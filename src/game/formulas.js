@@ -51,11 +51,11 @@ export function calcMdef(baseLv, int, vit, dex, equipMdef = 0) {
 }
 
 export function calcHit(baseLv, dex, luk) {
-    return 175 + baseLv + dex + Math.floor(luk / 3)
+    return baseLv + dex + Math.floor(luk / 3)
 }
 
 export function calcFlee(baseLv, agi, luk, skillBonus = 0) {
-    return 100 + baseLv + agi + Math.floor(luk / 5) + skillBonus
+    return baseLv + agi + Math.floor(luk / 5) + skillBonus
 }
 
 export function calcCrit(luk, equipCrit = 0) {
@@ -69,7 +69,7 @@ export function calcCrit(luk, equipCrit = 0) {
  * @param {number} tickMs - 游戏循环的毫秒数 (默认 100, 即战斗 AI 的间隔)
  * @returns {number} 最终每 tick 移动的像素数
  */
-export function calcMoveSpeed(roSpeed, cellSize = 20, tickMs = 100) {
+export function calcMoveSpeed(roSpeed, cellSize = 10, tickMs = 100) {
     // 逻辑：每毫秒走 (cellSize / roSpeed) 像素
     // 每一 tick 走 (cellSize / roSpeed) * tickMs 像素
     const pixelsPerTick = (cellSize / roSpeed) * tickMs

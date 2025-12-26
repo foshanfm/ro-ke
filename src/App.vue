@@ -296,7 +296,7 @@
               <div class="text-xs text-gray-500 mt-1 flex justify-between px-2">
                  <span>{{ Maps[player.currentMap]?.name }}</span>
                  <!-- Coordinate Display -->
-                 <span>({{ Math.floor(player.x) }}, {{ Math.floor(player.y) }})</span>
+                  <span>({{ Math.floor(player.x / 10) }}, {{ Math.floor(player.y / 10) }})</span>
               </div>
           </div>
 
@@ -410,7 +410,7 @@
                   class="block w-full text-left px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-200 transition-colors"
                 >
                   → {{ portal.targetName }}
-                  <span class="text-gray-500 text-[10px]">({{ portal.x }}, {{ portal.y }})</span>
+                  <span class="text-gray-500 text-[10px]">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
                 </button>
               </div>
             </div>

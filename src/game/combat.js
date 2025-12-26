@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { player, addExp, addItem, useItem, saveGame, warp } from './player'
+import { player, addExp, addItem, useItem, saveGame, warp, respawn } from './player'
 import { spawnMonster, getMonster } from './monsters'
 import { getItemInfo } from './items'
 import { calcAspdDelay, calculateDamageFlow } from './formulas'
@@ -47,10 +47,9 @@ export function startBot() {
     if (gameState.isAuto) return
 
     if (player.hp <= 0) {
-        log('检测到玩家已死亡。正在执行紧急复苏协议...', 'warning')
-        player.hp = player.maxHp
-        player.sp = player.maxSp
-        log('生命体征恢复。状态：满血。', 'system')
+        log('检测到玩家处于死亡状态。正在返回存储点复活...', 'warning')
+        const res = respawn()
+        log(res.msg, 'system')
     }
 
     gameState.isAuto = true
@@ -132,7 +131,9 @@ async function aiTick(sessionId) {
 
     try {
         if (player.hp <= 0) {
-            log('You have died. AI stopping.', 'error')
+            log('你已死亡！AI 停止工作。正在返回存储点...', 'error')
+            const res = respawn()
+            log(res.msg, 'system')
             stopBot()
             return
         }
@@ -146,13 +147,13 @@ async function aiTick(sessionId) {
             const dist = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2))
 
             if (dist < 5) {
-                log(`到达目的地 (${x}, ${y})`, 'success')
+                log(`到达目的地 (${Math.floor(x / 10)}, ${Math.floor(y / 10)})`, 'success')
                 gameState.manualTarget = null
                 stopBot()
                 return
             }
 
-            movePlayerToward(x, y, 10)
+            movePlayerToward(x, y, player.moveSpeed)
 
             // 检查传送阵触碰
             const warpInfo = checkWarpCollision(player.x, player.y)
@@ -167,7 +168,7 @@ async function aiTick(sessionId) {
                         const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
                         player.x = warpInfo.targetX + offsetX
                         player.y = warpInfo.targetY + offsetY
-                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x)}, ${Math.floor(player.y)})`, 'success')
+                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)})`, 'success')
                     }
                 }, 500)
                 return
@@ -185,7 +186,7 @@ async function aiTick(sessionId) {
             if (monster) {
                 gameState.currentMonster = monster
                 const mobTemplate = getMobTemplate(monster)
-                log(`Monster ${mobTemplate.name} detected at (${Math.floor(monster.x)}, ${Math.floor(monster.y)})!`, 'dim')
+                log(`Monster ${mobTemplate.name} detected at (${Math.floor(monster.x / 10)}, ${Math.floor(monster.y / 10)})!`, 'dim')
                 gameState.lastActionLog = '' // 重置动作日志
             } else {
                 // 没怪，随机漫步 (巡逻)
@@ -193,7 +194,7 @@ async function aiTick(sessionId) {
                 const arrived = randomWalk()
 
                 if (isFirstPatrol) {
-                    log(`No monsters nearby. Patrolling to (${Math.floor(mapState.patrolTarget.x)}, ${Math.floor(mapState.patrolTarget.y)})...`, 'dim')
+                    log(`No monsters nearby. Patrolling to (${Math.floor(mapState.patrolTarget.x / 10)}, ${Math.floor(mapState.patrolTarget.y / 10)})...`, 'dim')
                 }
 
                 mainLoopId = setTimeout(() => aiTick(sessionId), arrived ? 500 : 100) // 如果到达了等久一点
@@ -212,7 +213,7 @@ async function aiTick(sessionId) {
 
         // 2. 检查距离
         const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
-        const attackRange = player.config.attackRange || 40
+        const attackRange = player.attackRange || 10
 
         if (dist > attackRange) {
             // 距离太远，追击
@@ -220,11 +221,11 @@ async function aiTick(sessionId) {
             const mobTemplate = getMobTemplate(target)
 
             if (gameState.lastActionLog !== `chase_${target.guid}`) {
-                log(`Moving toward ${mobTemplate.name} at (${Math.floor(target.x)}, ${Math.floor(target.y)})...`, 'dim')
+                log(`Moving toward ${mobTemplate.name} at (${Math.floor(target.x / 10)}, ${Math.floor(target.y / 10)})...`, 'dim')
                 gameState.lastActionLog = `chase_${target.guid}`
             }
 
-            movePlayerToward(target.x, target.y, 15) // 追击速度快一点
+            movePlayerToward(target.x, target.y, player.moveSpeed) // 使用计算出的玩家速度
 
             // 检查是否触碰传送点
             const warpInfo = checkWarpCollision(player.x, player.y)
@@ -239,7 +240,7 @@ async function aiTick(sessionId) {
                         const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
                         player.x = warpInfo.targetX + offsetX
                         player.y = warpInfo.targetY + offsetY
-                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x)}, ${Math.floor(player.y)})`, 'success')
+                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)})`, 'success')
                     }
                 }, 500)
                 return
@@ -265,7 +266,7 @@ async function aiTick(sessionId) {
         })
 
         if (res.type === 'miss') {
-            log(`You miss ${target.name}!`, 'dim')
+            log(`You miss ${targetTemplate.name}!`, 'dim')
         } else {
             let damage = res.damage
             if (passiveRes.damageMod !== 1.0) damage = Math.floor(damage * passiveRes.damageMod)
@@ -318,29 +319,25 @@ async function monsterActionLoop(sessionId) {
     // 1. 距离检测
     const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
 
-    // 逻辑像素转格子: CELL_SIZE = 20
-    const attackRangePx = (targetTemplate.range1 || 1) * 20
+    // 逻辑像素转格子: CELL_SIZE = 10
+    const attackRangePx = (targetTemplate.range1 || 1) * 10
 
     // 2. 行为分支
     if (dist > attackRangePx) {
         // [追击模式]
-        // 移动逻辑: 简单的向玩家移动
-        // 移动速度: RO 标准 (ms/cell)
-        const moveSpeed = Formulas.calcMoveSpeed(targetTemplate.speed || 400)
+        // AI 决策延迟(模拟反应时间)
+        const reactDelay = Math.random() * 100 + 50 // 50-150ms 怪物反应快一点
 
-        // 计算移动向量
+        // 计算在此延迟内应该移动的距离
+        const moveSpeed = Formulas.calcMoveSpeed(targetTemplate.speed || 400, 10, reactDelay)
         const angle = Math.atan2(player.y - target.y, player.x - target.x)
+
         target.x += Math.cos(angle) * moveSpeed
         target.y += Math.sin(angle) * moveSpeed
 
-        // 追击时不攻击，直接返回等待下一次 Loop
-        // 这样就实现了"风筝" (Kiting): 玩家攻速快+射程远，可以在怪物追击途中多次攻击
-
+        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), reactDelay)
     } else {
         // [攻击模式]
-        // 只有进入 Range1 才能造成伤害
-
-        // 攻击前摇 (Act Delay) - 简单模拟
         const res = calculateDamageFlow({
             attackerAtk: targetTemplate.atk,
             attackerHit: targetTemplate.hit || 50,
@@ -358,28 +355,19 @@ async function monsterActionLoop(sessionId) {
             checkAutoPotion()
 
             if (player.hp <= 0) {
-                log('You died!', 'error')
+                log('你被杀死了！', 'error')
                 player.hp = 0
                 gameState.currentMonster = null
-                saveGame()
+                const respRes = respawn()
+                log(respRes.msg, 'system')
                 stopBot()
                 return
             }
         }
 
         // 攻击后摇 (Attack Delay)
-        // 如果攻击了，下一次行动要等待 aDelay
         const delay = targetTemplate.attackDelay || 2000
         monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), delay)
-        return // 退出函数，不由底部的通用定时器接管
-    }
-
-    if (gameState.isAuto && gameState.currentMonster && gameState.currentMonster.hp > 0 && sessionId === combatSessionId) {
-        // AI 决策延迟(模拟反应时间)
-        const reactDelay = Math.random() * 200 + 100 // 100-300ms
-        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), reactDelay)
-    } else {
-        monsterLoopId = null
     }
 }
 

@@ -119,6 +119,12 @@ function spawnSingleMonsterById(mobId, spawnArea = null) {
         spawnY = Math.floor(Math.random() * mapState.height)
     }
 
+    // 适配逻辑: 如果 x1/x2 很小(旧格式或者格数格式), 乘以 CELL_SIZE (目前是 10)
+    if (spawnX < 500 && spawnY < 500 && mapState.width > 1000) {
+        spawnX *= 10
+        spawnY *= 10
+    }
+
     const instance = {
         guid: ++guidCounter,
         templateId: mobId,           // 关联模板 ID
@@ -189,7 +195,7 @@ export function movePlayerToward(tx, ty, speed = 5) {
 export function randomWalk() {
     // 如果已经有巡逻目标了，就尝试走过去
     if (mapState.patrolTarget) {
-        const { x, ty } = mapState.patrolTarget // ty? typo in my thought? let's use x, y
+        const { x, y } = mapState.patrolTarget
         const arrived = movePlayerToward(mapState.patrolTarget.x, mapState.patrolTarget.y, player.moveSpeed)
         if (arrived) {
             mapState.patrolTarget = null // 到达，清空目标
@@ -199,7 +205,7 @@ export function randomWalk() {
 
     // 设定一个新的随机巡逻点
     const angle = Math.random() * Math.PI * 2
-    const dist = 100 + Math.random() * 200 // 走远一点，体现空间感
+    const dist = 200 + Math.random() * 400 // 地图变大了，走远一点
     const tx = Math.max(20, Math.min(mapState.width - 20, player.x + Math.cos(angle) * dist))
     const ty = Math.max(20, Math.min(mapState.height - 20, player.y + Math.sin(angle) * dist))
 

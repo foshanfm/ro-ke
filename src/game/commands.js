@@ -1,4 +1,4 @@
-import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob, insertCard } from './player.js'
+import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob, insertCard, setSavePoint } from './player.js'
 import { getItemInfo, ItemType } from './items.js'
 import { startBot, stopBot, gameState, moveTo } from './combat.js'
 import { JobConfig, JobType } from './jobs.js'
@@ -100,8 +100,8 @@ registerCommand({
             log('用法: move <x> <y>', 'error')
             return
         }
-        const x = parseInt(args[0])
-        const y = parseInt(args[1])
+        const x = parseInt(args[0]) * 10
+        const y = parseInt(args[1]) * 10
         if (isNaN(x) || isNaN(y)) {
             log('无效的坐标。', 'error')
             return
@@ -109,11 +109,11 @@ registerCommand({
 
         // 边界检查
         if (x < 0 || x > mapState.width || y < 0 || y > mapState.height) {
-            log(`超出地图边界！当前地图大小为: ${mapState.width}x${mapState.height}`, 'error')
+            log(`超出地图边界！当前地图大小为: ${Math.floor(mapState.width / 10)}x${Math.floor(mapState.height / 10)}`, 'error')
             return
         }
 
-        log(`正在移动向 (${x}, ${y})...`, 'system')
+        log(`正在移动向 (${args[0]}, ${args[1]})...`, 'system')
         moveTo(x, y)
     }
 })
@@ -201,7 +201,7 @@ registerCommand({
 
         log(`----------------[ 角色状态 ]----------------`, 'system')
         log(`名字: ${player.name} | 职业: ${jobName}`, 'system')
-        log(`位置: ${mapName} (${player.currentMap})`, 'system')
+        log(`位置: ${mapName} (${player.currentMap}) [${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)}]`, 'system')
         log(`Base Lv: ${player.lv} | Exp: ${player.exp}/${player.nextExp} (${((player.exp / player.nextExp) * 100).toFixed(2)}%)`, 'system')
         log(`Job  Lv: ${player.jobLv} | Exp: ${player.jobExp}/${player.nextJobExp} (${((player.jobExp / player.nextJobExp) * 100).toFixed(2)}%)`, 'system')
         log(`HP: ${player.hp}/${player.maxHp} | SP: ${player.sp}/${player.maxSp}`, 'system')
@@ -507,7 +507,7 @@ registerCommand({
                 warps.forEach(w => {
                     const targetName = Maps[w.targetMap]?.name || w.targetMap
                     log(`  >>> 前往 [${targetName}]`, 'success')
-                    log(`      位置: (${w.x}, ${w.y}) - 靠近自动传送`, 'dim')
+                    log(`      位置: (${Math.floor(w.x / 10)}, ${Math.floor(w.y / 10)}) - 靠近自动传送`, 'dim')
                 })
             }
             log(`提示: 使用 'move <x> <y>' 走向传送点，或直接点右上角按钮。`, 'system')
@@ -515,7 +515,7 @@ registerCommand({
                 log('  (无已知传送点)', 'dim')
             } else {
                 warps.forEach(w => {
-                    log(`  -> ${w.targetMap} 位于 (${w.x}, ${w.y}) - ${w.name}`, 'dim')
+                    log(`  -> ${w.targetMap} 位于 (${Math.floor(w.x / 10)}, ${Math.floor(w.y / 10)}) - ${w.name}`, 'dim')
                 })
             }
             log(`输入 'map <id>' 进行跳转,或 'move <x> <y>' 走向传送点。`, 'system')
@@ -607,6 +607,19 @@ registerCommand({
                 log(`${index + 1}. ${info.name} x ${slot.count}${extra}`, 'info')
             })
             log('================', 'system')
+        }
+    }
+})
+
+registerCommand({
+    name: 'save',
+    description: '设置当前坐标为存储点 (仅限主城)',
+    execute: (args, { log }) => {
+        const res = setSavePoint()
+        if (res.success) {
+            log(res.msg, 'success')
+        } else {
+            log(res.msg, 'error')
         }
     }
 })

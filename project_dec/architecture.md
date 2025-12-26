@@ -49,7 +49,7 @@ We prioritize "Feel" over "Academic Accuracy".
 *   **Search:** Scan `viewRange` for nearest entity.
 *   **Chase:** `movePlayerToward(target.x, target.y)` until `dist <= attackRange`.
 *   **Range & Kiting:**
-    - **Unit Standard:** `1 Cell = 20px`.
+    - **Unit Standard:** `1 Cell = 10px`.
     - **Weapon Range:** Defined in `Equipment.js`, mapped to Cells. Supports skill modifiers (e.g., `Vulture's Eye`).
     - **Kiting Logic:** Monsters enter `CHASE` state if out of range, allowing ranged players to land free hits.
 *   **Patrol System:** In `SEARCHING` mode, players walk to a random `patrolTarget` at `moveSpeed` instead of teleporting.
@@ -59,6 +59,7 @@ We prioritize "Feel" over "Academic Accuracy".
     - `checkWarpCollision(x, y)` scans current map's `activeWarps`.
     - Portals have a `spanX/Y` (collision box).
     - Transitions trigger `warp(targetMap)` and reset coords to `targetX/Y`.
+    - **Save Point**: `savePoint` (map/x/y) in player state allows city-based respawning. Triggered upon death or initial AI startup if dead.
     - **Deduplication**: `dataLoader.js` performs aggressive deduplication, keeping only one portal per destination map to ensure a clean UI.
 
 ### 3.3. Drop System (Layered)

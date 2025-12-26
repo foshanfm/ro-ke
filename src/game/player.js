@@ -25,13 +25,19 @@ const defaultStats = {
         auto_hp_percent: 0,
         auto_hp_item: '红色药水',
         auto_buy_potion: 0,
-        viewRange: 200
+        viewRange: 30 * 10, // 30格视野
+        attackRange: 10
     },
     currentMap: 'prt_fild08',
-    x: 200, y: 200,
+    x: 400 * 10 / 2, y: 400 * 10 / 2, // 初始位置设在地图中央
     hp: 100, maxHp: 100, sp: 20, maxSp: 20,
     atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0, moveSpeed: 5,
     str: 1, agi: 1, dex: 1, vit: 1, int: 1, luk: 1,
+    savePoint: {
+        map: 'prontera',
+        x: 156 * 10,
+        y: 178 * 10
+    },
     inventory: []
 }
 
@@ -147,16 +153,16 @@ export function recalculateMaxStats() {
 
     // 计算移动速度 (RO 机制: 数值越小越快, 150 为基准)
     // 未来可根据 AGI UP 或 Peco 修正此数值
-    let roSpeedValue = 150
+    let roSpeedValue = 100 // 默认给个快一点的速度 (原 150)
 
     // 逻辑：加速术或大嘴鸟通常取最快值 (112), 不叠加
     // if (player.buffs['agi_up'] || player.config.hasPeco) roSpeedValue = 112
 
-    player.moveSpeed = Formulas.calcMoveSpeed(roSpeedValue)
+    player.moveSpeed = Formulas.calcMoveSpeed(roSpeedValue, 10)
 
     // 计算攻击距离
-    // 1 Cell = 20 px (RO标准: 逻辑像素)
-    const CELL_SIZE = 20
+    // 1 Cell = 10 px (RO标准: 逻辑像素)
+    const CELL_SIZE = 10
     let rangeInCells = WeaponRangeTable[weaponType] || 1
 
     // 苍鹰之眼修正 (仅限弓箭类)
@@ -286,6 +292,11 @@ export async function loadGame(saveId) {
         // 坐标校验与修复
         if (player.x === undefined || player.x === null || isNaN(player.x)) player.x = 200
         if (player.y === undefined || player.y === null || isNaN(player.y)) player.y = 200
+
+        // 存档点兼容 (旧存档可能没有 savePoint)
+        if (!player.savePoint) {
+            player.savePoint = { map: 'prontera', x: 156 * 10, y: 178 * 10 }
+        }
 
         player.nextExp = getNextBaseExp(player.lv)
         player.nextJobExp = getNextJobExp(player.jobLv)
@@ -700,6 +711,52 @@ export function warp(mapId) {
     player.currentMap = mapId
     saveGame()
     return { success: true, msg: `Warped to ${map.name}` }
+}
+
+/**
+ * 设置存储点 (只有在主城可以设置)
+ */
+const CITIES = ['prontera', 'payon', 'morocc', 'geffen', 'alberta', 'aldebaran', 'izlude']
+
+export function setSavePoint() {
+    const currentMap = player.currentMap.toLowerCase()
+
+    // 检查是否在城市
+    const isCity = CITIES.some(city => currentMap.includes(city))
+
+    if (!isCity) {
+        return { success: false, msg: '只有在各大主城才可以设置存档点。' }
+    }
+
+    player.savePoint = {
+        map: player.currentMap,
+        x: Math.floor(player.x),
+        y: Math.floor(player.y)
+    }
+
+    saveGame()
+    return { success: true, msg: `存储点已更新至: ${Maps[player.currentMap]?.name || player.currentMap} (${Math.floor(player.savePoint.x / 20)}, ${Math.floor(player.savePoint.y / 20)})` }
+}
+
+/**
+ * 死亡复活逻辑
+ */
+export function respawn() {
+    if (!player.savePoint) {
+        player.savePoint = { map: 'prontera', x: 156 * 10, y: 178 * 10 }
+    }
+
+    // 1. 恢复状态
+    player.hp = player.maxHp
+    player.sp = player.maxSp
+
+    // 2. 传送回存档点
+    player.currentMap = player.savePoint.map
+    player.x = player.savePoint.x
+    player.y = player.savePoint.y
+
+    saveGame()
+    return { success: true, msg: '你已在存储点复活，状态已恢复。' }
 }
 
 export function sellItem(itemNameOrId, count = 1) {

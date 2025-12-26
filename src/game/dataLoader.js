@@ -1,5 +1,6 @@
 // src/game/dataLoader.js
 // 数据加载器 - 负责解析外部数据文件并转换为游戏内部格式
+import { calcHit, calcFlee } from './formulas'
 
 /**
  * 解析物品数据库文件 (item_db.txt)
@@ -116,9 +117,9 @@ export async function loadMobDB(maxLevel = 20) {
       const element = parseInt(parts[24])
       const mode = parseInt(parts[25]) // AI 模式 (Aggressive, Looter, etc.)
 
-      // 计算命中和闪避 (基于官方公式)
-      const hit = lv + dex
-      const flee = lv + agi
+      // 计算命中和闪避 (统一使用 formulas.js 公式)
+      const hit = calcHit(lv, dex, luk)
+      const flee = calcFlee(lv, agi, luk)
 
       // 解析攻击延迟 (aDelay 字段)
       const attackDelay = parseInt(parts[27]) || 2000
@@ -326,13 +327,13 @@ export async function loadWarpData() {
 
           if (!isDuplicate) {
             warpDB[sourceMap].push({
-              x: parseInt(x),
-              y: parseInt(y),
-              spanX: parseInt(spanX),
-              spanY: parseInt(spanY),
+              x: parseInt(x) * 10,
+              y: parseInt(y) * 10,
+              spanX: parseInt(spanX) * 10,
+              spanY: parseInt(spanY) * 10,
               targetMap,
-              targetX: parseInt(targetX),
-              targetY: parseInt(targetY),
+              targetX: parseInt(targetX) * 10,
+              targetY: parseInt(targetY) * 10,
               name: npcName
             })
           }

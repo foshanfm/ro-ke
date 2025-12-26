@@ -144,8 +144,22 @@ A web-based idle game recreating the experience of using automated botting softw
   - [x] Aligned `WeaponRangeTable` with official RO values (e.g., Spears=3).
   - [x] Integrated `Vulture's Eye` passive skill for Archer range bonuses.
 
+### Phase 15: Save Points & Responsiveness [Completed]
+- [x] **Save Point System**:
+    - [x] `save` command to set a persistent respawn location.
+    - [x] Gated to cities (Prontera, etc.) for authentic RO feel.
+    - [x] Automated `respawn` on death with full HP/SP recovery.
+- [x] **Spatial Refactor (10px/Cell)**:
+    - [x] Reduced logic scale from 20px to **10px per Cell** for tighter feel.
+    - [x] Adjusted all spatial databases (Warps, Spawns, Ranges) to matching the 10x scale.
+    - [x] Multi-layer coordinate display logic (Internal Pixels vs External Cells).
+- [x] **Movement & Pace Optimization**:
+    - [x] Increased base movement speed (150 -> 100) to reduce travel friction.
+    - [x] Unified `attackRange` and `viewRange` (30 Cells) for better engagement.
+    - [x] Smooth Monster Chasing: Reaction-delay-aware movement scaling.
+
 ## 4. Current State
-*   **Version:** 1.4.1 (Phase 14 - Kiting, Range & Spatial Mobility Complete)
+*   **Version:** 1.5.0 (Phase 15 - Save Points & Responsiveness Complete)
 *   **Stability:** High. Combat logic now supports kiting, varied weapon ranges, and localized spawning.
 *   **Performance:** Optimal.
 *   **New Features:**
@@ -154,4 +168,6 @@ A web-based idle game recreating the experience of using automated botting softw
     - **Smart AI**: Monsters chase before attacking.
     - **Patrol System**: Players walk to destinations instead of teleporting.
     - **Area Spawning**: Monsters spawn in designated zones according to scripts.
+    - **Save Point System**: Death is no longer a soft-lock; players respawn at cities.
+    - **High Responsiveness**: Faster movement and tighter 10px grid.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.
