@@ -177,13 +177,22 @@ A web-based idle game recreating the experience of using automated botting softw
     - [x] **Consumables**: Implemented HP/SP recovery logic for core potions (Red/Org/Yel/Whi/Blu).
     - [x] **Responsive Movement**: `moveTo` now interrupts AI action wait for instant response.
 
+### Phase 17: Structured Data & Automated Logic [Completed]
+- [x] **DB Compiler Utility**: Created `db_compiler.cjs` to transform rAthena TXT into high-performance JSON.
+- [x] **JSON Pipeline**: Refactored `dataLoader.js` and `DataManager.js` to consume structured JSON.
+- [x] **Automated Item Scripts**: Implemented a regex-based parser for `item_db` scripts (e.g., `itemheal`), enabling 10k+ items automatically.
+- [x] **UX Detail Polish**: 
+    - [x] Reformatted Details Panel to show item names and percentages for drops.
+    - [x] Enhanced entity lookup with fuzzy name searching across all databases.
+- [x] **Cache Invalidation**: Bumped `DATA_VERSION` to 2 to ensure data integrity across character loads.
+- [x] **Content Unlock**: Standardized `maxLevel` to 99 across all initialization routines.
+
 ## 4. Current State
-*   **Version:** 1.6.0 (Phase 16 - UX & Smart Bot Complete)
-*   **Stability:** High. Content cap unlocked. UI is highly interactive.
-*   **Performance:** Optimal.
+*   **Version:** 2.0.0 (Phase 17 - Structured Data Complete)
+*   **Stability:** High. No longer bottlenecked by TXT parsing.
+*   **Performance:** Elite. Fast startup and memory-efficient runtime.
 *   **New Features:**
-    - **Smart Navigation**: Bot can walk across multiple maps to reach targets.
-    - **Interactive Logs**: Click any entity to see its drop table and stats.
-    - **Stat UI**: Modal-based allocation.
-    - **Data-Driven Content**: All drops and monster levels now match the DB exactly.
-*   **Next Objective:** Transition from TXT to JSON data pipeline for better maintainability and script execution.
+    - **Automated Potion Effects**: All DB-defined healing items work out of the box.
+    - **Rich Details Overlay**: Visual breakdown of monster drops and item bonuses.
+    - **Optimized Data Flow**: Pre-compiled JSON reduces CPU load during game initialization.
+*   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

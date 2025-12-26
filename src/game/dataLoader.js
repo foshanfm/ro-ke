@@ -3,89 +3,36 @@ import { calcHit, calcFlee } from './formulas'
 import { buildNavigationGraph } from './navigation.js'
 
 /**
- * 解析物品数据库文件 (item_db.txt)
- * 格式: ID,AegisName,Name,Type,Buy,Sell,Weight,ATK[:MATK],DEF,Range,Slots,Job,Class,Gender,Location,wLV,eLV[:maxLevel],Refineable,View,{ Script },{ OnEquip_Script },{ OnUnequip_Script }
+ * 解析物品数据库文件 (Compiled JSON)
  */
 export async function loadItemDB() {
   try {
-    const response = await fetch('/src/game/data/item_db.txt')
-    const text = await response.text()
-    const lines = text.split('\n')
+    const response = await fetch('/src/game/data/compiled/items.json')
+    const itemsDB = await response.json()
 
-    const itemsDB = {}
+    // 注入运行时效果 (如药水恢复逻辑)
+    Object.values(itemsDB).forEach(item => {
+      if (item.type === 'Usable' && item.effects) {
+        item.effects.forEach(eff => {
+          if (eff.type === 'heal') {
+            item.effect = (player) => {
+              let hpHeal = 0
+              if (Array.isArray(eff.hp)) {
+                hpHeal = Math.floor(eff.hp[0] + Math.random() * (eff.hp[1] - eff.hp[0] + 1))
+              } else {
+                hpHeal = eff.hp
+              }
 
-    for (const line of lines) {
-      // 跳过注释和空行
-      if (line.trim().startsWith('//') || line.trim() === '') continue
-
-      const parts = line.split(',')
-      if (parts.length < 5) continue // 至少需要基本字段
-
-      const id = parseInt(parts[0])
-      const aegisName = parts[1]
-      const name = parts[2]
-      const type = parseInt(parts[3])
-      const buyPrice = parseInt(parts[4]) || 0
-      const sellPrice = parseInt(parts[5]) || Math.floor(buyPrice / 2)
-      const weight = parseInt(parts[6]) || 0
-
-      // 解析 ATK 字段 (可能包含 ATK:MATK)
-      let atk = 0
-      let matk = 0
-      if (parts[7]) {
-        const atkParts = parts[7].split(':')
-        atk = parseInt(atkParts[0]) || 0
-        matk = parseInt(atkParts[1]) || 0
+              const oldHp = player.hp
+              player.hp = Math.min(player.maxHp, player.hp + hpHeal)
+              return { type: 'hp', value: player.hp - oldHp }
+            }
+          }
+        })
       }
+    })
 
-      const location = parseInt(parts[14]) || 0 // Location Field
-      const wLv = parseInt(parts[15]) || 1      // Weapon Level / Equip Level Limit
-      const eLv = parts[16] ? parseInt(parts[16].split(':')[0]) : 0 // Equip Level
-
-      const def = parseInt(parts[8]) || 0
-      const range = parseInt(parts[9]) || 0
-      const slots = parseInt(parts[10]) || 0
-
-      // Map Location to SubType
-      let subType = null
-      if (type === 4) { // Weapon
-        // Weapon type parsing logic if needed in future (View ID mapping)
-        // For now, rely on View ID or Name mapping if specific logic needed
-        // But here we rely on existing robust logic or basic type 4
-        subType = 'Weapon'
-        // Note: In rAthena, View (parts[18]) often maps to WeaponType ID
-        // We can map View ID -> WeaponType here if we had the table
-      } else if (type === 5) { // Armor
-        if (location & 256) subType = 'HeadTop'
-        else if (location & 512) subType = 'HeadMid'
-        else if (location & 1) subType = 'HeadLow'
-        else if (location & 16) subType = 'Armor'
-        else if (location & 32) subType = 'Shield'
-        else if (location & 4) subType = 'Garment'
-        else if (location & 64) subType = 'Footgear'
-        else if ((location & 8) || (location & 128)) subType = 'Accessory'
-      }
-
-      // 构建物品对象
-      itemsDB[id] = {
-        id,
-        aegisName,
-        name,
-        type: mapItemType(type),
-        subType, // Inject calculated subType
-        price: buyPrice,
-        sellPrice,
-        weight,
-        atk,
-        matk,
-        def,
-        range,
-        slots,
-        reqLv: eLv || 1
-      }
-    }
-
-    console.log(`[DataLoader] 已加载 ${Object.keys(itemsDB).length} 个物品`)
+    console.log(`[DataLoader] 已加载 ${Object.keys(itemsDB).length} 个组件化物品`)
     return itemsDB
   } catch (error) {
     console.error('[DataLoader] 加载物品数据库失败:', error)
@@ -94,120 +41,40 @@ export async function loadItemDB() {
 }
 
 /**
- * 解析怪物数据库文件 (mob_db.txt)
- * 格式: ID,Sprite_Name,kName,iName,LV,HP,SP,EXP,JEXP,Range1,ATK1,ATK2,DEF,MDEF,STR,AGI,VIT,INT,DEX,LUK,Range2,Range3,Scale,Race,Element,Mode,Speed,aDelay,aMotion,dMotion,MEXP,MVP1id,MVP1per,MVP2id,MVP2per,MVP3id,MVP3per,Drop1id,Drop1per,Drop2id,Drop2per,Drop3id,Drop3per,Drop4id,Drop4per,Drop5id,Drop5per,Drop6id,Drop6per,Drop7id,Drop7per,Drop8id,Drop8per,Drop9id,Drop9per,DropCardid,DropCardper
+ * 解析怪物数据库文件 (Compiled JSON)
  */
-export async function loadMobDB(maxLevel = 20) {
+export async function loadMobDB(maxLevel = 99) {
   try {
-    const response = await fetch('/src/game/data/mob_db.txt')
-    const text = await response.text()
-    const lines = text.split('\n')
+    const response = await fetch('/src/game/data/compiled/mobs.json')
+    const allMobs = await response.json()
 
+    // 过滤等级并打平结构以便兼容旧逻辑
     const mobsDB = {}
-
-    for (const line of lines) {
-      // 跳过注释和空行
-      if (line.trim().startsWith('//') || line.trim() === '') continue
-
-      const parts = line.split(',')
-      if (parts.length < 20) continue // 至少需要基本字段
-
-      const id = parseInt(parts[0])
-      const spriteName = parts[1]
-      const kName = parts[2]
-      const iName = parts[3]
-      const lv = parseInt(parts[4])
-
-      // 等级过滤 - 只加载 <= maxLevel 的怪物
-      if (lv > maxLevel) continue
-
-      const hp = parseInt(parts[5])
-      const sp = parseInt(parts[6]) || 0
-      const exp = parseInt(parts[7])
-      const jobExp = parseInt(parts[8])
-      const range1 = parseInt(parts[9]) || 1
-      const atk1 = parseInt(parts[10])
-      const atk2 = parseInt(parts[11])
-      const def = parseInt(parts[12])
-      const mdef = parseInt(parts[13])
-      const str = parseInt(parts[14])
-      const agi = parseInt(parts[15])
-      const vit = parseInt(parts[16])
-      const int = parseInt(parts[17])
-      const dex = parseInt(parts[18])
-      const luk = parseInt(parts[19])
-      const range2 = parseInt(parts[20]) || 1 // 技能距离
-      const range3 = parseInt(parts[21]) || 1 // 追击/视野距离
-      const scale = parseInt(parts[22])
-      const race = parseInt(parts[23])
-      const element = parseInt(parts[24])
-      const mode = parseInt(parts[25]) // AI 模式 (Aggressive, Looter, etc.)
-
-      // 计算命中和闪避 (统一使用 formulas.js 公式)
-      const hit = calcHit(lv, dex, luk)
-      const flee = calcFlee(lv, agi, luk)
-
-      // 解析攻击延迟 (aDelay 字段)
-      const attackDelay = parseInt(parts[27]) || 2000
-
-      // 解析掉落物品 (Drop1-9 + Card)
-      const drops = []
-      for (let i = 0; i < 9; i++) {
-        const dropIdIndex = 37 + i * 2
-        const dropRateIndex = 38 + i * 2
-        if (parts[dropIdIndex] && parts[dropRateIndex]) {
-          const dropId = parseInt(parts[dropIdIndex])
-          const dropRate = parseInt(parts[dropRateIndex]) / 10000 // 转换为 0-1 的概率
-          if (dropId > 0 && dropRate > 0) {
-            drops.push({ id: dropId, rate: dropRate })
-          }
+    Object.values(allMobs).forEach(mob => {
+      if (mob.lv <= maxLevel) {
+        mobsDB[mob.id] = {
+          id: mob.id,
+          name: mob.name,
+          lv: mob.lv,
+          hp: mob.hp,
+          maxHp: mob.hp,
+          exp: mob.exp,
+          jobExp: mob.jobExp,
+          atk: mob.battleStats.atk,
+          def: mob.battleStats.def,
+          mdef: mob.battleStats.mdef,
+          hit: mob.battleStats.hit,
+          flee: mob.battleStats.flee,
+          attackDelay: mob.battleStats.attackDelay,
+          aspd: mob.battleStats.aspd,
+          range1: mob.battleStats.range,
+          drops: mob.drops,
+          ...mob.attributes
         }
       }
+    })
 
-      // 卡片掉落
-      if (parts[55] && parts[56]) {
-        const cardId = parseInt(parts[55])
-        const cardRate = parseInt(parts[56]) / 10000
-        if (cardId > 0 && cardRate > 0) {
-          drops.push({ id: cardId, rate: cardRate })
-        }
-      }
-
-      // 构建怪物对象
-      mobsDB[id] = {
-        id,
-        name: kName,
-        lv,
-        hp,
-        maxHp: hp,
-        exp,
-        jobExp,
-        atk: Math.floor((atk1 + atk2) / 2), // 使用平均攻击力
-        def,
-        mdef,
-        hit,
-        flee,
-        attackDelay,
-        // 根据 aDelay 计算直观攻速数值 (方案 B)
-        aspd: Math.floor(200 - (attackDelay / 20)),
-        // 计算每秒攻击次数 (方案 A)
-        aps: parseFloat((1000 / attackDelay).toFixed(2)),
-        drops,
-        // 额外属性
-        str,
-        agi,
-        vit,
-        int,
-        dex,
-        luk,
-        range1,
-        range2,
-        range3,
-        mode
-      }
-    }
-
-    console.log(`[DataLoader] 已加载 ${Object.keys(mobsDB).length} 个怪物 (Lv <= ${maxLevel})`)
+    console.log(`[DataLoader] 已加载 ${Object.keys(mobsDB).length} 个结构化怪物 (Lv <= ${maxLevel})`)
     return mobsDB
   } catch (error) {
     console.error('[DataLoader] 加载怪物数据库失败:', error)

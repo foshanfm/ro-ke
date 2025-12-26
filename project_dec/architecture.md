@@ -63,9 +63,10 @@ We prioritize "Feel" over "Academic Accuracy".
     - **Save Point**: `savePoint` (map/x/y) in player state allows city-based respawning. Triggered upon death or initial AI startup if dead.
     - **Deduplication**: `dataLoader.js` performs aggressive deduplication, keeping only one portal per destination map to ensure a clean UI.
     - **Smart Navigation (BFS)**: `navigation.js` allows the robot to find the shortest map route between its current location and a target map. Used by `combat.js` (`gameState.goalMap`).
-*   **Data Strategy Shift (Upcoming)**:
-    - Transitioning from rAthena TXT format to **Structured JSON**.
-    - **Compiler Pattern**: A Node.js script will pre-process the raw DB into logic-ready JSON with parsed scripts (e.g., `{itemheal rand(45,65)}` -> `{"hp": [45, 65]}`).
+*   **Data Strategy (Structured JSON)**:
+    - **Compiler Pattern**: A Node.js compiler (`scripts/db_compiler.cjs`) pre-processes the raw TXT DB into logic-ready JSON.
+    - **Automated logic**: Scripts (e.g., `{itemheal rand(45,65)}`) are parsed into machine-readable data (`{"hp": [45, 65]}`) during compilation.
+    - **Efficiency**: Eliminates expensive string splitting and regex parsing in the browser.
 
 ### 3.3. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).

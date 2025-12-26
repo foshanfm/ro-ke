@@ -6,7 +6,7 @@ import { loadItemDB, loadMobDB, loadSpawnData, loadWarpData } from './dataLoader
 import { analyzeConnectivity } from './utils/mapGraph.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
-const DATA_VERSION = 1;
+const DATA_VERSION = 2;
 
 // 内存缓存
 let itemsCache = null;
@@ -18,7 +18,7 @@ let warpCache = null;
  * 初始化游戏数据
  * 优先从 IndexedDB 加载,如果不存在或版本过期则重新解析并缓存
  */
-export async function initializeGameData(maxLevel = 20) {
+export async function initializeGameData(maxLevel = 99) {
     console.log('[DataManager] 开始初始化游戏数据...');
 
     // 检查是否需要重新加载物品数据
@@ -141,7 +141,7 @@ export function getWarpInfo(mapId) {
 /**
  * 强制刷新数据 (清除缓存并重新加载)
  */
-export async function refreshGameData(maxLevel = 20) {
+export async function refreshGameData(maxLevel = 99) {
     console.log('[DataManager] 强制刷新游戏数据...');
     itemsCache = null;
     mobsCache = null;
