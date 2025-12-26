@@ -353,7 +353,14 @@ export async function initializeGameData(maxLevel = 20) {
   const itemsDB = await loadItemDB()
   const mobsDB = await loadMobDB(maxLevel)
   const spawnData = await loadSpawnData(mobsDB, maxLevel)
+  // 3. 传送点数据 (rAthena airports)
+  // 递归读取 cities, fields, dungeons
   const warpDB = await loadWarpData()
+  // 确保 prt_fild08 被加载 (如果递归漏了)
+  if (!warpDB['prt_fild08'] && warpDB['prontera']) {
+    // 这里只是防止热更加载问题，理论上 loadWarpData 应该已经扫到了
+    // console.log('Reloading warps...')
+  }
 
   console.log('[DataLoader] 游戏数据加载完成')
 

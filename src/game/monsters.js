@@ -25,6 +25,23 @@ const fallbackMonstersDB = {
       { id: 1201, rate: 0.02 }, // 短剑
       { id: 4002, rate: 0.001 } // 绿棉虫卡片
     ]
+  },
+  1003: {
+    id: 1003, name: '虫蛹', lv: 2, hp: 600, exp: 2, jobExp: 2,
+    atk: 1, def: 2, hit: 10, flee: 0, attackDelay: 2000,
+    drops: [
+      { id: 909, rate: 0.6 },
+      { id: 938, rate: 0.3 }  // 粘稠液体
+    ]
+  },
+  1004: {
+    id: 1004, name: '疯兔', lv: 1, hp: 55, exp: 2, jobExp: 1,
+    atk: 9, def: 0, hit: 13, flee: 5, attackDelay: 1700,
+    drops: [
+      { id: 909, rate: 0.6 },
+      { id: 519, rate: 0.05 },
+      { id: 2228, rate: 0.01 } // 彩色萝卜
+    ]
   }
 }
 

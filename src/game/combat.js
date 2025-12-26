@@ -11,6 +11,7 @@ import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, re
 export const gameState = reactive({
     isAuto: false,
     currentMonster: null, // 当前锁定的目标
+    manualTarget: null, // 手动移动目标 { x, y }
     status: 'IDLE' // IDLE, MOVING, ATTACKING, SEARCHING
 })
 
@@ -61,9 +62,20 @@ export function stopBot() {
     gameState.isAuto = false
     gameState.status = 'IDLE'
     gameState.currentMonster = null
+    gameState.manualTarget = null
     clearLoops()
     combatSessionId++
     log('AI Suspended.', 'system')
+}
+
+/**
+ * 设置手动移动目标
+ */
+export function moveTo(x, y) {
+    gameState.manualTarget = { x, y }
+    if (!gameState.isAuto) {
+        startBot()
+    }
 }
 
 function clearLoops() {
@@ -118,6 +130,41 @@ async function aiTick(sessionId) {
         }
 
         checkAutoPotion()
+
+        // 0. 优先处理手动移动目标
+        if (gameState.manualTarget) {
+            gameState.status = 'MOVING'
+            const { x, y } = gameState.manualTarget
+            const dist = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2))
+
+            if (dist < 5) {
+                log(`到达目的地 (${x}, ${y})`, 'success')
+                gameState.manualTarget = null
+                stopBot()
+                return
+            }
+
+            movePlayerToward(x, y, 10)
+
+            // 检查传送阵触碰
+            const warpInfo = checkWarpCollision(player.x, player.y)
+            if (warpInfo) {
+                log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
+                stopBot()
+                setTimeout(() => {
+                    const res = warp(warpInfo.targetMap)
+                    if (res.success) {
+                        player.x = warpInfo.targetX
+                        player.y = warpInfo.targetY
+                        log(`已到达 ${warpInfo.targetMap} (${warpInfo.targetX}, ${warpInfo.targetY})`, 'success')
+                    }
+                }, 500)
+                return
+            }
+
+            mainLoopId = setTimeout(() => aiTick(sessionId), 100)
+            return
+        }
 
         // 1. 如果没有目标，则寻怪
         if (!gameState.currentMonster) {

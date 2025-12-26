@@ -43,6 +43,7 @@ We prioritize "Feel" over "Academic Accuracy".
 *   **Movement:** `Speed = Base + (Agi * 0.05)`.
 *   **Search:** Scan `viewRange` for nearest entity.
 *   **Chase:** `movePlayerToward(target.x, target.y)` until `dist <= attackRange`.
+*   **Manual Movement:** `moveTo(x, y)` sets `gameState.manualTarget`, prioritizing it over search/combat.
 *   **Route / Warp:** 
     - `checkWarpCollision(x, y)` scans current map's `activeWarps`.
     - Portals have a `spanX/Y` (collision box).

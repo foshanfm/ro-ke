@@ -1,12 +1,13 @@
 import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob, insertCard } from './player.js'
 import { getItemInfo, ItemType } from './items.js'
-import { startBot, stopBot, gameState } from './combat.js'
+import { startBot, stopBot, gameState, moveTo } from './combat.js'
 import { JobConfig, JobType } from './jobs.js'
 import { Skills } from './skills.js'
 import { getEquipInfo, EquipType } from './equipment.js'
 import { Maps } from './maps.js'
 import { runSimulation } from './simulator.js'
 import { castSkill } from './skillEngine.js'
+import { mapState } from './mapManager.js'
 
 const commands = {}
 
@@ -89,6 +90,33 @@ export function getCommandSuggestions(rawInput) {
 }
 
 // --- Command Definitions ---
+
+registerCommand({
+    name: 'move',
+    aliases: ['m'],
+    description: '移动到指定坐标 (用法: move <x> <y>)',
+    execute: (args, { log }) => {
+        if (args.length < 2) {
+            log('用法: move <x> <y>', 'error')
+            return
+        }
+        const x = parseInt(args[0])
+        const y = parseInt(args[1])
+        if (isNaN(x) || isNaN(y)) {
+            log('无效的坐标。', 'error')
+            return
+        }
+
+        // 边界检查
+        if (x < 0 || x > mapState.width || y < 0 || y > mapState.height) {
+            log(`超出地图边界！当前地图大小为: ${mapState.width}x${mapState.height}`, 'error')
+            return
+        }
+
+        log(`正在移动向 (${x}, ${y})...`, 'system')
+        moveTo(x, y)
+    }
+})
 
 registerCommand({
     name: 'auto',
@@ -460,15 +488,37 @@ registerCommand({
     suggest: (arg) => {
         return Object.entries(Maps)
             .filter(([id, m]) => id.includes(arg) || m.name.includes(arg))
-            .map(([id, m]) => ({ text: id, hint: m.name, type: 'arg' }))
+            .map(([id, m]) => ({ text: id, hint: `${m.name} (Lv.${m.minLv}-${m.maxLv})`, type: 'arg' }))
     },
     execute: (args, { log }) => {
         if (args.length === 0) {
-            log('[ 世界地图 ]', 'system')
-            for (const [id, m] of Object.entries(Maps)) {
-                log(`  ${id} : ${m.name} (Lv.${m.minLv}-${m.maxLv})`, 'dim')
+            log(`=== 世界地图一览 ===`, 'system')
+            const list = Object.entries(Maps)
+            list.forEach(([id, m]) => {
+                log(`  ${id.padEnd(14)} : ${m.name} (Lv.${m.minLv}-${m.maxLv})`, 'info')
+            })
+            log(`====================`, 'system')
+
+            log(`[当前位置: ${Maps[player.currentMap]?.name || player.currentMap}]`, 'system')
+            const warps = mapState.activeWarps || []
+            if (warps.length === 0) {
+                log('  (周围没有检测到传送阵)', 'dim')
+            } else {
+                warps.forEach(w => {
+                    const targetName = Maps[w.targetMap]?.name || w.targetMap
+                    log(`  >>> 前往 [${targetName}]`, 'success')
+                    log(`      位置: (${w.x}, ${w.y}) - 靠近自动传送`, 'dim')
+                })
             }
-            log(`输入 'map <id>' 进行移动。`, 'system')
+            log(`提示: 使用 'move <x> <y>' 走向传送点，或直接点右上角按钮。`, 'system')
+            if (warps.length === 0) {
+                log('  (无已知传送点)', 'dim')
+            } else {
+                warps.forEach(w => {
+                    log(`  -> ${w.targetMap} 位于 (${w.x}, ${w.y}) - ${w.name}`, 'dim')
+                })
+            }
+            log(`输入 'map <id>' 进行跳转,或 'move <x> <y>' 走向传送点。`, 'system')
         } else {
             const mapId = args[0]
             // 如果正在挂机，先停止

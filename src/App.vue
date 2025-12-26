@@ -6,9 +6,10 @@
   import { Maps } from './game/maps.js'
   import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggestions } from './game/commands.js'
   import { initializeGameData } from './game/DataManager.js'
-  import { setItemsDB } from './game/items.js'
-  import { setMonstersDB } from './game/monsters.js'
-  import { setSpawnData, setWarpData } from './game/mapManager.js'
+  import { setItemsDB, getItemInfo } from './game/items.js'
+  import { setMonstersDB, getMonster } from './game/monsters.js'
+  import { setSpawnData, setWarpData, mapState } from './game/mapManager.js'
+  import { moveTo } from './game/combat.js'
   import LoginScreen from './components/LoginScreen.vue'
 
   // --- 核心状态 ---
@@ -214,6 +215,38 @@
 
   const jobName = computed(() => JobConfig[player.job] ? JobConfig[player.job].name : player.job)
 
+  // 地图怪物列表
+  const mapMonsters = computed(() => {
+    const mapInfo = Maps[player.currentMap]
+    if (!mapInfo || !mapInfo.monsters) return []
+    
+    return mapInfo.monsters.map(m => {
+      const mobInfo = getMonster(m.id)
+      return {
+        id: m.id,
+        name: mobInfo?.name || `Monster ${m.id}`,
+        lv: mobInfo?.lv || '?'
+      }
+    })
+  })
+
+  // 地图传送点列表
+  const mapPortals = computed(() => {
+    if (!mapState.activeWarps) return []
+    return mapState.activeWarps.map(w => ({
+      x: w.x,
+      y: w.y,
+      targetMap: w.targetMap,
+      targetName: Maps[w.targetMap]?.name || w.targetMap,
+      name: w.name
+    }))
+  })
+
+  // 导航到传送点
+  const navigateToPortal = (x, y) => {
+    moveTo(x, y)
+  }
+
   </script>
   
   <template>
@@ -325,6 +358,39 @@
             <span>_</span>
             <span>□</span>
             <span>×</span>
+          </div>
+        </div>
+
+        <!-- Map Navigation Panel -->
+        <div class="bg-gray-800 border-b border-gray-600 p-2 text-xs shrink-0">
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Monsters -->
+            <div>
+              <div class="text-cyan-400 font-bold mb-1">地图生物</div>
+              <div class="space-y-0.5">
+                <div v-if="mapMonsters.length === 0" class="text-gray-500">无数据</div>
+                <div v-for="mob in mapMonsters" :key="mob.id" class="text-gray-300">
+                  <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Portals -->
+            <div>
+              <div class="text-cyan-400 font-bold mb-1">已知出口</div>
+              <div class="space-y-0.5">
+                <div v-if="mapPortals.length === 0" class="text-gray-500">无传送点</div>
+                <button 
+                  v-for="(portal, idx) in mapPortals" 
+                  :key="idx"
+                  @click="navigateToPortal(portal.x, portal.y)"
+                  class="block w-full text-left px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-200 transition-colors"
+                >
+                  → {{ portal.targetName }}
+                  <span class="text-gray-500 text-[10px]">({{ portal.x }}, {{ portal.y }})</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
     

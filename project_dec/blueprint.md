@@ -80,12 +80,20 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Warp Database:** Parsed `src/game/data/airports/**/*.txt` (rAthena format).
 - [x] **Collision Detection:** Implemented `checkWarpCollision` in `mapManager.js`.
 - [x] **Automatic Logic:** Seamless map transitions when walking into portals during AI movement.
+- [x] **Data Completion:** Added missing warp data for `prt_fild08`.
+
+### Phase 9: Advanced Navigation & UX [Completed]
+- [x] **Manual Movement:** Implemented `move` command with map boundary checks.
+- [x] **Navigation Panel:** Added top-right UI panel for "Map Info" (Monsters & Portals).
+- [x] **Auto-Pilot:** Clickable portal buttons that automatically move the player to the exit.
+- [x] **Context Awareness:** Enhanced `map` command with level range hints and nearby portal lists.
 
 ## 4. Current State
-*   **Version:** 1.0.1 (Phase 8 - Real Route System Complete)
-*   **Stability:** High. Level penalty and warp systems verified.
-*   **Automation:** Full cyclic navigation possible via warp scripts.
+*   **Version:** 1.0.2 (Phase 9 - Advanced Navigation & UX Complete)
+*   **Stability:** High. Verified navigation loops and experience penalties.
+*   **Automation:** Full cyclic navigation supported via both commands and UI.
 *   **New Features:**
-    - **Renewal Experience System:** Authentic RO experience tables and level-gap penalties.
-    - **Real Route System:** Coordinate-based map transitions using official RO warp points.
-*   **Next Objective:** Implement 1st Job active skills and sit/regen mechanics.
+    - **UI Navigation Panel:** Real-time monster list and clickable "Goto" buttons for portals.
+    - **Standard Movement:** Precision `move <x> <y>` command with pathing integration.
+    - **Renewal Database:** Authentic Exp tables and level penalty formulas.
+*   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

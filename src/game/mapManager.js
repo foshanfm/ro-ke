@@ -182,12 +182,12 @@ export function movePlayerToward(tx, ty, speed = 5) {
     const dist = Math.sqrt(dx * dx + dy * dy)
 
     if (dist <= speed) {
-        player.x = tx
-        player.y = ty
+        player.x = Math.max(0, Math.min(mapState.width, tx))
+        player.y = Math.max(0, Math.min(mapState.height, ty))
         return true // 到达目的地
     } else {
-        player.x += (dx / dist) * speed
-        player.y += (dy / dist) * speed
+        player.x = Math.max(0, Math.min(mapState.width, player.x + (dx / dist) * speed))
+        player.y = Math.max(0, Math.min(mapState.height, player.y + (dy / dist) * speed))
         return false // 还在路上
     }
 }
