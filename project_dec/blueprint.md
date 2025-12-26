@@ -158,16 +158,32 @@ A web-based idle game recreating the experience of using automated botting softw
     - [x] Unified `attackRange` and `viewRange` (30 Cells) for better engagement.
     - [x] Smooth Monster Chasing: Reaction-delay-aware movement scaling.
 
+### Phase 16: Hyper-Interactive UX & Content Gating Lifted [Completed]
+- [x] **Content Gating Lifted**: Monster level cap raised to 99; all spawn data processed.
+- [x] **Slot Expansion**: 
+    - [x] Implemented `HEAD_TOP`, `HEAD_MID`, `HEAD_LOW`, `GARMENT`, `FOOTGEAR`, `ACCESSORY1`, `ACCESSORY2`.
+    - [x] Updated `dataLoader.js` to parse `Location` bitmasks (item_db index 14).
+    - [x] Refactored `equipItem` to handle multi-slot targeting and accessory prioritization.
+- [x] **Interactive Console**:
+    - [x] Log segments: Entity names clickable via `[Name]` tags.
+    - [x] **Details Panel**: Persistent right-side overlay showing full entity/item attributes.
+    - [x] **Stats Modal**: UI-based attribute allocation (detailed stat display + point spending).
+- [x] **Smart Bot Navigation**:
+    - [x] **Navigation Graph**: Implemented BFS pathfinding over `warpDB` in `navigation.js`.
+    - [x] **Auto-Return**: Bot now automatically finds a path back to the target map if Stray/Dead.
+    - [x] **Interactive Navigation**: `auto <MapName>` command with map name suggestions.
+- [x] **Authentic Mechanics**:
+    - [x] **Data-Driven Drops**: Drops now pulled directly from `mob_db.txt` instead of proxy tables.
+    - [x] **Consumables**: Implemented HP/SP recovery logic for core potions (Red/Org/Yel/Whi/Blu).
+    - [x] **Responsive Movement**: `moveTo` now interrupts AI action wait for instant response.
+
 ## 4. Current State
-*   **Version:** 1.5.0 (Phase 15 - Save Points & Responsiveness Complete)
-*   **Stability:** High. Combat logic now supports kiting, varied weapon ranges, and localized spawning.
+*   **Version:** 1.6.0 (Phase 16 - UX & Smart Bot Complete)
+*   **Stability:** High. Content cap unlocked. UI is highly interactive.
 *   **Performance:** Optimal.
 *   **New Features:**
-    - **Kiting Support**: Ranged characters can "free hit" chasing monsters.
-    - **Weapon Realism**: Spears reach further than Daggers; Bows have long range.
-    - **Smart AI**: Monsters chase before attacking.
-    - **Patrol System**: Players walk to destinations instead of teleporting.
-    - **Area Spawning**: Monsters spawn in designated zones according to scripts.
-    - **Save Point System**: Death is no longer a soft-lock; players respawn at cities.
-    - **High Responsiveness**: Faster movement and tighter 10px grid.
-*   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.
+    - **Smart Navigation**: Bot can walk across multiple maps to reach targets.
+    - **Interactive Logs**: Click any entity to see its drop table and stats.
+    - **Stat UI**: Modal-based allocation.
+    - **Data-Driven Content**: All drops and monster levels now match the DB exactly.
+*   **Next Objective:** Transition from TXT to JSON data pipeline for better maintainability and script execution.

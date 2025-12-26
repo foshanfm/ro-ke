@@ -6,13 +6,15 @@ import { calcAspdDelay, calculateDamageFlow } from './formulas'
 import { calculateDrops } from './drops'
 import { PassiveHooks } from './skillEngine'
 import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, removeMonster, checkWarpCollision } from './mapManager'
+import { findPath } from './navigation' // Import findPath
 
 // 游戏循环状态
 export const gameState = reactive({
     isAuto: false,
+    goalMap: null, // 目标挂机地图
     currentMonster: null, // 当前锁定的目标
     manualTarget: null, // 手动移动目标 { x, y }
-    status: 'IDLE', // IDLE, MOVING, ATTACKING, SEARCHING
+    status: 'IDLE', // IDLE, MOVING, ATTACKING, SEARCHING, RETURNING
     lastActionLog: '' // 防止重复打日志
 })
 
@@ -59,7 +61,12 @@ export function startBot() {
     // 初始化地图
     initMap(player.currentMap)
 
-    log(`AI Initiated (Session ${currentSession}) on ${player.currentMap}.`, 'system')
+    // 设置目标地图为当前地图(如果未设置或刚启动)
+    // 如果是从 auto <MapName> 命令启动，则在这里之前已经设置过 goalMap
+    // 这里我们假设 startBot 时如果没有 goalMap，就默认为当前地图
+    if (!gameState.goalMap) gameState.goalMap = player.currentMap
+
+    log(`AI Initiated (Session ${currentSession}). Target: ${gameState.goalMap}.`, 'system')
 
     clearLoops()
     aiTick(currentSession)
@@ -68,6 +75,7 @@ export function startBot() {
 export function stopBot() {
     gameState.isAuto = false
     gameState.status = 'IDLE'
+    gameState.goalMap = null // Clear goal on stop
     gameState.currentMonster = null
     gameState.manualTarget = null
     clearLoops()
@@ -80,8 +88,15 @@ export function stopBot() {
  */
 export function moveTo(x, y) {
     gameState.manualTarget = { x, y }
+
+    // 如果 bot 没开，启动它
     if (!gameState.isAuto) {
         startBot()
+    } else {
+        // 如果 bot 开着，我们可能需要立即刷新 aiTick 以响应移动，
+        // 而不是等待当前的 attackDelay 结束
+        clearLoops() // 清除当前的 setTimeout
+        aiTick(combatSessionId) // 重新触发一个 Tick
     }
 }
 
@@ -140,7 +155,62 @@ async function aiTick(sessionId) {
 
         checkAutoPotion()
 
-        // 0. 优先处理手动移动目标
+        // 0. 检查是否在目标地图
+        if (gameState.goalMap && player.currentMap !== gameState.goalMap) {
+            gameState.status = 'RETURNING'
+            // 寻路返回
+            const path = findPath(player.currentMap, gameState.goalMap)
+
+            if (!path || path.length < 2) {
+                log(`无法找到返回 ${gameState.goalMap} 的路径!`, 'error')
+                stopBot()
+                return
+            }
+
+            const nextMap = path[1] // path[0] is current
+
+            // 寻找通往 nextMap 的传送点
+            // mapState.activeWarps 应该包含所有传送点信息
+            // activeWarps: [{x, y, targetMap, name}]
+            const warpToNext = mapState.activeWarps.find(w => w.targetMap === nextMap)
+
+            if (warpToNext) {
+                if (gameState.lastActionLog !== `return_${nextMap}`) {
+                    log(`Returning to ${gameState.goalMap}... Next step: ${nextMap}`, 'system')
+                    gameState.lastActionLog = `return_${nextMap}`
+                }
+
+                // 移动向传送点
+                movePlayerToward(warpToNext.x, warpToNext.y, player.moveSpeed)
+
+                // 检查是否触碰传送点 (复用原有逻辑)
+                const warpInfo = checkWarpCollision(player.x, player.y)
+                if (warpInfo) {
+                    // ... warp logic (reuse existing block via function extraction could be better, but inline works)
+                    log(`进入传送点 [${warpInfo.name}]...`, 'warning')
+                    // 暂时停止一下让 warp 生效，不要 stopBot，因为我们要跨图
+                    // 但目前的 warp 实现是立即生效 + 异步
+                    // 我们不需要 stopBot，只需要让这一帧结束，等待 warp 更新 map
+                    const res = warp(warpInfo.targetMap)
+                    if (res.success) {
+                        // Warp successful
+                        // Update player pos slightly to avoid immediate re-warp if bidirectional (handled by offset)
+                        // But wait, warp() changes map, InitMap will trigger.
+                        // On next aiTick, player.currentMap will be new map.
+                        return
+                    }
+                }
+            } else {
+                // 找不到传送点 (可能是 warp 数据缺失)
+                log(`Unknown warp to ${nextMap} on current map!`, 'error')
+                stopBot()
+            }
+
+            mainLoopId = setTimeout(() => aiTick(sessionId), 100)
+            return
+        }
+
+        // 1. 优先处理手动移动目标
         if (gameState.manualTarget) {
             gameState.status = 'MOVING'
             const { x, y } = gameState.manualTarget
@@ -186,7 +256,7 @@ async function aiTick(sessionId) {
             if (monster) {
                 gameState.currentMonster = monster
                 const mobTemplate = getMobTemplate(monster)
-                log(`Monster ${mobTemplate.name} detected at (${Math.floor(monster.x / 10)}, ${Math.floor(monster.y / 10)})!`, 'dim')
+                log(`[${mobTemplate.name}] detected at (${Math.floor(monster.x / 10)}, ${Math.floor(monster.y / 10)})!`, 'dim')
                 gameState.lastActionLog = '' // 重置动作日志
             } else {
                 // 没怪，随机漫步 (巡逻)
@@ -221,7 +291,7 @@ async function aiTick(sessionId) {
             const mobTemplate = getMobTemplate(target)
 
             if (gameState.lastActionLog !== `chase_${target.guid}`) {
-                log(`Moving toward ${mobTemplate.name} at (${Math.floor(target.x / 10)}, ${Math.floor(target.y / 10)})...`, 'dim')
+                log(`Moving toward [${mobTemplate.name}] at (${Math.floor(target.x / 10)}, ${Math.floor(target.y / 10)})...`, 'dim')
                 gameState.lastActionLog = `chase_${target.guid}`
             }
 
@@ -266,13 +336,13 @@ async function aiTick(sessionId) {
         })
 
         if (res.type === 'miss') {
-            log(`You miss ${targetTemplate.name}!`, 'dim')
+            log(`You miss [${targetTemplate.name}]!`, 'dim')
         } else {
             let damage = res.damage
             if (passiveRes.damageMod !== 1.0) damage = Math.floor(damage * passiveRes.damageMod)
 
             if (res.type === 'crit') log(`CRITICAL! You deal ${damage} damage.`, 'warning')
-            else log(`You attack ${targetTemplate.name} for ${damage} damage.`, 'default')
+            else log(`You attack [${targetTemplate.name}] for ${damage} damage.`, 'default')
 
             passiveRes.logs.forEach(l => log(l.msg, l.type))
 
@@ -373,7 +443,7 @@ async function monsterActionLoop(sessionId) {
 
 function monsterDead(target) {
     const targetTemplate = getMobTemplate(target)
-    log(`${targetTemplate.name} died.`, 'success')
+    log(`[${targetTemplate.name}] died.`, 'success')
 
     const jobExp = targetTemplate.jobExp || Math.ceil(targetTemplate.exp * 0.6)
     const { leveledUp, jobLeveledUp, finalBase, finalJob } = addExp(targetTemplate.exp, jobExp, targetTemplate.lv)
@@ -389,7 +459,7 @@ function monsterDead(target) {
         const info = getItemInfo(drop.id)
         const typeStr = drop.type === 'rare' ? '[RARE] ' : ''
         const style = drop.type === 'rare' ? 'warning' : 'success'
-        log(`Loot: ${typeStr}${info.name} x ${drop.count}`, style)
+        log(`Loot: ${typeStr}[${info.name}] x ${drop.count}`, style)
     })
 
     // 从地图移除怪物

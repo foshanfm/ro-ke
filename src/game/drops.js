@@ -99,20 +99,35 @@ export const DropTables = {
 }
 
 // 核心掉落计算
-export function calculateDrops(monsterId) {
-    const table = DropTables[monsterId]
-    if (!table) return []
+import { getMonster } from './monsters'
 
+export function calculateDrops(monsterId) {
     const results = []
     const pity = getPity(monsterId)
+    const template = getMonster(monsterId)
+
+    // 优先使用数据库加载的掉落数据
+    if (template && template.drops && template.drops.length > 0) {
+        template.drops.forEach(drop => {
+            // RO 数据库中的概率通常是 0-1 (或者 10000 = 100%)
+            // 已经在 dataLoader 中转换为 0-1 了
+            if (Math.random() < drop.rate) {
+                // 简单判定 rare: 概率小于 1% 的视为 rare
+                const type = drop.rate < 0.01 ? 'rare' : 'normal'
+                results.push({ id: drop.id, count: 1, type: type })
+            }
+        })
+        return results
+    }
+
+    // 后备：使用硬编码的掉落表
+    const table = DropTables[monsterId]
+    if (!table) return []
 
     // 1. Normal Drops (无保底，受倍率影响)
     if (table.normal) {
         for (const drop of table.normal) {
-            // 基础概率 (万分比)
             let rate = drop.rate
-            // 这里可以乘玩家/地图倍率
-            
             if (Math.random() * 10000 < rate) {
                 results.push({ id: drop.id, count: 1, type: 'normal' })
             }
@@ -124,9 +139,7 @@ export function calculateDrops(monsterId) {
         let hasRare = false
         for (const drop of table.rare) {
             let baseRate = drop.rate
-            // 软保底: 每杀一只没出，概率增加 0.05% (5点)
             let effectiveRate = baseRate + (pity.rareCounter * 5)
-            // 上限 10倍
             effectiveRate = Math.min(effectiveRate, baseRate * 10)
 
             if (Math.random() * 10000 < effectiveRate) {
@@ -136,9 +149,9 @@ export function calculateDrops(monsterId) {
         }
 
         if (hasRare) {
-            pity.rareCounter = 0 // 重置保底
+            pity.rareCounter = 0
         } else {
-            pity.rareCounter++ // 积累怨气
+            pity.rareCounter++
         }
     }
 

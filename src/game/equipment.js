@@ -1,12 +1,16 @@
-// src/game/equipment.js
-
 export const EquipType = {
     WEAPON: 'Weapon',
     SHIELD: 'Shield',
+    HEAD_TOP: 'HeadTop',
+    HEAD_MID: 'HeadMid',
+    HEAD_LOW: 'HeadLow',
     ARMOR: 'Armor',
-    HEAD: 'Head',
-    ACCESSORY: 'Accessory'
+    GARMENT: 'Garment',
+    FOOTGEAR: 'Footgear',
+    ACCESSORY1: 'Accessory1',
+    ACCESSORY2: 'Accessory2'
 }
+
 
 // 武器类型 (用于技能判定和攻速计算)
 export const WeaponType = {

@@ -21,11 +21,58 @@ const fallbackItemsDB = {
     price: 50,
     desc: '恢复少量 HP (约45点)。',
     effect: (player) => {
-      // 恢复 30 ~ 60 点 HP
-      const healAmount = Math.floor(30 + Math.random() * 30)
+      const healAmount = Math.floor(40 + Math.random() * 20)
       const oldHp = player.hp
       player.hp = Math.min(player.maxHp, player.hp + healAmount)
-      return player.hp - oldHp // 返回实际恢复量
+      return { type: 'hp', value: player.hp - oldHp }
+    }
+  },
+  502: {
+    name: '橙色药水',
+    type: ItemType.USABLE,
+    price: 200,
+    desc: '中量恢复 HP (约105点)。',
+    effect: (player) => {
+      const healAmount = Math.floor(90 + Math.random() * 30)
+      const oldHp = player.hp
+      player.hp = Math.min(player.maxHp, player.hp + healAmount)
+      return { type: 'hp', value: player.hp - oldHp }
+    }
+  },
+  503: {
+    name: '黄色药水',
+    type: ItemType.USABLE,
+    price: 550,
+    desc: '较大量恢复 HP (约175点)。',
+    effect: (player) => {
+      const healAmount = Math.floor(150 + Math.random() * 50)
+      const oldHp = player.hp
+      player.hp = Math.min(player.maxHp, player.hp + healAmount)
+      return { type: 'hp', value: player.hp - oldHp }
+    }
+  },
+  504: {
+    name: '白色药水',
+    type: ItemType.USABLE,
+    price: 1200,
+    desc: '大量恢复 HP (约400点)。',
+    effect: (player) => {
+      const healAmount = Math.floor(350 + Math.random() * 100)
+      const oldHp = player.hp
+      player.hp = Math.min(player.maxHp, player.hp + healAmount)
+      return { type: 'hp', value: player.hp - oldHp }
+    }
+  },
+  505: {
+    name: '蓝色药水',
+    type: ItemType.USABLE,
+    price: 5000,
+    desc: '恢复少量 SP (约60点)。',
+    effect: (player) => {
+      const healAmount = Math.floor(50 + Math.random() * 20)
+      const oldSp = player.sp
+      player.sp = Math.min(player.maxSp, player.sp + healAmount)
+      return { type: 'sp', value: player.sp - oldSp }
     }
   },
 
@@ -78,4 +125,32 @@ export function getItemInfo(id) {
  */
 export function isItemsDBLoaded() {
   return Object.keys(itemsDB).length > 0
+}
+/**
+ * 根据名称获取物品 (模糊查询)
+ */
+export function getItemByName(name) {
+  const cleanName = name.toLowerCase()
+
+  // 1. 查加载库
+  for (const item of Object.values(itemsDB)) {
+    if (item.name.toLowerCase() === cleanName) return item
+  }
+  for (const item of Object.values(itemsDB)) {
+    if (item.name.toLowerCase().includes(cleanName)) return item
+  }
+
+  // 2. 查后备库
+  for (const item of Object.values(fallbackItemsDB)) {
+    if (item.name.toLowerCase().includes(cleanName)) return item
+  }
+
+  // 3. 查装备库
+  for (const id in EquipDB) {
+    if (EquipDB[id].name.toLowerCase().includes(cleanName)) {
+      return { ...EquipDB[id], type: ItemType.EQUIP }
+    }
+  }
+
+  return null
 }

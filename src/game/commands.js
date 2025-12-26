@@ -121,8 +121,23 @@ registerCommand({
 registerCommand({
     name: 'auto',
     aliases: ['start'],
-    description: '开始自动战斗',
+    description: '开始自动战斗 (用法: auto [mapId])',
+    suggest: (arg) => {
+        return Object.entries(Maps)
+            .filter(([id, m]) => id.includes(arg) || m.name.includes(arg))
+            .map(([id, m]) => ({ text: id, hint: m.name, type: 'arg' }))
+    },
     execute: (args, { log }) => {
+        if (args.length > 0) {
+            const mapId = args[0]
+            if (Maps[mapId]) {
+                gameState.goalMap = mapId
+                log(`目标地图设定为: ${Maps[mapId].name} (${mapId})`, 'system')
+            } else {
+                log(`未知地图: ${mapId}`, 'error')
+                return
+            }
+        }
         startBot()
     }
 })

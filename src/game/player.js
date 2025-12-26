@@ -17,9 +17,14 @@ const defaultStats = {
     equipment: {
         [EquipType.WEAPON]: null,
         [EquipType.SHIELD]: null,
+        [EquipType.HEAD_TOP]: null,
+        [EquipType.HEAD_MID]: null,
+        [EquipType.HEAD_LOW]: null,
         [EquipType.ARMOR]: null,
-        [EquipType.HEAD]: null,
-        [EquipType.ACCESSORY]: null
+        [EquipType.GARMENT]: null,
+        [EquipType.FOOTGEAR]: null,
+        [EquipType.ACCESSORY1]: null,
+        [EquipType.ACCESSORY2]: null
     },
     config: {
         auto_hp_percent: 0,
@@ -231,16 +236,28 @@ export async function loadGame(saveId) {
 
         // 装备兼容性处理
         if (parsed.equipment) {
-            Object.keys(parsed.equipment).forEach(slot => {
-                const val = parsed.equipment[slot]
-                if (val !== null && typeof val !== 'object') {
-                    const info = EquipDB[val]
-                    parsed.equipment[slot] = {
-                        id: val,
-                        cards: info && info.slots ? new Array(info.slots).fill(null) : []
-                    }
+            if (parsed.equipment) {
+                // Migration for old slots
+                if (parsed.equipment['Head']) {
+                    parsed.equipment[EquipType.HEAD_TOP] = parsed.equipment['Head']
+                    delete parsed.equipment['Head']
                 }
-            })
+                if (parsed.equipment['Accessory']) {
+                    parsed.equipment[EquipType.ACCESSORY1] = parsed.equipment['Accessory']
+                    delete parsed.equipment['Accessory']
+                }
+
+                Object.keys(parsed.equipment).forEach(slot => {
+                    const val = parsed.equipment[slot]
+                    if (val !== null && typeof val !== 'object') {
+                        const info = getItemInfo(val) // Use global parser
+                        parsed.equipment[slot] = {
+                            id: val,
+                            cards: info && info.slots ? new Array(info.slots).fill(null) : []
+                        }
+                    }
+                })
+            }
         }
 
         Object.assign(player, parsed)
@@ -276,9 +293,14 @@ export async function loadGame(saveId) {
             player.equipment = {
                 [EquipType.WEAPON]: null,
                 [EquipType.SHIELD]: null,
+                [EquipType.HEAD_TOP]: null,
+                [EquipType.HEAD_MID]: null,
+                [EquipType.HEAD_LOW]: null,
                 [EquipType.ARMOR]: null,
-                [EquipType.HEAD]: null,
-                [EquipType.ACCESSORY]: null
+                [EquipType.GARMENT]: null,
+                [EquipType.FOOTGEAR]: null,
+                [EquipType.ACCESSORY1]: null,
+                [EquipType.ACCESSORY2]: null
             }
         }
 
@@ -530,9 +552,10 @@ export function equipItem(itemNameOrId) {
     }
 
     const invSlot = player.inventory[slotIndex]
-    const equipData = EquipDB[invSlot.id]
+    // Use getItemInfo for richer data (including item_db.txt) instead of just EquipDB
+    const equipData = getItemInfo(invSlot.id)
 
-    if (!equipData) {
+    if (!equipData || equipData.type !== ItemType.EQUIP) {
         return { success: false, msg: '这不是一件可装备的物品。' }
     }
 
@@ -540,14 +563,32 @@ export function equipItem(itemNameOrId) {
         return { success: false, msg: `等级不足 (需要 Lv.${equipData.reqLv})` }
     }
 
-    const type = equipData.type
 
-    if (player.equipment[type]) {
-        const oldInstance = player.equipment[type]
+    // Determine target slot
+    let targetSlot = equipData.subType // e.g., Weapon, Shield, Armor, etc. from dataLoader mapping
+
+    // Special handling for Accessories (1 or 2)
+    if (targetSlot === 'Accessory') {
+        if (!player.equipment[EquipType.ACCESSORY1]) targetSlot = EquipType.ACCESSORY1
+        else if (!player.equipment[EquipType.ACCESSORY2]) targetSlot = EquipType.ACCESSORY2
+        else targetSlot = EquipType.ACCESSORY1 // Default to 1 if both full
+    } else if (targetSlot === 'Head') {
+        // Default headgear to Top if not specified (should be mapped in dataLoader)
+        targetSlot = EquipType.HEAD_TOP
+    }
+
+    // Check if subType is a valid slot key
+    if (!player.equipment.hasOwnProperty(targetSlot)) {
+        // Try to map raw type if needed, or error out
+        return { success: false, msg: `无法装备: 未知的部位类型 (${targetSlot})` }
+    }
+
+    if (player.equipment[targetSlot]) {
+        const oldInstance = player.equipment[targetSlot]
         addItem(oldInstance.id, 1)
     }
 
-    player.equipment[type] = invSlot.instance || {
+    player.equipment[targetSlot] = invSlot.instance || {
         id: invSlot.id,
         cards: equipData.slots ? new Array(equipData.slots).fill(null) : []
     }
@@ -654,12 +695,10 @@ export function useItem(itemNameOrId) {
 
     let effectMsg = ''
     if (info.effect) {
-        const val = info.effect(player)
-        if (val > 0) {
-            effectMsg = `(HP +${val})`
+        const result = info.effect(player)
+        if (result && result.value > 0) {
+            effectMsg = `(${result.type.toUpperCase()} +${result.value})`
         }
-    } else {
-        return { success: false, msg: '物品没有任何效果。' }
     }
 
     invSlot.count--
@@ -668,7 +707,7 @@ export function useItem(itemNameOrId) {
     }
 
     saveGame()
-    return { success: true, msg: `使用了 ${info.name} ${effectMsg}` }
+    return { success: true, msg: `使用了 [${info.name}] ${effectMsg}` }
 }
 
 export function setConfig(key, value) {

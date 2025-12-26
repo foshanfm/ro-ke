@@ -1,13 +1,13 @@
 <script setup>
   import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue' 
-  import { player, saveGame } from './game/player.js'
+  import { player, saveGame, getStatPointCost } from './game/player.js'
   import { setLogCallback, startRecovery, gameState } from './game/combat.js'
   import { JobConfig } from './game/jobs.js'
   import { Maps } from './game/maps.js'
   import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggestions } from './game/commands.js'
   import { initializeGameData } from './game/DataManager.js'
-  import { setItemsDB, getItemInfo } from './game/items.js'
-  import { setMonstersDB, getMonster } from './game/monsters.js'
+  import { setItemsDB, getItemInfo, getItemByName } from './game/items.js'
+  import { setMonstersDB, getMonster, getMonsterByName } from './game/monsters.js'
   import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
   import { moveTo } from './game/combat.js'
   import LoginScreen from './components/LoginScreen.vue'
@@ -24,6 +24,21 @@
   // --- 智能提示状态 ---
   const showSuggestions = ref(false)
   const suggestionIndex = ref(0)
+  
+  // --- 交互详情状态 ---
+  const selectedDetail = ref(null) // { type: 'item'|'monster', data: ... }
+  const showStatsModal = ref(false)
+  
+  // --- 素质点加点 ---
+  import { increaseStat } from './game/player.js'
+  const handleIncreaseStat = (stat) => {
+      const res = increaseStat(stat)
+      if (res.success) {
+          addLog(res.msg, 'success')
+      } else {
+          addLog(res.msg, 'error')
+      }
+  }
   
   // 基础指令库 (动态获取)
   const baseCommands = computed(() => getCommandNames())
@@ -88,10 +103,98 @@
 
   
   // --- 日志系统 ---
+  // --- 日志系统 ---
+  // 解析日志中的 [Name] 模式，使其可点击
+  // 格式: [Type:ID:Name] 
+  // 例如: [Item:501:Red Potion], [Monster:1001:Poring]
+  // 简化版我们可以在逻辑层生成日志时就把 ID 埋进去，或者简单点正则匹配名称
+  // 为了健壮性，我们修改 combat.js 发送日志的格式，或者在这里做文本匹配
+  // 现阶段这里做简单文本匹配: 如果日志包含 "Loot: [RARE] Name"
+  
   const addLog = (msg, type = 'info') => {
     const time = new Date().toLocaleTimeString('zh-CN', { hour12: false })
     if (logs.value.length > 200) logs.value.shift()
-    logs.value.push({ time, msg, type })
+    
+    // 解析交互实体
+    // 简单正则: 匹配 [Name]
+    // 更好的方式是让 msg 本身是一个对象结构，但为了兼容旧代码，我们先做简单处理
+    // 在这里我们不改变 msg 存储结构，而是在 template里用 v-html 或组件渲染
+    // 但 Vue 推荐数据驱动。
+    
+    // 方案: 存储 parsedMsg 数组
+    const parsedSegments = []
+    const regex = /\[(.*?)\]/g
+    let lastIndex = 0
+    let match
+    
+    while ((match = regex.exec(msg)) !== null) {
+        // Text before match
+        if (match.index > lastIndex) {
+            parsedSegments.push({ text: msg.substring(lastIndex, match.index), type: 'text' })
+        }
+        
+        const content = match[1] // e.g., "RARE", "Poring", "Red Potion"
+        // 尝试判断类型 (这很脆弱，但在有限的日志格式下可行)
+        // 比如: [RARE] 是修饰符， [Name] 是实体
+        // 我们可以约定，游戏逻辑发出的日志，实体用特殊标记，比如 {Item:501}
+        // 但为了不重构 combat.js 所有日志，我们先只针对 UI 
+        
+        // 临时方案: 只是把 [] 里的内容高亮，点击尝试搜索名字
+        parsedSegments.push({ 
+            text: `[${content}]`, 
+            type: 'interactive', 
+            content: content 
+        })
+        
+        lastIndex = regex.lastIndex
+    }
+    
+    if (lastIndex < msg.length) {
+        parsedSegments.push({ text: msg.substring(lastIndex), type: 'text' })
+    }
+    
+    logs.value.push({ time, msg, type, segments: parsedSegments.length > 0 ? parsedSegments : null })
+  }
+
+  const handleEntityClick = (name) => {
+      // 去除修饰符如 RARE 和 [] 以及空格
+      const cleanName = name.replace('RARE', '').replace('[', '').replace(']', '').trim()
+      if (!cleanName) return
+
+      console.log(`[UI] Clicking entity: ${cleanName}`)
+
+      // 1. 尝试从当前地图怪物找
+      const mobOnMap = mapMonsters.value.find(m => m.name.toLowerCase().includes(cleanName.toLowerCase()))
+      if (mobOnMap) {
+          const template = getMonster(mobOnMap.id)
+          if (template) {
+              selectedDetail.value = { type: 'Monster', data: template }
+              return
+          }
+      }
+      
+      // 2. 尝试从背包/装备找
+      const itemInInv = player.inventory.find(i => getItemInfo(i.id).name.toLowerCase().includes(cleanName.toLowerCase()))
+      if (itemInInv) {
+           const info = getItemInfo(itemInInv.id)
+           selectedDetail.value = { type: 'Item', data: info }
+           return
+      }
+
+      // 3. 深度搜索: 直接查 DB
+      const mobFromDB = getMonsterByName(cleanName)
+      if (mobFromDB) {
+          selectedDetail.value = { type: 'Monster', data: mobFromDB }
+          return
+      }
+
+      const itemFromDB = getItemByName(cleanName)
+      if (itemFromDB) {
+          selectedDetail.value = { type: 'Item', data: itemFromDB }
+          return
+      }
+      
+      console.warn(`[UI] Entity not found in DB: ${cleanName}`)
   }
 
   const clearLogs = () => {
@@ -352,6 +455,9 @@
               <div class="text-gray-400">Flee</div><div class="text-right">{{ player.flee }}</div>
               <div class="text-gray-400">Aspd</div><div class="text-right">{{ player.aspd }}</div>
           </div>
+          <button @click="showStatsModal = true" class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-xs py-1 rounded text-cyan-400">
+              详细素质点 & 加点
+          </button>
 
           <!-- Assets -->
           <div class="pt-2 border-t border-gray-700">
@@ -429,9 +535,73 @@
               'text-cyan-600': log.type === 'system',      
               'text-gray-500': log.type === 'dim',         
               'text-gray-100': log.type === 'default'
-            }">{{ log.msg }}</span>
+            }">
+                <template v-if="log.segments">
+                    <span v-for="(seg, idx) in log.segments" :key="idx" 
+                          :class="{'cursor-pointer underline hover:text-white': seg.type === 'interactive'}"
+                          @click="seg.type === 'interactive' && handleEntityClick(seg.content)"
+                    >{{ seg.text }}</span>
+                </template>
+                <template v-else>{{ log.msg }}</template>
+            </span>
           </div>
         </div>
+
+        <!-- Details Panel (Overlay on right side) -->
+        <div v-if="selectedDetail" class="absolute right-0 top-10 w-64 bg-gray-900 border-l border-gray-600 h-3/4 p-2 overflow-y-auto shadow-lg bg-opacity-95">
+            <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+                <span class="text-yellow-500 font-bold">{{ selectedDetail.type }} Info</span>
+                <button @click="selectedDetail = null" class="text-red-500 font-bold">×</button>
+            </div>
+            <div class="text-xs space-y-2">
+                <div v-if="selectedDetail.data.name" class="font-bold text-lg text-white">{{ selectedDetail.data.name }}</div>
+                
+                <!-- Special Layout for Drops -->
+                <div v-for="(val, key) in selectedDetail.data" :key="key">
+                    <template v-if="key === 'drops' && Array.isArray(val)">
+                        <div class="mt-2 bg-black bg-opacity-30 p-2 rounded border border-gray-800">
+                            <div class="text-cyan-400 font-bold border-b border-gray-700 pb-1 mb-1 mb-2 flex justify-between">
+                                <span>掉落物品</span>
+                                <span class="text-[10px] text-gray-500 font-normal">概率</span>
+                            </div>
+                            <div v-for="drop in val" :key="drop.id" class="flex justify-between py-0.5 hover:bg-gray-800 px-1 rounded transition-colors">
+                                <span class="text-gray-300">{{ getItemInfo(drop.id).name }}</span>
+                                <span :class="drop.rate < 0.01 ? 'text-orange-400' : 'text-yellow-600'">
+                                    {{ (drop.rate * 100).toFixed(drop.rate < 0.001 ? 3 : 2) }}%
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else-if="!['id', 'templateId', 'guid', 'isAggressive', 'lastAttackTime', 'x', 'y', 'name'].includes(key) && val !== null && typeof val !== 'object'">
+                        <div class="flex justify-between border-b border-gray-800 py-1 px-1">
+                            <span class="text-gray-500 capitalize">{{ key }}</span>
+                            <span class="text-gray-200 font-mono">{{ val }}</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+    <!-- Stats Modal -->
+    <div v-if="showStatsModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" @click.self="showStatsModal = false">
+        <div class="bg-gray-800 border border-gray-600 p-4 rounded w-96 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white">素质点分配</h3>
+                 <span class="text-yellow-500">剩余点数: {{ player.statPoints }}</span>
+            </div>
+            <div class="space-y-2 text-sm">
+                <div v-for="stat in ['Str', 'Agi', 'Vit', 'Int', 'Dex', 'Luk']" :key="stat" class="flex items-center justify-between bg-gray-900 p-2 rounded">
+                    <span class="w-8 font-bold text-gray-400">{{ stat }}</span>
+                    <span class="text-white font-mono text-lg">{{ player[stat.toLowerCase()] }}</span>
+                    <div class="flex items-center gap-2">
+                         <span class="text-gray-500 text-xs">Cost: {{ getStatPointCost(player[stat.toLowerCase()]) }}</span>
+                         <button @click="handleIncreaseStat(stat.toLowerCase())" class="bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded">+</button>
+                    </div>
+                </div>
+            </div>
+            <button @click="showStatsModal = false" class="mt-4 w-full bg-gray-700 hover:bg-gray-600 py-2 rounded">关闭</button>
+        </div>
+    </div>
 
         <!-- 智能提示浮窗 -->
         <div v-if="suggestions.length > 0 && userCommand" class="bg-gray-800 border-t border-gray-600 text-gray-300 px-2 py-1 absolute bottom-8 left-0 w-full opacity-90">

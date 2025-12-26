@@ -94,6 +94,25 @@ export function getMonster(id) {
 }
 
 /**
+ * 根据名称查找角色 (模糊匹配)
+ */
+export function getMonsterByName(name) {
+  const cleanName = name.toLowerCase()
+  // 先查加载库
+  for (const mob of Object.values(monstersDB)) {
+    if (mob.name.toLowerCase() === cleanName) return mob
+  }
+  for (const mob of Object.values(monstersDB)) {
+    if (mob.name.toLowerCase().includes(cleanName)) return mob
+  }
+  // 再查后备库
+  for (const mob of Object.values(fallbackMonstersDB)) {
+    if (mob.name.toLowerCase().includes(cleanName)) return mob
+  }
+  return null
+}
+
+/**
  * 生成怪物实例 (基于地图配置)
  */
 export function spawnMonster(mapId) {

@@ -1,6 +1,6 @@
-// src/game/dataLoader.js
 // 数据加载器 - 负责解析外部数据文件并转换为游戏内部格式
 import { calcHit, calcFlee } from './formulas'
+import { buildNavigationGraph } from './navigation.js'
 
 /**
  * 解析物品数据库文件 (item_db.txt)
@@ -38,9 +38,33 @@ export async function loadItemDB() {
         matk = parseInt(atkParts[1]) || 0
       }
 
+      const location = parseInt(parts[14]) || 0 // Location Field
+      const wLv = parseInt(parts[15]) || 1      // Weapon Level / Equip Level Limit
+      const eLv = parts[16] ? parseInt(parts[16].split(':')[0]) : 0 // Equip Level
+
       const def = parseInt(parts[8]) || 0
       const range = parseInt(parts[9]) || 0
       const slots = parseInt(parts[10]) || 0
+
+      // Map Location to SubType
+      let subType = null
+      if (type === 4) { // Weapon
+        // Weapon type parsing logic if needed in future (View ID mapping)
+        // For now, rely on View ID or Name mapping if specific logic needed
+        // But here we rely on existing robust logic or basic type 4
+        subType = 'Weapon'
+        // Note: In rAthena, View (parts[18]) often maps to WeaponType ID
+        // We can map View ID -> WeaponType here if we had the table
+      } else if (type === 5) { // Armor
+        if (location & 256) subType = 'HeadTop'
+        else if (location & 512) subType = 'HeadMid'
+        else if (location & 1) subType = 'HeadLow'
+        else if (location & 16) subType = 'Armor'
+        else if (location & 32) subType = 'Shield'
+        else if (location & 4) subType = 'Garment'
+        else if (location & 64) subType = 'Footgear'
+        else if ((location & 8) || (location & 128)) subType = 'Accessory'
+      }
 
       // 构建物品对象
       itemsDB[id] = {
@@ -48,6 +72,7 @@ export async function loadItemDB() {
         aegisName,
         name,
         type: mapItemType(type),
+        subType, // Inject calculated subType
         price: buyPrice,
         sellPrice,
         weight,
@@ -55,7 +80,8 @@ export async function loadItemDB() {
         matk,
         def,
         range,
-        slots
+        slots,
+        reqLv: eLv || 1
       }
     }
 
@@ -357,8 +383,8 @@ export async function initializeGameData(maxLevel = 20) {
   console.log('[DataLoader] 开始加载游戏数据...')
 
   const itemsDB = await loadItemDB()
-  const mobsDB = await loadMobDB(maxLevel)
-  const spawnData = await loadSpawnData(mobsDB, maxLevel)
+  const mobsDB = await loadMobDB(99) // Unlock to Level 99
+  const spawnData = await loadSpawnData(mobsDB, 99) // Unlock to Level 99
   // 3. 传送点数据 (rAthena airports)
   // 递归读取 cities, fields, dungeons
   const warpDB = await loadWarpData()
@@ -367,6 +393,9 @@ export async function initializeGameData(maxLevel = 20) {
     // 这里只是防止热更加载问题，理论上 loadWarpData 应该已经扫到了
     // console.log('Reloading warps...')
   }
+
+  // 构建导航图
+  buildNavigationGraph(warpDB)
 
   console.log('[DataLoader] 游戏数据加载完成')
 

@@ -28,6 +28,7 @@ All math logic resides in `src/game/formulas.js`.
 *   **`db/index.js`**: Dexie.js Database Wrapper. Manages `saves` and `static_data` object stores.
 *   **`DataManager.js`**: Logic Orchestrator. Manages the lifecycle of game data, including parsing, caching to IndexedDB, and memory retrieval.
 *   **`dataLoader.js`**: Parser. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts. Called by `DataManager` if cache is stale.
+*   **`navigation.js`**: Pathfinding Engine. Constructs a world graph from warp links and provides shortest-path BFS for multi-map navigation.
 *   **`monsters.js`**: Template Cache. Stores monster templates loaded from `mob_db.txt`. Provides `getMonster(id)` for attribute lookup.
 *   **`mapManager.js`**: Instance Manager. Manages live monster instances (`mapState.monsters`) and active warps. Uses Template-Instance Pattern:
     - **Template** (from `monsters.js`): Static data like `name`, `hp`, `atk`, `attackDelay`.
@@ -61,6 +62,10 @@ We prioritize "Feel" over "Academic Accuracy".
     - Transitions trigger `warp(targetMap)` and reset coords to `targetX/Y`.
     - **Save Point**: `savePoint` (map/x/y) in player state allows city-based respawning. Triggered upon death or initial AI startup if dead.
     - **Deduplication**: `dataLoader.js` performs aggressive deduplication, keeping only one portal per destination map to ensure a clean UI.
+    - **Smart Navigation (BFS)**: `navigation.js` allows the robot to find the shortest map route between its current location and a target map. Used by `combat.js` (`gameState.goalMap`).
+*   **Data Strategy Shift (Upcoming)**:
+    - Transitioning from rAthena TXT format to **Structured JSON**.
+    - **Compiler Pattern**: A Node.js script will pre-process the raw DB into logic-ready JSON with parsed scripts (e.g., `{itemheal rand(45,65)}` -> `{"hp": [45, 65]}`).
 
 ### 3.3. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
