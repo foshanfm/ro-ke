@@ -123,11 +123,23 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Aggressive Warp Deduplication**:
   - [x] Refined `loadWarpData` to strictly enforce one portal per destination per map, drastically cleaning up the navigation UI.
 
+### Phase 14: Kiting & Range Mechanics [Completed]
+- [x] **Data Parsing**:
+  - [x] Parsed `Range1` (Attack), `Range2` (Skill), `Range3` (Chase) from `mob_db.txt`.
+- [x] **Spatial Logic (Cells)**:
+  - [x] Implemented `CELL_SIZE = 20` constant (1 Cell = 20px).
+  - [x] Added `WeaponRangeTable` mapping weapons to cell ranges (e.g., Bow=8, Spear=2).
+  - [x] `player.attackRange` now dynamically calculates based on finding Weapon Type.
+- [x] **Combat State Machine**:
+  - [x] **Chase State**: Monsters now chase players if out of attack range (Kiting support).
+  - [x] **Attack State**: Monsters only attack when within range (Melee vs Ranged behaviors).
+
 ## 4. Current State
-*   **Version:** 1.3.0 (Phase 12 - Account Experience & Data Integrity Complete)
-*   **Stability:** High. Character creation and map transitions are robust.
-*   **Performance:** Optimal. Data parsing includes target-based deduplication.
+*   **Version:** 1.4.0 (Phase 14 - Kiting & Range Mechanics Complete)
+*   **Stability:** High. Combat logic now supports kiting and varied weapon ranges.
+*   **Performance:** Optimal.
 *   **New Features:**
-    - **Account Management**: Supports infinite characters with deletion capability.
-    - **Polished Navigation**: Minimalist and accurate warp list in UI.
+    - **Kiting Support**: Ranged characters can "free hit" chasing monsters.
+    - **Weapon Realism**: Spears reach further than Daggers; Bows have long range.
+    - **Smart AI**: Monsters chase before attacking.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

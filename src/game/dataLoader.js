@@ -109,6 +109,12 @@ export async function loadMobDB(maxLevel = 20) {
       const int = parseInt(parts[17])
       const dex = parseInt(parts[18])
       const luk = parseInt(parts[19])
+      const range2 = parseInt(parts[20]) || 1 // 技能距离
+      const range3 = parseInt(parts[21]) || 1 // 追击/视野距离
+      const scale = parseInt(parts[22])
+      const race = parseInt(parts[23])
+      const element = parseInt(parts[24])
+      const mode = parseInt(parts[25]) // AI 模式 (Aggressive, Looter, etc.)
 
       // 计算命中和闪避 (基于官方公式)
       const hit = lv + dex
@@ -166,7 +172,11 @@ export async function loadMobDB(maxLevel = 20) {
         vit,
         int,
         dex,
-        luk
+        luk,
+        range1,
+        range2,
+        range3,
+        mode
       }
     }
 

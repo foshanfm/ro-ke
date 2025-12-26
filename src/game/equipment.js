@@ -30,6 +30,28 @@ export const WeaponType = {
     ROD: 'ROD'                        // 杖 (向后兼容，映射到 STAFF)
 }
 
+// 武器攻击距离表 (单位: 格子/Cells)
+export const WeaponRangeTable = {
+    [WeaponType.NONE]: 1,
+    [WeaponType.DAGGER]: 1,
+    [WeaponType.SWORD]: 1,
+    [WeaponType.TWO_HAND_SWORD]: 1,
+    [WeaponType.AXE]: 1,
+    [WeaponType.TWO_HAND_AXE]: 1,
+    [WeaponType.MACE]: 1,
+    [WeaponType.SPEAR]: 2,
+    [WeaponType.TWO_HAND_SPEAR]: 2,
+    [WeaponType.STAFF]: 1,
+    [WeaponType.TWO_HAND_STAFF]: 1,
+    [WeaponType.BOW]: 8,     // 弓箭默认 8 格 (120px)
+    [WeaponType.KNUCKLE]: 1,
+    [WeaponType.KATAR]: 1,
+    [WeaponType.INSTRUMENT]: 6,
+    [WeaponType.WHIP]: 6,
+    [WeaponType.BOOK]: 1,
+    [WeaponType.ROD]: 1
+}
+
 export const EquipDB = {
     // --- Weapons ---
     1201: {

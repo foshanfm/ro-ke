@@ -1,7 +1,7 @@
 import { reactive, watch } from 'vue'
 import { JobType, JobConfig, getNextBaseExp, getNextJobExp } from './jobs'
 import { Skills, canLearnSkill } from './skills'
-import { EquipDB, EquipType, WeaponType } from './equipment'
+import { EquipDB, EquipType, WeaponType, WeaponRangeTable } from './equipment'
 import { getItemInfo, ItemType } from './items'
 import { Maps } from './maps'
 import * as Formulas from './formulas'
@@ -143,8 +143,15 @@ export function recalculateMaxStats() {
         aspdModifiers    // 修正值对象
     )
 
+
     // 计算移动速度
     player.moveSpeed = Formulas.calcMoveSpeed(finalAgi, 0, equipMoveSpeedBonus)
+
+    // 计算攻击距离
+    // 1 Cell = 20 px (RO标准: 逻辑像素)
+    const CELL_SIZE = 20
+    const rangeInCells = WeaponRangeTable[weaponType] || 1
+    player.attackRange = rangeInCells * CELL_SIZE
 }
 
 /**

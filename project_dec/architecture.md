@@ -47,6 +47,10 @@ We prioritize "Feel" over "Academic Accuracy".
 *   **Movement:** `Speed = Base + (Agi * 0.05)`.
 *   **Search:** Scan `viewRange` for nearest entity.
 *   **Chase:** `movePlayerToward(target.x, target.y)` until `dist <= attackRange`.
+*   **Range & Kiting:**
+    - **Unit Standard:** `1 Cell = 20px`.
+    - **Weapon Range:** Defined in `Equipment.js`, mapped to Cells.
+    - **Kiting Logic:** Monsters enter `CHASE` state if out of range, allowing ranged players to land free hits.
 *   **Manual Movement:** `moveTo(x, y)` sets `gameState.manualTarget`, prioritizing it over search/combat.
 *   **Route / Warp:** 
     - `checkWarpCollision(x, y)` scans current map's `activeWarps`.

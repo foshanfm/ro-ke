@@ -262,9 +262,10 @@ async function aiTick(sessionId) {
 
             target.hp -= damage
 
-            // 怪物反击 (简易版：怪物被攻击时开始攻击玩家)
-            if (!monsterLoopId) {
-                monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), 500)
+            // 怪物被攻击，激活怪物 AI
+            if (!monsterLoopId && target.hp > 0) {
+                // 延迟启动怪物反击 (模拟反应)
+                monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), 200)
             }
 
             if (target.hp <= 0) {
@@ -297,8 +298,35 @@ async function monsterActionLoop(sessionId) {
 
     const target = gameState.currentMonster
 
-    if (target.hp > 0 && player.hp > 0) {
-        const targetTemplate = getMobTemplate(target)
+    const targetTemplate = getMobTemplate(target)
+
+    // 1. 距离检测
+    const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
+
+    // 逻辑像素转格子: CELL_SIZE = 20
+    const attackRangePx = (targetTemplate.range1 || 1) * 20
+
+    // 2. 行为分支
+    if (dist > attackRangePx) {
+        // [追击模式]
+        // 移动逻辑: 简单的向玩家移动
+        // 移动速度: 假设怪物的 Speed 字段越小越快 (RO标准: Speed 200 = 慢, 100 = 正常)
+        // 这里做一个简化的近似: Speed * 0.05 px/tick
+        const moveSpeed = (2000 / (targetTemplate.speed || 200)) * 2 // 临时公式
+
+        // 计算移动向量
+        const angle = Math.atan2(player.y - target.y, player.x - target.x)
+        target.x += Math.cos(angle) * moveSpeed
+        target.y += Math.sin(angle) * moveSpeed
+
+        // 追击时不攻击，直接返回等待下一次 Loop
+        // 这样就实现了"风筝" (Kiting): 玩家攻速快+射程远，可以在怪物追击途中多次攻击
+
+    } else {
+        // [攻击模式]
+        // 只有进入 Range1 才能造成伤害
+
+        // 攻击前摇 (Act Delay) - 简单模拟
         const res = calculateDamageFlow({
             attackerAtk: targetTemplate.atk,
             attackerHit: targetTemplate.hit || 50,
@@ -324,12 +352,18 @@ async function monsterActionLoop(sessionId) {
                 return
             }
         }
+
+        // 攻击后摇 (Attack Delay)
+        // 如果攻击了，下一次行动要等待 aDelay
+        const delay = targetTemplate.attackDelay || 2000
+        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), delay)
+        return // 退出函数，不由底部的通用定时器接管
     }
 
     if (gameState.isAuto && gameState.currentMonster && gameState.currentMonster.hp > 0 && sessionId === combatSessionId) {
-        const targetTemplate = getMobTemplate(target)
-        const delay = targetTemplate.attackDelay || 2000
-        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), delay)
+        // AI 决策延迟(模拟反应时间)
+        const reactDelay = Math.random() * 200 + 100 // 100-300ms
+        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), reactDelay)
     } else {
         monsterLoopId = null
     }
