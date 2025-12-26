@@ -4,12 +4,14 @@ import { spawnMonster } from './monsters'
 import { getItemInfo } from './items'
 import { calcAspdDelay, calculateDamageFlow } from './formulas' 
 import { calculateDrops } from './drops' 
-import { PassiveHooks } from './skillEngine' // 引入技能引擎钩子
+import { PassiveHooks } from './skillEngine'
+import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, removeMonster } from './mapManager'
 
 // 游戏循环状态
 export const gameState = reactive({
   isAuto: false, 
-  currentMonster: null, 
+  currentMonster: null, // 当前锁定的目标
+  status: 'IDLE' // IDLE, MOVING, ATTACKING, SEARCHING
 })
 
 let logCallback = null
@@ -27,7 +29,7 @@ function getPlayerDelay() {
 }
 
 // --- 循环控制 ---
-let playerLoopId = null
+let mainLoopId = null
 let monsterLoopId = null
 let recoveryTimer = null
 let combatSessionId = 0 
@@ -46,22 +48,28 @@ export function startBot() {
   combatSessionId++
   const currentSession = combatSessionId
 
-  log(`AI Initiated (Session ${currentSession}).`, 'system')
+  // 初始化地图
+  initMap(player.currentMap)
+
+  log(`AI Initiated (Session ${currentSession}) on ${player.currentMap}.`, 'system')
+  
   clearLoops()
-  playerActionLoop(currentSession)
+  aiTick(currentSession)
 }
 
 export function stopBot() {
   gameState.isAuto = false
+  gameState.status = 'IDLE'
+  gameState.currentMonster = null
   clearLoops()
   combatSessionId++ 
   log('AI Suspended.', 'system')
 }
 
 function clearLoops() {
-    if (playerLoopId) clearTimeout(playerLoopId)
+    if (mainLoopId) clearTimeout(mainLoopId)
     if (monsterLoopId) clearTimeout(monsterLoopId)
-    playerLoopId = null
+    mainLoopId = null
     monsterLoopId = null
 }
 
@@ -97,9 +105,9 @@ function checkAutoPotion() {
     }
 }
 
-// --- 异步双轨循环 ---
+// --- 核心 AI 决策树 (Tick-based) ---
 
-async function playerActionLoop(sessionId) {
+async function aiTick(sessionId) {
     if (!gameState.isAuto || sessionId !== combatSessionId) return
 
     try {
@@ -111,78 +119,89 @@ async function playerActionLoop(sessionId) {
 
         checkAutoPotion()
 
+        // 1. 如果没有目标，则寻怪
         if (!gameState.currentMonster) {
-            log('Searching for target...', 'dim')
-            await sleep(800) 
-            if (!gameState.isAuto || sessionId !== combatSessionId) return 
-
-            const mapId = player.currentMap || 'prt_fild08'
-            gameState.currentMonster = spawnMonster(mapId)
-            log(`Monster ${gameState.currentMonster.name} appeared! (HP: ${gameState.currentMonster.hp})`, 'warning')
+            gameState.status = 'SEARCHING'
+            const { monster, distance } = findNearestMonster(player.config.viewRange)
             
-            if (!monsterLoopId) {
-                setTimeout(() => monsterActionLoop(sessionId), Math.random() * 500)
+            if (monster) {
+                gameState.currentMonster = monster
+                log(`Monster ${monster.name} detected at distance ${Math.floor(distance)}!`, 'dim')
+            } else {
+                // 没怪，随机走动
+                randomWalk()
+                mainLoopId = setTimeout(() => aiTick(sessionId), 1000)
+                return
             }
         }
 
         const target = gameState.currentMonster
         
-        if (target && target.hp > 0) {
-             // 1. 获取被动技能修正
-             // 这一步在计算伤害之前调用，检查是否有被动（如二刀连击）改变了这次攻击
-             const passiveRes = PassiveHooks.onNormalAttack(target)
-             
-             // 2. 调用伤害公式
-             const res = calculateDamageFlow({
-                 attackerAtk: player.atk,
-                 attackerHit: player.hit,
-                 attackerCrit: player.crit,
-                 defenderDef: target.def || 0,
-                 defenderFlee: target.flee || 1,
-                 isPlayerAttacking: true
-             })
-
-             if (res.type === 'miss') {
-                 log(`You miss ${target.name}!`, 'dim')
-             } else {
-                 let damage = res.damage
-                 
-                 // 应用被动伤害倍率 (例如 Double Attack 的 2.0x)
-                 if (passiveRes.damageMod !== 1.0) {
-                     damage = Math.floor(damage * passiveRes.damageMod)
-                 }
-
-                 if (res.type === 'crit') {
-                     log(`CRITICAL! You deal ${damage} damage to ${target.name}.`, 'warning')
-                 } else {
-                     log(`You attack ${target.name} for ${damage} damage.`, 'default')
-                 }
-                 
-                 // 显示被动触发的日志 (例如 "Double Attack!!")
-                 passiveRes.logs.forEach(l => log(l.msg, l.type))
-
-                 // 扣除 HP
-                 target.hp -= damage
-
-                 // 处理被动技能的额外 Hit (为了视觉效果，RO 里二刀是两个黄字，这里我们已经合并伤害，但为了逻辑严谨性，可以认为这是多段)
-                 // 如果以后需要处理如 "每次攻击触发" 的效果，这里需要循环 passiveRes.extraHitCount
-
-                 if (target.hp <= 0) {
-                     monsterDead(target)
-                     if (monsterLoopId) {
-                         clearTimeout(monsterLoopId)
-                         monsterLoopId = null
-                     }
-                     saveGame() 
-                     playerLoopId = setTimeout(() => playerActionLoop(sessionId), 500)
-                     return 
-                 }
-             }
+        // 校验目标有效性 (是否已死亡)
+        if (target.hp <= 0) {
+            gameState.currentMonster = null
+            mainLoopId = setTimeout(() => aiTick(sessionId), 200)
+            return
         }
 
-        if (gameState.isAuto && sessionId === combatSessionId) {
-            playerLoopId = setTimeout(() => playerActionLoop(sessionId), getPlayerDelay())
+        // 2. 检查距离
+        const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
+        const attackRange = player.config.attackRange || 40
+
+        if (dist > attackRange) {
+            // 距离太远，追击
+            gameState.status = 'MOVING'
+            movePlayerToward(target.x, target.y, 15) // 追击速度快一点
+            mainLoopId = setTimeout(() => aiTick(sessionId), 100)
+            return
         }
+
+        // 3. 开始攻击逻辑
+        gameState.status = 'ATTACKING'
+        
+        // 攻击逻辑 (保持原有的 formulas)
+        const passiveRes = PassiveHooks.onNormalAttack(target)
+        const res = calculateDamageFlow({
+            attackerAtk: player.atk,
+            attackerHit: player.hit,
+            attackerCrit: player.crit,
+            defenderDef: target.def || 0,
+            defenderFlee: target.flee || 1,
+            isPlayerAttacking: true
+        })
+
+        if (res.type === 'miss') {
+            log(`You miss ${target.name}!`, 'dim')
+        } else {
+            let damage = res.damage
+            if (passiveRes.damageMod !== 1.0) damage = Math.floor(damage * passiveRes.damageMod)
+            
+            if (res.type === 'crit') log(`CRITICAL! You deal ${damage} damage.`, 'warning')
+            else log(`You attack ${target.name} for ${damage} damage.`, 'default')
+            
+            passiveRes.logs.forEach(l => log(l.msg, l.type))
+
+            target.hp -= damage
+
+            // 怪物反击 (简易版：怪物被攻击时开始攻击玩家)
+            if (!monsterLoopId) {
+                monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), 500)
+            }
+
+            if (target.hp <= 0) {
+                monsterDead(target)
+                if (monsterLoopId) {
+                    clearTimeout(monsterLoopId)
+                    monsterLoopId = null
+                }
+                saveGame() 
+                mainLoopId = setTimeout(() => aiTick(sessionId), 500)
+                return 
+            }
+        }
+
+        // 攻击间隔
+        mainLoopId = setTimeout(() => aiTick(sessionId), getPlayerDelay())
 
     } catch (err) {
         console.error(err)
@@ -200,7 +219,6 @@ async function monsterActionLoop(sessionId) {
     const target = gameState.currentMonster
 
     if (target.hp > 0 && player.hp > 0) {
-        // 2. 怪物攻击调用公式
         const res = calculateDamageFlow({
             attackerAtk: target.atk,
             attackerHit: target.hit || 50,
@@ -247,9 +265,7 @@ function monsterDead(target) {
   if (leveledUp) log(`Level Up! Base Lv ${player.lv}`, 'levelup')
   if (jobLeveledUp) log(`Job Up! Job Lv ${player.jobLv}`, 'levelup')
 
-  // 3. 调用新的掉落系统
   const drops = calculateDrops(target.id)
-  
   drops.forEach(drop => {
       addItem(drop.id, drop.count)
       const info = getItemInfo(drop.id)
@@ -258,6 +274,8 @@ function monsterDead(target) {
       log(`Loot: ${typeStr}${info.name} x ${drop.count}`, style)
   })
 
+  // 从地图移除怪物
+  removeMonster(target.guid)
   gameState.currentMonster = null
 }
 

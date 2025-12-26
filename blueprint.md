@@ -11,6 +11,8 @@ A web-based idle game recreating the experience of using automated botting softw
     *   **Session Lock:** Prevents race conditions during state transitions.
     *   **Pure Formulas:** All math (Damage, Hit, Drop) is isolated in `formulas.js`.
     *   **Command Registry:** All console commands are decoupled using the Registry Pattern (`commands.js`).
+    *   **Skill Engine:** Unified system for active/passive skills (`skillEngine.js`) handling casts, SP, and damage modifiers.
+    *   **Map Manager:** Spatial simulation (`mapManager.js`) managing coordinates, movement, and monster spawns.
 *   **Drop System:** Layered RNG with "Normal" (Trash) vs "Rare" (Equip/Card) tables, featuring a **Soft Pity** mechanism.
 
 ## 3. Roadmap
@@ -38,11 +40,16 @@ A web-based idle game recreating the experience of using automated botting softw
     - [x] Implemented `drops.js` (Weighted Tables + Pity).
     - [x] Refactored `App.vue` command parser to Registry Pattern (`commands.js`).
 
-### Phase 4: Job Change & Advancement [Next Step]
-- [ ] **Job Change System:**
-    - [ ] `job change` command.
-    - [ ] Requirements check (Job Lv 10).
-    - [ ] Stat/Skill reset and bonus application.
+### Phase 4: Job Change & Advancement [In Progress]
+- [x] **Job Change System:**
+    - [x] `job change` command.
+    - [x] Requirements check (Job Lv 10).
+    - [x] Stat/Skill reset and bonus application.
+- [x] **Advanced Mechanics:**
+    - [x] **Skill Engine:** `castSkill` (Active) & `PassiveHooks` (Double Attack).
+    - [x] **Spatial System:** `mapManager` handling X, Y coordinates and `moveSpeed`.
+    - [x] **Card System:** Weapon/Armor slots, `card` command, and attribute bonuses.
+    - [x] **Equipment:** Added `SHIELD` slot.
 - [ ] **1st Jobs Implementation:**
     - [ ] **Swordman:** Bash, Magnum Break, Provoke.
     - [ ] **Mage:** Cast Time system, Elemental Bolts.
@@ -53,10 +60,11 @@ A web-based idle game recreating the experience of using automated botting softw
     - [ ] `sit` command (2x Regen).
 
 ## 4. Current State
-*   **Version:** 0.9.6 (Architecture Update)
+*   **Version:** 0.9.7 (Phase 4 Alpha - Spatial & Skills)
 *   **Stability:** Enterprise-grade. Protected against race conditions and save corruption.
-*   **Automation:** Fully autonomous loop (Fight -> Auto Potion -> Loot -> Auto Sell -> Auto Buy).
-*   **Code Quality:**
-    - **Decoupled Commands:** New `commands.js` module allows easy addition of new commands without bloating UI code.
-    - **Pure Math:** Damage and stats isolated in `formulas.js`.
-*   **Next Objective:** Begin Phase 4 (Job Change) to break the Novice limit.
+*   **Automation:** Fully autonomous loop (Search -> Move -> Fight -> Loot -> Auto Sell -> Auto Buy).
+*   **New Features:**
+    - **Visual Sidebar:** Real-time HP/SP bars, Exp bars, Stats, and Coordinates (X, Y).
+    - **Spatial AI:** Bot now searches for targets and physically moves to them.
+    - **Card System:** Fully functional card insertion and stat calculation.
+*   **Next Objective:** Implement specific 1st Job skills to utilize the new Skill Engine.

@@ -61,6 +61,15 @@ export function calcCrit(luk, equipCrit = 0) {
     return 1 + Math.floor(luk / 3) + equipCrit
 }
 
+export function calcMoveSpeed(agi, jobBonus = 0, equipBonus = 0) {
+    // 基础速度: 5
+    // Agi加成: 每10点Agi + 0.5 (即 Agi * 0.05)
+    // 上限可以设定一个值，比如 20
+    const base = 5
+    const agiBonus = agi * 0.05
+    return parseFloat((base + agiBonus + jobBonus + equipBonus).toFixed(2))
+}
+
 const BaseAspdTable = {
     [WeaponType.NONE]: 160,   
     [WeaponType.DAGGER]: 150, 

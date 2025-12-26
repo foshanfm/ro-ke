@@ -1,4 +1,4 @@
-import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob } from './player.js'
+import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob, insertCard } from './player.js'
 import { getItemInfo, ItemType } from './items.js'
 import { startBot, stopBot, gameState } from './combat.js'
 import { JobConfig, JobType } from './jobs.js'
@@ -103,6 +103,38 @@ registerCommand({
 })
 
 registerCommand({
+    name: 'card',
+    description: '插卡系统 (用法: card <卡片名> <装备部位>)',
+    execute: (args, { log }) => {
+        if (args.length < 2) {
+            log('用法: card <卡片名> <装备部位 (weapon/shield/armor/head/accessory)>', 'error')
+            return
+        }
+        const cardName = args[0]
+        const slotName = args[1].toLowerCase()
+        
+        let type = null
+        if (slotName === 'weapon' || slotName === 'w') type = EquipType.WEAPON
+        if (slotName === 'shield' || slotName === 's') type = EquipType.SHIELD
+        if (slotName === 'armor' || slotName === 'a') type = EquipType.ARMOR
+        if (slotName === 'head' || slotName === 'h') type = EquipType.HEAD
+        if (slotName === 'accessory' || slotName === 'acc') type = EquipType.ACCESSORY
+
+        if (!type) {
+            log('无效的装备部位。', 'error')
+            return
+        }
+
+        const res = insertCard(cardName, type)
+        if (res.success) {
+            log(res.msg, 'success')
+        } else {
+            log(res.msg, 'error')
+        }
+    }
+})
+
+registerCommand({
     name: 'stat',
     aliases: ['s', 'st'],
     description: '查看角色状态',
@@ -127,10 +159,20 @@ registerCommand({
         log(`Vit: ${player.vit} | Int: ${player.int} | Luk: ${player.luk}`, 'system')
         
         if (player.equipment) {
-           const w = player.equipment[EquipType.WEAPON] ? getEquipInfo(player.equipment[EquipType.WEAPON]).name : '(无)'
-           const s = player.equipment[EquipType.SHIELD] ? getEquipInfo(player.equipment[EquipType.SHIELD]).name : '(无)'
-           const a = player.equipment[EquipType.ARMOR] ? getEquipInfo(player.equipment[EquipType.ARMOR]).name : '(无)'
-           log(`[装备] 武器: ${w} | 副手: ${s} | 身体: ${a}`, 'dim')
+           const w = player.equipment[EquipType.WEAPON]
+           const s = player.equipment[EquipType.SHIELD]
+           const a = player.equipment[EquipType.ARMOR]
+           
+           const getEquipName = (inst) => {
+               if (!inst) return '(无)'
+               const info = getEquipInfo(inst.id)
+               const cardNames = inst.cards && inst.cards.filter(c => c).map(c => getItemInfo(c).name).join(', ')
+               return cardNames ? `${info.name} [${cardNames}]` : info.name
+           }
+
+           log(`[装备] 武器: ${getEquipName(w)}`, 'dim')
+           log(`[装备] 副手: ${getEquipName(s)}`, 'dim')
+           log(`[装备] 身体: ${getEquipName(a)}`, 'dim')
         }
 
         log(`[资产] Zeny: ${player.zeny}`, 'warning')
@@ -422,6 +464,10 @@ registerCommand({
           let extra = ''
           if (info.type === ItemType.EQUIP) {
               extra = info.atk ? ` (Atk:${info.atk})` : (info.def ? ` (Def:${info.def})` : '')
+              if (slot.instance && slot.instance.cards) {
+                  const cardCount = slot.instance.cards.filter(c => c).length
+                  if (cardCount > 0) extra += ` [Cards: ${cardCount}]`
+              }
           }
           log(`${index + 1}. ${info.name} x ${slot.count}${extra}`, 'info')
         })

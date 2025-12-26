@@ -242,7 +242,11 @@
           <div class="text-center pb-2 border-b border-gray-700">
               <h2 class="text-lg font-bold text-white">{{ player.name }}</h2>
               <div class="text-xs text-cyan-400">{{ jobName }}</div>
-              <div class="text-xs text-gray-500 mt-1">{{ Maps[player.currentMap]?.name }}</div>
+              <div class="text-xs text-gray-500 mt-1 flex justify-between px-2">
+                 <span>{{ Maps[player.currentMap]?.name }}</span>
+                 <!-- Coordinate Display -->
+                 <span>({{ Math.floor(player.x) }}, {{ Math.floor(player.y) }})</span>
+              </div>
           </div>
 
           <!-- HP / SP Bars -->
@@ -308,7 +312,10 @@
           
            <!-- Status Indicator -->
            <div class="mt-auto pt-2 border-t border-gray-700 text-xs text-center">
-              <span v-if="gameState.isAuto" class="text-green-500 animate-pulse">● AUTO BATTLE</span>
+              <div v-if="gameState.isAuto">
+                  <div class="text-green-500 font-bold animate-pulse">● AUTO BATTLE</div>
+                  <div class="text-gray-500 text-[10px] mt-1">{{ gameState.status }}</div>
+              </div>
               <span v-else class="text-gray-500">● IDLE</span>
            </div>
       </div>

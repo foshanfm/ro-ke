@@ -15,7 +15,7 @@ const defaultStats = {
   skills: {}, 
   equipment: {
       [EquipType.WEAPON]: null,
-      [EquipType.SHIELD]: null, // 新增槽位
+      [EquipType.SHIELD]: null,
       [EquipType.ARMOR]: null,
       [EquipType.HEAD]: null,
       [EquipType.ACCESSORY]: null
@@ -27,7 +27,7 @@ const defaultStats = {
   },
   currentMap: 'prt_fild08', 
   hp: 100, maxHp: 100, sp: 20, maxSp: 20,
-  atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0,  
+  atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0, moveSpeed: 5,
   str: 1, agi: 1, dex: 1, vit: 1, int: 1, luk: 1,
   inventory: [] 
 }
@@ -58,39 +58,64 @@ export function recalculateMaxStats() {
     let weaponAtk = 0
     let equipDef = 0
     let equipAspdBonus = 0 
+    let equipMoveSpeedBonus = 0
     let weaponType = WeaponType.NONE 
+    
+    const bonus = {
+        str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0,
+        atk: 0, def: 0, hp: 0, sp: 0, crit: 0, flee: 0
+    }
 
     if (player.equipment) {
-        const wId = player.equipment[EquipType.WEAPON]
-        if (wId) {
-            const w = EquipDB[wId]
-            if (w) {
-                weaponAtk = w.atk || 0
-                weaponType = w.subType || WeaponType.NONE 
+        Object.values(player.equipment).forEach(instance => {
+            if (!instance) return
+            const e = EquipDB[instance.id]
+            if (!e) return
+            
+            if (e.type === EquipType.WEAPON) {
+                weaponAtk = e.atk || 0
+                weaponType = e.subType || WeaponType.NONE
             }
-        }
-        Object.values(player.equipment).forEach(eid => {
-            if (eid) {
-                const e = EquipDB[eid]
-                if (e && e.def) equipDef += e.def
+            if (e.def) equipDef += e.def
+
+            if (instance.cards) {
+                instance.cards.forEach(cardId => {
+                    if (!cardId) return
+                    if (cardId === 4001) bonus.luk += 2 
+                    if (cardId === 4002) { bonus.vit += 1; bonus.hp += 100 } 
+                    if (cardId === 4005) { bonus.luk += 2; bonus.crit += 2 } 
+                })
             }
         })
     }
     
-    player.atk = Formulas.calcAtk(baseLv, str, dex, luk, weaponAtk)
-    player.matk = Formulas.calcMatk(baseLv, int, dex, luk)
-    player.def = Formulas.calcDef(baseLv, vit, agi, equipDef)
-    player.mdef = Formulas.calcMdef(baseLv, int, vit, dex)
-    player.hit = Formulas.calcHit(baseLv, dex, luk)
+    const finalStr = str + bonus.str
+    const finalAgi = agi + bonus.agi
+    const finalVit = vit + bonus.vit
+    const finalInt = int + bonus.int
+    const finalDex = dex + bonus.dex
+    const finalLuk = luk + bonus.luk
+
+    player.maxHp += bonus.hp
+    player.maxSp += bonus.sp
+
+    player.atk = Formulas.calcAtk(baseLv, finalStr, finalDex, finalLuk, weaponAtk + bonus.atk)
+    player.matk = Formulas.calcMatk(baseLv, finalInt, finalDex, finalLuk)
+    player.def = Formulas.calcDef(baseLv, finalVit, finalAgi, equipDef + bonus.def)
+    player.mdef = Formulas.calcMdef(baseLv, finalInt, finalVit, finalDex)
+    player.hit = Formulas.calcHit(baseLv, finalDex, finalLuk)
     
-    let fleeBonus = 0
+    let fleeBonus = bonus.flee
     if (player.skills['improve_dodge']) {
-        fleeBonus = (player.skills['improve_dodge'] || 0) * 3
+        fleeBonus += (player.skills['improve_dodge'] || 0) * 3
     }
-    player.flee = Formulas.calcFlee(baseLv, agi, luk, fleeBonus)
+    player.flee = Formulas.calcFlee(baseLv, finalAgi, finalLuk, fleeBonus)
     
-    player.crit = Formulas.calcCrit(luk)
-    player.aspd = Formulas.calcAspd(weaponType, agi, dex, jobCfg.aspdBonus, equipAspdBonus)
+    player.crit = Formulas.calcCrit(finalLuk, bonus.crit)
+    player.aspd = Formulas.calcAspd(weaponType, finalAgi, finalDex, jobCfg.aspdBonus, equipAspdBonus)
+    
+    // 计算移动速度
+    player.moveSpeed = Formulas.calcMoveSpeed(finalAgi, 0, equipMoveSpeedBonus)
 }
 
 const SAVE_KEY = 'ro_ke_save_v2' 
@@ -104,6 +129,20 @@ export function loadGame() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData)
+        
+        if (parsed.equipment) {
+            Object.keys(parsed.equipment).forEach(slot => {
+                const val = parsed.equipment[slot]
+                if (val !== null && typeof val !== 'object') {
+                    const info = EquipDB[val]
+                    parsed.equipment[slot] = {
+                        id: val,
+                        cards: info && info.slots ? new Array(info.slots).fill(null) : []
+                    }
+                }
+            })
+        }
+
         Object.assign(player, parsed)
         
         if (!player.inventory) player.inventory = []
@@ -115,10 +154,7 @@ export function loadGame() {
         if (player.statPoints === undefined) player.statPoints = 0
         if (!player.skills) player.skills = {}
         if (!player.config) player.config = {}
-        if (player.config.auto_hp_percent === undefined) player.config.auto_hp_percent = 0
-        if (player.config.auto_hp_item === undefined) player.config.auto_hp_item = '红色药水'
-        if (player.config.auto_buy_potion === undefined) player.config.auto_buy_potion = 0
-
+        
         if (!player.currentMap) player.currentMap = 'prt_fild08'
         if (player.zeny === undefined) player.zeny = 0 
 
@@ -130,8 +166,6 @@ export function loadGame() {
                 [EquipType.HEAD]: null,
                 [EquipType.ACCESSORY]: null
             }
-        } else if (player.equipment[EquipType.SHIELD] === undefined) {
-            player.equipment[EquipType.SHIELD] = null
         }
 
         const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
@@ -165,8 +199,23 @@ export function resetGame() {
 
 export function addItem(itemId, count = 1) {
     if (!player.inventory) player.inventory = []
-    const existingItem = player.inventory.find(i => i.id === itemId)
     
+    const info = getItemInfo(itemId)
+    if (info.type === ItemType.EQUIP) {
+        for (let i = 0; i < count; i++) {
+            player.inventory.push({ 
+                id: itemId, 
+                count: 1, 
+                instance: { 
+                    id: itemId, 
+                    cards: info.slots ? new Array(info.slots).fill(null) : [] 
+                } 
+            })
+        }
+        return
+    }
+
+    const existingItem = player.inventory.find(i => i.id === itemId)
     if (existingItem) {
       existingItem.count += count
     } else {
@@ -226,7 +275,6 @@ export function changeJob(newJob) {
     player.jobExp = 0
     player.nextJobExp = getNextJobExp(1)
     
-    // 转职奖励：补满状态
     recalculateMaxStats()
     player.hp = player.maxHp
     player.sp = player.maxSp
@@ -320,11 +368,14 @@ export function equipItem(itemNameOrId) {
     const type = equipData.type 
     
     if (player.equipment[type]) {
-        const oldId = player.equipment[type]
-        addItem(oldId, 1) 
+        const oldInstance = player.equipment[type]
+        addItem(oldInstance.id, 1) 
     }
     
-    player.equipment[type] = invSlot.id
+    player.equipment[type] = invSlot.instance || { 
+        id: invSlot.id, 
+        cards: equipData.slots ? new Array(equipData.slots).fill(null) : [] 
+    }
     
     invSlot.count--
     if (invSlot.count <= 0) {
@@ -338,20 +389,61 @@ export function equipItem(itemNameOrId) {
 }
 
 export function unequipItem(type) {
-    const currentId = player.equipment[type]
-    if (!currentId) {
+    const currentInstance = player.equipment[type]
+    if (!currentInstance) {
         return { success: false, msg: '该部位没有装备。' }
     }
     
-    addItem(currentId, 1)
+    const info = getItemInfo(currentInstance.id)
+    player.inventory.push({
+        id: currentInstance.id,
+        count: 1,
+        instance: currentInstance
+    })
     
     player.equipment[type] = null
     
     recalculateMaxStats()
     saveGame()
     
-    const info = getItemInfo(currentId)
     return { success: true, msg: `已卸下: ${info.name}` }
+}
+
+export function insertCard(cardName, equipType) {
+    const lowerCardName = cardName.toLowerCase()
+    const cardIndex = player.inventory.findIndex(i => {
+        const info = getItemInfo(i.id)
+        return info.type === ItemType.CARD && info.name.toLowerCase().includes(lowerCardName)
+    })
+
+    if (cardIndex === -1) {
+        return { success: false, msg: '背包中未找到该卡片。' }
+    }
+
+    const equipment = player.equipment[equipType]
+    if (!equipment) {
+        return { success: false, msg: '该部位没有装备。' }
+    }
+
+    const emptySlotIndex = equipment.cards.indexOf(null)
+    if (emptySlotIndex === -1) {
+        return { success: false, msg: '该装备没有剩余插槽。' }
+    }
+
+    const cardItem = player.inventory[cardIndex]
+    equipment.cards[emptySlotIndex] = cardItem.id
+
+    cardItem.count--
+    if (cardItem.count <= 0) {
+        player.inventory.splice(cardIndex, 1)
+    }
+
+    recalculateMaxStats()
+    saveGame()
+
+    const cardInfo = getItemInfo(cardItem.id)
+    const equipInfo = getItemInfo(equipment.id)
+    return { success: true, msg: `已将 [${cardInfo.name}] 插入 [${equipInfo.name}]！` }
 }
 
 export function useItem(itemNameOrId) {

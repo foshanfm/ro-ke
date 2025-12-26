@@ -4,6 +4,9 @@ export const Maps = {
     'prt_fild08': {
         id: 'prt_fild08',
         name: '普隆德拉南门',
+        width: 400,
+        height: 400,
+        spawnRate: 15, // 地图最大怪物数量
         minLv: 1,
         maxLv: 5,
         monsters: [
@@ -16,48 +19,60 @@ export const Maps = {
     'prt_fild06': {
         id: 'prt_fild06',
         name: '普隆德拉西门', 
+        width: 350,
+        height: 350,
+        spawnRate: 12,
         minLv: 3,
         maxLv: 7,
         monsters: [
-            { id: 1005, rate: 0.35 }, // 小鸡 35%
-            { id: 1006, rate: 0.3 },  // 苍蝇 30%
-            { id: 1010, rate: 0.2 },  // 盗虫 20%
-            { id: 1001, rate: 0.15 }  // 波利 15%
+            { id: 1005, rate: 0.35 }, 
+            { id: 1006, rate: 0.3 },  
+            { id: 1010, rate: 0.2 },  
+            { id: 1001, rate: 0.15 }  
         ]
     },
     'pay_fild04': {
         id: 'pay_fild04',
         name: '斐扬树林', 
+        width: 500,
+        height: 500,
+        spawnRate: 20,
         minLv: 5,
         maxLv: 10,
         monsters: [
-            { id: 1007, rate: 0.4 },  // 树木精 40%
-            { id: 1002, rate: 0.3 },  // 绿棉虫 30%
-            { id: 1011, rate: 0.2 },  // 大嘴鸟蛋 20%
-            { id: 1001, rate: 0.1 }   // 波利 10%
+            { id: 1007, rate: 0.4 },  
+            { id: 1002, rate: 0.3 },  
+            { id: 1011, rate: 0.2 },  
+            { id: 1001, rate: 0.1 }   
         ]
     },
     'moc_fild12': {
         id: 'moc_fild12',
         name: '梦罗克沙漠',
+        width: 450,
+        height: 450,
+        spawnRate: 18,
         minLv: 7,
         maxLv: 12,
         monsters: [
-            { id: 1009, rate: 0.4 },  // 秃鹰 40%
-            { id: 1005, rate: 0.3 },  // 小鸡 30%
-            { id: 1011, rate: 0.2 },  // 大嘴鸟蛋 20%
-            { id: 1008, rate: 0.1 }   // 小野猪 10%
+            { id: 1009, rate: 0.4 },  
+            { id: 1005, rate: 0.3 },  
+            { id: 1011, rate: 0.2 },  
+            { id: 1008, rate: 0.1 }   
         ]
     },
     'prt_sewb1': {
         id: 'prt_sewb1',
         name: '普隆德拉下水道1F',
+        width: 300,
+        height: 300,
+        spawnRate: 25,
         minLv: 9,
         maxLv: 15,
         monsters: [
-            { id: 1010, rate: 0.6 },  // 盗虫 60%
-            { id: 1006, rate: 0.3 },  // 苍蝇 30%
-            { id: 1001, rate: 0.1 }   // 波利 10% (偶尔迷路的)
+            { id: 1010, rate: 0.6 },  
+            { id: 1006, rate: 0.3 },  
+            { id: 1001, rate: 0.1 }   
         ]
     }
 }
