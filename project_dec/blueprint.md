@@ -105,13 +105,21 @@ A web-based idle game recreating the experience of using automated botting softw
   - [x] Fixed `mapMonsters` computed property to read `mapState.monsters` (real-time instances).
   - [x] Monster list now displays live data with counts (e.g., "波利 (Lv.1) x5").
 
+### Phase 11: World Connectivity & Navigation Refinement [Completed]
+- [x] **Massive Warp Restoration**:
+  - [x] Restored 100+ core world warps (Prontera, Payon, Morroc, Geffen fields) from reference data.
+  - [x] Connectivity rate from Prontera increased from **4.27%** to **43.07%** (202 reachable maps).
+- [x] **Warp Logic Refinement**:
+  - [x] **Sticky Portal Fix**: Added landing offset ($\pm 2-4$ units) to prevent immediate re-warp loops.
+  - [x] **Deduplication**: Implemented proximity-based de-dupe logic in `dataLoader.js` to merge redundant portals (< 5 units apart).
+- [x] **Recursive Data Discovery**: Enabled recursive globbing for all monster and warp data files.
+
 ## 4. Current State
-*   **Version:** 1.1.0 (Phase 10 - Data Architecture Optimization Complete)
-*   **Stability:** High. Verified combat system with template-instance separation.
-*   **Performance:** Optimized memory usage by eliminating redundant monster data storage.
+*   **Version:** 1.2.0 (Phase 11 - World Connectivity & Navigation Refinement Complete)
+*   **Stability:** High. Map connectivity verified via BFS analysis.
+*   **Performance:** Optimized warp data processing with de-duplication.
 *   **New Features:**
-    - **Template-Instance Pattern:** Monster instances reference templates via `templateId`.
-    - **Dynamic Attack Speed:** Monsters attack at their own `aDelay` intervals from database.
-    - **Clean Data Layer:** Maps, monsters, and spawn data are now properly decoupled.
-    - **Live Monster List:** UI displays real-time monster counts on current map.
+    - **Global Interconnectivity**: Major cities and fields are now linked bidirectionally.
+    - **Smart Navigation**: UI cleaned of redundant portal buttons.
+    - **Safe Landing**: Warp transitions are smooth and non-blocking.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

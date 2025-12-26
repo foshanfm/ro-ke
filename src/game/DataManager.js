@@ -3,6 +3,7 @@
 
 import { getStaticData, setStaticData, isStaticDataStale } from '../db/index.js';
 import { loadItemDB, loadMobDB, loadSpawnData, loadWarpData } from './dataLoader.js';
+import { analyzeConnectivity } from './utils/mapGraph.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
 const DATA_VERSION = 1;
@@ -50,11 +51,19 @@ export async function initializeGameData(maxLevel = 20) {
     console.log('[DataManager] 加载传送点数据...');
     warpCache = await loadWarpData();
 
+    // 5. 进行地图图论分析 (Graph Analysis)
+    console.log('[DataManager] 正在分析世界地图连通性...');
+    const connectivityReport = analyzeConnectivity(warpCache);
+    console.log('[DataManager] 世界连通性报告:', connectivityReport);
+
     console.log('[DataManager] 游戏数据初始化完成');
     console.log(`  - 物品: ${Object.keys(itemsCache).length} 个`);
     console.log(`  - 怪物: ${Object.keys(mobsCache).length} 个`);
-    console.log(`  - 地图: ${Object.keys(spawnCache).length} 个`);
-    console.log(`  - 传送点: ${Object.values(warpCache).reduce((sum, arr) => sum + arr.length, 0)} 个`);
+    console.log(`  - 地图 (怪): ${Object.keys(spawnCache).length} / ${connectivityReport.totalMaps} (总)`);
+    console.log(`  - 连通率 (从普隆德拉): ${connectivityReport.connectivityRate} (${connectivityReport.reachableCount} 张地图)`);
+    if (connectivityReport.unreachableCount > 0) {
+        console.warn(`  - 发现 ${connectivityReport.unreachableCount} 张孤岛地图（无法从主城到达）:`, connectivityReport.unreachableList);
+    }
 
     return {
         itemsDB: itemsCache,

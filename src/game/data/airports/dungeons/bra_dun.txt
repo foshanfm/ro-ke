@@ -1,20 +1,17 @@
 //===== rAthena Script =======================================
-//= Arena Warps
+//= Brasilis Dungeon Warp
 //===== By: ==================================================
-//= Euphy
+//= L0ne_W0lf
 //===== Current Version: =====================================
 //= 1.0
 //===== Compatible With: =====================================
 //= rAthena Project
 //===== Description: =========================================
-//= Warp Points related to Izlude Arena.
+//= [Official Conversion]
+//= Brasilis Dungeon warp script
 //===== Additional Comments: =================================
-//= 1.0 First version, Renewal warps.
+//= 1.0 First version.
 //============================================================
 
-izlude,213,161,0	warp	welcome_arena	1,1,arena_room,100,30
-izlude_a,213,161,0	warp	welcome_arena_a	1,1,arena_room,100,30
-izlude_b,213,161,0	warp	welcome_arena_b	1,1,arena_room,100,30
-izlude_c,213,161,0	warp	welcome_arena_c	1,1,arena_room,100,30
-izlude_d,213,161,0	warp	welcome_arena_d	1,1,arena_room,100,30
-arena_room,99,24,0	warp	bye_arena	2,2,izlude,209,161
+bra_dun01,199,35,0	warp	brad1tobrad2	1,1,bra_dun02,261,263
+bra_dun02,261,265,0	warp	brad2tobrad1	1,1,bra_dun01,199,37

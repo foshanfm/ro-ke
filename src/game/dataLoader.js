@@ -190,7 +190,7 @@ export async function loadSpawnData(mobsDB, maxLevel = 20) {
 
   try {
     // 使用 Vite 的 import.meta.glob 自动发现所有刷怪文件
-    const modules = import.meta.glob('/src/game/data/mobs/fields/*.txt', { as: 'raw', eager: true })
+    const modules = import.meta.glob('/src/game/data/mobs/**/*.txt', { query: '?raw', import: 'default', eager: true })
 
     for (const [path, text] of Object.entries(modules)) {
       const lines = text.split('\n')
@@ -274,7 +274,7 @@ export async function loadWarpData() {
     const warpDB = {}
 
     // 使用 Vite 的 import.meta.glob 自动发现所有传送点文件 (递归扫描 cities, fields, dungeons)
-    const modules = import.meta.glob('/src/game/data/airports/**/*.txt', { as: 'raw', eager: true })
+    const modules = import.meta.glob('/src/game/data/airports/**/*.txt', { query: '?raw', import: 'default', eager: true })
 
     for (const [path, text] of Object.entries(modules)) {
       const lines = text.split('\n')
@@ -299,16 +299,26 @@ export async function loadWarpData() {
           // 也可以注册目标地图 (防止跳转到黑洞)
           registerMap(targetMap, { name: targetMap })
 
-          warpDB[sourceMap].push({
-            x: parseInt(x),
-            y: parseInt(y),
-            spanX: parseInt(spanX),
-            spanY: parseInt(spanY),
-            targetMap,
-            targetX: parseInt(targetX),
-            targetY: parseInt(targetY),
-            name: npcName
-          })
+          // 获取当前地图已有的传送点，进行近距离去重
+          const existingWarps = warpDB[sourceMap]
+          const isDuplicate = existingWarps.some(w =>
+            w.targetMap === targetMap &&
+            Math.abs(w.x - parseInt(x)) < 5 &&
+            Math.abs(w.y - parseInt(y)) < 5
+          )
+
+          if (!isDuplicate) {
+            warpDB[sourceMap].push({
+              x: parseInt(x),
+              y: parseInt(y),
+              spanX: parseInt(spanX),
+              spanY: parseInt(spanY),
+              targetMap,
+              targetX: parseInt(targetX),
+              targetY: parseInt(targetY),
+              name: npcName
+            })
+          }
         }
       }
     }

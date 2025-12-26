@@ -161,9 +161,12 @@ async function aiTick(sessionId) {
                 setTimeout(() => {
                     const res = warp(warpInfo.targetMap)
                     if (res.success) {
-                        player.x = warpInfo.targetX
-                        player.y = warpInfo.targetY
-                        log(`已到达 ${warpInfo.targetMap} (${warpInfo.targetX}, ${warpInfo.targetY})`, 'success')
+                        // 添加微小偏移量，防止踩在传送阵动弹不得
+                        const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+                        const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+                        player.x = warpInfo.targetX + offsetX
+                        player.y = warpInfo.targetY + offsetY
+                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x)}, ${Math.floor(player.y)})`, 'success')
                     }
                 }, 500)
                 return
@@ -216,9 +219,12 @@ async function aiTick(sessionId) {
                 setTimeout(() => {
                     const res = warp(warpInfo.targetMap)
                     if (res.success) {
-                        player.x = warpInfo.targetX
-                        player.y = warpInfo.targetY
-                        log(`已到达 ${warpInfo.targetMap} (${warpInfo.targetX}, ${warpInfo.targetY})`, 'success')
+                        // 添加微小偏移量，防止踩在传送阵动弹不得
+                        const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+                        const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+                        player.x = warpInfo.targetX + offsetX
+                        player.y = warpInfo.targetY + offsetY
+                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x)}, ${Math.floor(player.y)})`, 'success')
                     }
                 }, 500)
                 return
