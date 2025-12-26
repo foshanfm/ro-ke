@@ -23,11 +23,13 @@ All math logic resides in `src/game/formulas.js`.
 ## 2. Module Responsibilities
 
 *   **`player.js`**: State Owner. Handles Inventory, Stats, Config, Persistence.
-*   **`combat.js`**: Loop Manager. Handles Timers, Session IDs, Logging.
-*   **`formulas.js`**: Pure Math. Stat calculation, Damage formulas.
+*   **`combat.js`**: Loop Manager. Handles AI State Machine (Search -> Move -> Attack), Timers, Session IDs.
+*   **`formulas.js`**: Pure Math. Stat calculation, Damage formulas, Move Speed.
 *   **`drops.js`**: RNG Engine. Handles Drop Tables and Pity Counters.
 *   **`simulator.js`**: Analytics. Runs Monte Carlo simulations for efficiency analysis.
 *   **`commands.js`**: Registry Pattern. Handles all console commands and their executions.
+*   **`skillEngine.js`**: Unified Skill Logic. Handles Casting, SP Check, Damage Modifiers, Passive Hooks.
+*   **`mapManager.js`**: Spatial Engine. Handles Map Instances, Monster Spawning (ViewPort), Coordinates, Pathfinding.
 
 ## 3. Core Algorithms (Standard)
 
@@ -37,7 +39,12 @@ We prioritize "Feel" over "Academic Accuracy".
 *   **Crit:** `clamp(Crit - Luk, 1, 50)`%. Deals 1.4x Damage, Ignores Def.
 *   **Damage:** `floor((Atk - Def) * random(0.9, 1.1))`. Min 1.
 
-### 3.2. Drop System (Layered)
+### 3.2. Spatial & AI Logic
+*   **Movement:** `Speed = Base + (Agi * 0.05)`.
+*   **Search:** Scan `viewRange` for nearest entity.
+*   **Chase:** `movePlayerToward(target.x, target.y)` until `dist <= attackRange`.
+
+### 3.3. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 *   **Normal:** Independent rolls. Affected by Drop Rate modifiers.
 *   **Rare:** Independent rolls. Affected by **Soft Pity**.
@@ -50,8 +57,8 @@ Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 1.  **New Item/Monster:** Update `items.js` / `monsters.js`. **Always** add price to items if sellable.
 2.  **New Skill:**
     *   Add definition to `skills.js`.
-    *   If passive stat bonus: Update `formulas.js`.
-    *   If active combat logic: Update `combat.js` loop.
+    *   If passive stat bonus: Update `formulas.js` or `PassiveHooks` in `skillEngine.js`.
+    *   If active combat logic: `skillEngine.js` handles it automatically via `castSkill`.
 3.  **New Config:**
     *   Add to `defaultStats` in `player.js`.
     *   Add setter in `setConfig`.
