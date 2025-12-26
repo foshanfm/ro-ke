@@ -213,7 +213,12 @@ export async function loadSpawnData(mobsDB, maxLevel = 20) {
         const parts = line.split(/\s+/)
         if (parts.length < 3) continue
 
-        const mapName = parts[0].split(',')[0]
+        const areaParts = parts[0].split(',')
+        const mapName = areaParts[0]
+        const x1 = parseInt(areaParts[1]) || 0
+        const y1 = parseInt(areaParts[2]) || 0
+        const x2 = parseInt(areaParts[3]) || 0
+        const y2 = parseInt(areaParts[4]) || 0
         const monsterKeyword = parts.find(p => p === 'monster')
         if (!monsterKeyword) continue
 
@@ -245,7 +250,8 @@ export async function loadSpawnData(mobsDB, maxLevel = 20) {
         spawnData[mapName].spawns.push({
           id: mobId,
           name: mobName,
-          count
+          count,
+          x1, y1, x2, y2
         })
       }
     }

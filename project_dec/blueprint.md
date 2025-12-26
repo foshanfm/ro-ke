@@ -133,13 +133,25 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Combat State Machine**:
   - [x] **Chase State**: Monsters now chase players if out of attack range (Kiting support).
   - [x] **Attack State**: Monsters only attack when within range (Melee vs Ranged behaviors).
+- [x] **Spatial Movement & Patrol**:
+  - [x] Implemented destination-based **Patrol System** replacing instant movement.
+  - [x] Added real-time movement logs showing coordinates (X, Y).
+- [x] **Area Spawning**:
+  - [x] Parsed `X1, Y1, X2, Y2` area boundaries from `mobs/*.txt`.
+  - [x] Map Manager now respects localized spawn zones.
+- [x] **RO Data Alignment**:
+  - [x] Refactored `moveSpeed` to follow RO standard (150 = 100% speed, ms/cell).
+  - [x] Aligned `WeaponRangeTable` with official RO values (e.g., Spears=3).
+  - [x] Integrated `Vulture's Eye` passive skill for Archer range bonuses.
 
 ## 4. Current State
-*   **Version:** 1.4.0 (Phase 14 - Kiting & Range Mechanics Complete)
-*   **Stability:** High. Combat logic now supports kiting and varied weapon ranges.
+*   **Version:** 1.4.1 (Phase 14 - Kiting, Range & Spatial Mobility Complete)
+*   **Stability:** High. Combat logic now supports kiting, varied weapon ranges, and localized spawning.
 *   **Performance:** Optimal.
 *   **New Features:**
     - **Kiting Support**: Ranged characters can "free hit" chasing monsters.
     - **Weapon Realism**: Spears reach further than Daggers; Bows have long range.
     - **Smart AI**: Monsters chase before attacking.
+    - **Patrol System**: Players walk to destinations instead of teleporting.
+    - **Area Spawning**: Monsters spawn in designated zones according to scripts.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

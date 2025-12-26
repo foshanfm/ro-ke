@@ -12,7 +12,8 @@ export const gameState = reactive({
     isAuto: false,
     currentMonster: null, // 当前锁定的目标
     manualTarget: null, // 手动移动目标 { x, y }
-    status: 'IDLE' // IDLE, MOVING, ATTACKING, SEARCHING
+    status: 'IDLE', // IDLE, MOVING, ATTACKING, SEARCHING
+    lastActionLog: '' // 防止重复打日志
 })
 
 let logCallback = null
@@ -184,11 +185,18 @@ async function aiTick(sessionId) {
             if (monster) {
                 gameState.currentMonster = monster
                 const mobTemplate = getMobTemplate(monster)
-                log(`Monster ${mobTemplate.name} detected at distance ${Math.floor(distance)}!`, 'dim')
+                log(`Monster ${mobTemplate.name} detected at (${Math.floor(monster.x)}, ${Math.floor(monster.y)})!`, 'dim')
+                gameState.lastActionLog = '' // 重置动作日志
             } else {
-                // 没怪，随机走动
-                randomWalk()
-                mainLoopId = setTimeout(() => aiTick(sessionId), 1000)
+                // 没怪，随机漫步 (巡逻)
+                const isFirstPatrol = !mapState.patrolTarget
+                const arrived = randomWalk()
+
+                if (isFirstPatrol) {
+                    log(`No monsters nearby. Patrolling to (${Math.floor(mapState.patrolTarget.x)}, ${Math.floor(mapState.patrolTarget.y)})...`, 'dim')
+                }
+
+                mainLoopId = setTimeout(() => aiTick(sessionId), arrived ? 500 : 100) // 如果到达了等久一点
                 return
             }
         }
@@ -209,6 +217,13 @@ async function aiTick(sessionId) {
         if (dist > attackRange) {
             // 距离太远，追击
             gameState.status = 'MOVING'
+            const mobTemplate = getMobTemplate(target)
+
+            if (gameState.lastActionLog !== `chase_${target.guid}`) {
+                log(`Moving toward ${mobTemplate.name} at (${Math.floor(target.x)}, ${Math.floor(target.y)})...`, 'dim')
+                gameState.lastActionLog = `chase_${target.guid}`
+            }
+
             movePlayerToward(target.x, target.y, 15) // 追击速度快一点
 
             // 检查是否触碰传送点
@@ -310,9 +325,8 @@ async function monsterActionLoop(sessionId) {
     if (dist > attackRangePx) {
         // [追击模式]
         // 移动逻辑: 简单的向玩家移动
-        // 移动速度: 假设怪物的 Speed 字段越小越快 (RO标准: Speed 200 = 慢, 100 = 正常)
-        // 这里做一个简化的近似: Speed * 0.05 px/tick
-        const moveSpeed = (2000 / (targetTemplate.speed || 200)) * 2 // 临时公式
+        // 移动速度: RO 标准 (ms/cell)
+        const moveSpeed = Formulas.calcMoveSpeed(targetTemplate.speed || 400)
 
         // 计算移动向量
         const angle = Math.atan2(player.y - target.y, player.x - target.x)

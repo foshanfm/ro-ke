@@ -39,15 +39,15 @@ export const WeaponRangeTable = {
     [WeaponType.AXE]: 1,
     [WeaponType.TWO_HAND_AXE]: 1,
     [WeaponType.MACE]: 1,
-    [WeaponType.SPEAR]: 2,
-    [WeaponType.TWO_HAND_SPEAR]: 2,
+    [WeaponType.SPEAR]: 3,           // 长矛优势：3格
+    [WeaponType.TWO_HAND_SPEAR]: 3,
     [WeaponType.STAFF]: 1,
     [WeaponType.TWO_HAND_STAFF]: 1,
-    [WeaponType.BOW]: 8,     // 弓箭默认 8 格 (120px)
+    [WeaponType.BOW]: 5,             // 弓基础 5 格 (加上苍鹰之眼最高 15)
     [WeaponType.KNUCKLE]: 1,
     [WeaponType.KATAR]: 1,
-    [WeaponType.INSTRUMENT]: 6,
-    [WeaponType.WHIP]: 6,
+    [WeaponType.INSTRUMENT]: 3,      // 乐器/鞭子 3格
+    [WeaponType.WHIP]: 3,
     [WeaponType.BOOK]: 1,
     [WeaponType.ROD]: 1
 }

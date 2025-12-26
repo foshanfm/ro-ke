@@ -24,7 +24,8 @@ const defaultStats = {
     config: {
         auto_hp_percent: 0,
         auto_hp_item: '红色药水',
-        auto_buy_potion: 0
+        auto_buy_potion: 0,
+        viewRange: 200
     },
     currentMap: 'prt_fild08',
     x: 200, y: 200,
@@ -144,13 +145,25 @@ export function recalculateMaxStats() {
     )
 
 
-    // 计算移动速度
-    player.moveSpeed = Formulas.calcMoveSpeed(finalAgi, 0, equipMoveSpeedBonus)
+    // 计算移动速度 (RO 机制: 数值越小越快, 150 为基准)
+    // 未来可根据 AGI UP 或 Peco 修正此数值
+    let roSpeedValue = 150
+
+    // 逻辑：加速术或大嘴鸟通常取最快值 (112), 不叠加
+    // if (player.buffs['agi_up'] || player.config.hasPeco) roSpeedValue = 112
+
+    player.moveSpeed = Formulas.calcMoveSpeed(roSpeedValue)
 
     // 计算攻击距离
     // 1 Cell = 20 px (RO标准: 逻辑像素)
     const CELL_SIZE = 20
-    const rangeInCells = WeaponRangeTable[weaponType] || 1
+    let rangeInCells = WeaponRangeTable[weaponType] || 1
+
+    // 苍鹰之眼修正 (仅限弓箭类)
+    if (weaponType === WeaponType.BOW) {
+        rangeInCells += (player.skills['vultures_eye'] || 0)
+    }
+
     player.attackRange = rangeInCells * CELL_SIZE
 }
 

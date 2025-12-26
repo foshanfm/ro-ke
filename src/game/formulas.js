@@ -62,13 +62,18 @@ export function calcCrit(luk, equipCrit = 0) {
     return 1 + Math.floor(luk / 3) + equipCrit
 }
 
-export function calcMoveSpeed(agi, jobBonus = 0, equipBonus = 0) {
-    // 基础速度: 5
-    // Agi加成: 每10点Agi + 0.5 (即 Agi * 0.05)
-    // 上限可以设定一个值，比如 20
-    const base = 5
-    const agiBonus = agi * 0.05
-    return parseFloat((base + agiBonus + jobBonus + equipBonus).toFixed(2))
+/**
+ * 计算移动速度 (RO 标准: 150 为 100%, 数值越小越快)
+ * @param {number} roSpeed - RO 原始速度值 (如 150, 112, 200)
+ * @param {number} cellSize - 每个格子的像素 (默认 20)
+ * @param {number} tickMs - 游戏循环的毫秒数 (默认 100, 即战斗 AI 的间隔)
+ * @returns {number} 最终每 tick 移动的像素数
+ */
+export function calcMoveSpeed(roSpeed, cellSize = 20, tickMs = 100) {
+    // 逻辑：每毫秒走 (cellSize / roSpeed) 像素
+    // 每一 tick 走 (cellSize / roSpeed) * tickMs 像素
+    const pixelsPerTick = (cellSize / roSpeed) * tickMs
+    return parseFloat(pixelsPerTick.toFixed(2))
 }
 
 /**

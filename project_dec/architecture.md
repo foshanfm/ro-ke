@@ -44,14 +44,17 @@ We prioritize "Feel" over "Academic Accuracy".
 
 
 ### 3.2. Spatial & AI Logic
-*   **Movement:** `Speed = Base + (Agi * 0.05)`.
+*   **Movement (RO Standard):** `pixelsPerTick = (cellSize / roSpeed) * tickMs`. 
+    - Base Standard: `150` speed translates to walking 1 cell per 150ms.
 *   **Search:** Scan `viewRange` for nearest entity.
 *   **Chase:** `movePlayerToward(target.x, target.y)` until `dist <= attackRange`.
 *   **Range & Kiting:**
     - **Unit Standard:** `1 Cell = 20px`.
-    - **Weapon Range:** Defined in `Equipment.js`, mapped to Cells.
+    - **Weapon Range:** Defined in `Equipment.js`, mapped to Cells. Supports skill modifiers (e.g., `Vulture's Eye`).
     - **Kiting Logic:** Monsters enter `CHASE` state if out of range, allowing ranged players to land free hits.
+*   **Patrol System:** In `SEARCHING` mode, players walk to a random `patrolTarget` at `moveSpeed` instead of teleporting.
 *   **Manual Movement:** `moveTo(x, y)` sets `gameState.manualTarget`, prioritizing it over search/combat.
+*   **Area Spawning:** Parsed from scripts (`X1, Y1, X2, Y2`). Instances are constrained to their logic zones if specified.
 *   **Route / Warp:** 
     - `checkWarpCollision(x, y)` scans current map's `activeWarps`.
     - Portals have a `spanX/Y` (collision box).

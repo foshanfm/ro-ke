@@ -8,7 +8,8 @@ export const mapState = reactive({
     monsters: [], // 当前地图上的怪物实例列表 { guid, id, name, x, y, hp, maxHp ... }
     width: 0,
     height: 0,
-    activeWarps: [] // 当前地图的传送点列表
+    activeWarps: [], // 当前地图的传送点列表
+    patrolTarget: null // 随机漫步的目标点 { x, y }
 })
 
 // 全局刷怪数据 - 将由 dataLoader 填充
@@ -44,6 +45,7 @@ export function initMap(mapId) {
     mapState.width = mapInfo.width
     mapState.height = mapInfo.height
     mapState.monsters = []
+    mapState.patrolTarget = null
 
     // 加载当前地图的传送点
     mapState.activeWarps = warpData[mapId] || []
@@ -91,7 +93,7 @@ function fillMonstersFromSpawnData(spawnInfo) {
 
         // 补充不足的怪物
         for (let i = currentCount; i < targetCount; i++) {
-            spawnSingleMonsterById(spawn.id)
+            spawnSingleMonsterById(spawn.id, spawn)
         }
     })
 }
@@ -99,13 +101,29 @@ function fillMonstersFromSpawnData(spawnInfo) {
 /**
  * 生成单个怪物 (按 ID)
  */
-function spawnSingleMonsterById(mobId) {
+function spawnSingleMonsterById(mobId, spawnArea = null) {
     const template = getMonster(mobId)
+
+    let spawnX, spawnY
+    if (spawnArea && (spawnArea.x1 !== 0 || spawnArea.x2 !== 0)) {
+        // 使用指定的刷怪区域
+        const minX = Math.min(spawnArea.x1, spawnArea.x2)
+        const maxX = Math.max(spawnArea.x1, spawnArea.x2)
+        const minY = Math.min(spawnArea.y1, spawnArea.y2)
+        const maxY = Math.max(spawnArea.y1, spawnArea.y2)
+        spawnX = minX + Math.floor(Math.random() * (maxX - minX + 1))
+        spawnY = minY + Math.floor(Math.random() * (maxY - minY + 1))
+    } else {
+        // 全地图随机
+        spawnX = Math.floor(Math.random() * mapState.width)
+        spawnY = Math.floor(Math.random() * mapState.height)
+    }
+
     const instance = {
         guid: ++guidCounter,
         templateId: mobId,           // 关联模板 ID
-        x: Math.floor(Math.random() * mapState.width),
-        y: Math.floor(Math.random() * mapState.height),
+        x: spawnX,
+        y: spawnY,
         hp: template.hp,             // 实例化的当前血量
         maxHp: template.hp,
         // 运行时状态
@@ -166,16 +184,27 @@ export function movePlayerToward(tx, ty, speed = 5) {
 }
 
 /**
- * 随机漫步逻辑
+ * 随机漫步逻辑 - 不再瞬移，而是设定一个目标点
  */
 export function randomWalk() {
-    const angle = Math.random() * Math.PI * 2
-    const dist = 30 + Math.random() * 50
-    const tx = Math.max(0, Math.min(mapState.width, player.x + Math.cos(angle) * dist))
-    const ty = Math.max(0, Math.min(mapState.height, player.y + Math.sin(angle) * dist))
+    // 如果已经有巡逻目标了，就尝试走过去
+    if (mapState.patrolTarget) {
+        const { x, ty } = mapState.patrolTarget // ty? typo in my thought? let's use x, y
+        const arrived = movePlayerToward(mapState.patrolTarget.x, mapState.patrolTarget.y, player.moveSpeed)
+        if (arrived) {
+            mapState.patrolTarget = null // 到达，清空目标
+        }
+        return arrived
+    }
 
-    player.x = tx
-    player.y = ty
+    // 设定一个新的随机巡逻点
+    const angle = Math.random() * Math.PI * 2
+    const dist = 100 + Math.random() * 200 // 走远一点，体现空间感
+    const tx = Math.max(20, Math.min(mapState.width - 20, player.x + Math.cos(angle) * dist))
+    const ty = Math.max(20, Math.min(mapState.height - 20, player.y + Math.sin(angle) * dist))
+
+    mapState.patrolTarget = { x: tx, y: ty }
+    return false
 }
 
 /**
