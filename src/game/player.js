@@ -329,14 +329,23 @@ export function addItem(itemId, count = 1) {
     }
 }
 
-export function addExp(baseAmount, jobAmount) {
+export function addExp(baseAmount, jobAmount, monsterLv = 1) {
     let leveledUp = false
     let jobLeveledUp = false
 
-    player.exp += baseAmount
-    if (player.exp >= player.nextExp) {
-        player.lv++
+    // 1. 应用等级差惩罚
+    const rate = Formulas.calcLevelDiffRate(player.lv, monsterLv)
+
+    // 确保最小收益为 1 (除非率是 0)
+    const finalBase = Math.floor(baseAmount * rate)
+    const finalJob = Math.floor(jobAmount * rate)
+
+    player.exp += finalBase
+
+    // 2. Base Level Up Loop
+    while (player.exp >= player.nextExp && player.lv < 99) {
         player.exp -= player.nextExp
+        player.lv++
         player.nextExp = getNextBaseExp(player.lv)
 
         const pointReward = Math.min(20, Math.floor(player.lv / 5) + 5)
@@ -351,18 +360,22 @@ export function addExp(baseAmount, jobAmount) {
 
     const currentJobCfg = JobConfig[player.job]
     if (player.jobLv < currentJobCfg.maxJobLv) {
-        player.jobExp += jobAmount
-        if (player.jobExp >= player.nextJobExp) {
-            player.jobLv++
-            player.jobExp -= player.nextJobExp
-            player.nextJobExp = getNextJobExp(player.jobLv)
-            player.skillPoints++
+        player.jobExp += finalJob
 
+        // 3. Job Level Up Loop
+        while (player.jobExp >= player.nextJobExp && player.jobLv < currentJobCfg.maxJobLv) {
+            player.jobExp -= player.nextJobExp
+            player.jobLv++
+
+            // Pass job type to get correct table
+            player.nextJobExp = getNextJobExp(player.jobLv, player.job)
+
+            player.skillPoints++
             jobLeveledUp = true
         }
     }
 
-    return { leveledUp, jobLeveledUp }
+    return { leveledUp, jobLeveledUp, finalBase, finalJob }
 }
 
 export function changeJob(newJob) {

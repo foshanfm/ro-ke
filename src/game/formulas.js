@@ -104,6 +104,30 @@ export function calcAspdDelay(aspd) {
     return Math.max(100, delay)
 }
 
+/**
+ * 计算等级差导致的经验/掉率惩罚 (Renewal)
+ * @param {number} playerLv 玩家等级
+ * @param {number} monsterLv 怪物等级
+ * @returns {number} 收益倍率 (1.0 = 100%)
+ */
+export function calcLevelDiffRate(playerLv, monsterLv) {
+    const diff = monsterLv - playerLv
+
+    // 怪物等级远高于玩家 (越级打怪惩罚)
+    if (diff >= 15) return 0.40  // 15级以上：40%
+    if (diff >= 10) return 1.40  // 10-14级：140% (高风险高回报)
+    if (diff >= 3) return 1.15  // 3-9级：115%
+
+    // 等级相仿 (正常收益区)
+    if (diff >= -5) return 1.00  // -5 到 +2 级：100%
+
+    // 玩家等级远高于怪物 (割草惩罚)
+    if (diff >= -10) return 0.95 // 低 6-10级：95%
+    if (diff >= -15) return 0.90 // 低 11-15级：90%
+    if (diff >= -30) return 0.35 // 低 21-30级：35%
+    return 0.10                  // 低 31级以上：10%
+}
+
 // --- 核心战斗逻辑 (Behavioral Correctness Template) ---
 
 export function calculateDamageFlow({

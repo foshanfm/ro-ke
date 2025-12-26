@@ -8,7 +8,7 @@
   import { initializeGameData } from './game/DataManager.js'
   import { setItemsDB } from './game/items.js'
   import { setMonstersDB } from './game/monsters.js'
-  import { setSpawnData } from './game/mapManager.js'
+  import { setSpawnData, setWarpData } from './game/mapManager.js'
   import LoginScreen from './components/LoginScreen.vue'
 
   // --- 核心状态 ---
@@ -161,11 +161,12 @@
   const initializeGameDataAsync = async () => {
     addLog('正在加载游戏数据...', 'system')
     try {
-      const { itemsDB, mobsDB, spawnData } = await initializeGameData(20)
+      const { itemsDB, mobsDB, spawnData, warpDB } = await initializeGameData(20)
       
       setItemsDB(itemsDB)
       setMonstersDB(mobsDB)
       setSpawnData(spawnData)
+      setWarpData(warpDB)
       
       isDataLoaded.value = true
       addLog('游戏数据加载完成!', 'success')

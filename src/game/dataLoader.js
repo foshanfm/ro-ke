@@ -270,6 +270,81 @@ function mapItemType(typeCode) {
 }
 
 /**
+ * 解析传送点数据库文件 (airports 目录)
+ * 格式: MapName,X,Y,Facing  warp  NpcName  SpanX,SpanY,TargetMap,TargetX,TargetY
+ */
+export async function loadWarpData() {
+  try {
+    const warpDB = {}
+
+    // 需要加载的目录列表
+    const directories = [
+      'cities',
+      'fields',
+      'dungeons'
+    ]
+
+    // 需要加载的文件列表 (示例 - 可以扩展)
+    const fileMap = {
+      cities: ['prontera', 'payon', 'geffen', 'morocc', 'alberta', 'comodo'],
+      fields: ['mtmjolnir', 'glastheim'],
+      dungeons: []
+    }
+
+    for (const dir of directories) {
+      const files = fileMap[dir] || []
+      for (const fileName of files) {
+        try {
+          const response = await fetch(`/src/game/data/airports/${dir}/${fileName}.txt`)
+          if (!response.ok) continue
+
+          const text = await response.text()
+          const lines = text.split('\n')
+
+          for (const line of lines) {
+            // 跳过注释和空行
+            if (line.trim().startsWith('//') || line.trim() === '') continue
+
+            // 解析格式: mapname,x,y,facing  warp  name  spanX,spanY,targetMap,targetX,targetY
+            const warpRegex = /^([a-zA-Z0-9_]+),(\d+),(\d+),\d+\s+warp\s+(\S+)\s+(\d+),(\d+),([a-zA-Z0-9_]+),(\d+),(\d+)/
+            const match = line.match(warpRegex)
+
+            if (match) {
+              const [_, sourceMap, x, y, npcName, spanX, spanY, targetMap, targetX, targetY] = match
+
+              // 初始化源地图的传送点数组
+              if (!warpDB[sourceMap]) {
+                warpDB[sourceMap] = []
+              }
+
+              warpDB[sourceMap].push({
+                x: parseInt(x),
+                y: parseInt(y),
+                spanX: parseInt(spanX),
+                spanY: parseInt(spanY),
+                targetMap,
+                targetX: parseInt(targetX),
+                targetY: parseInt(targetY),
+                name: npcName
+              })
+            }
+          }
+        } catch (err) {
+          console.warn(`[DataLoader] 无法加载传送点文件: ${dir}/${fileName}.txt`)
+        }
+      }
+    }
+
+    const totalWarps = Object.values(warpDB).reduce((sum, arr) => sum + arr.length, 0)
+    console.log(`[DataLoader] 已加载 ${totalWarps} 个传送点，覆盖 ${Object.keys(warpDB).length} 张地图`)
+    return warpDB
+  } catch (error) {
+    console.error('[DataLoader] 加载传送点数据失败:', error)
+    return {}
+  }
+}
+
+/**
  * 初始化所有数据
  */
 export async function initializeGameData(maxLevel = 20) {
@@ -278,12 +353,14 @@ export async function initializeGameData(maxLevel = 20) {
   const itemsDB = await loadItemDB()
   const mobsDB = await loadMobDB(maxLevel)
   const spawnData = await loadSpawnData(mobsDB, maxLevel)
+  const warpDB = await loadWarpData()
 
   console.log('[DataLoader] 游戏数据加载完成')
 
   return {
     itemsDB,
     mobsDB,
-    spawnData
+    spawnData,
+    warpDB
   }
 }

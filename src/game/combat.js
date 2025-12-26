@@ -1,26 +1,26 @@
 import { reactive } from 'vue'
-import { player, addExp, addItem, useItem, saveGame } from './player' 
+import { player, addExp, addItem, useItem, saveGame, warp } from './player'
 import { spawnMonster } from './monsters'
 import { getItemInfo } from './items'
-import { calcAspdDelay, calculateDamageFlow } from './formulas' 
-import { calculateDrops } from './drops' 
+import { calcAspdDelay, calculateDamageFlow } from './formulas'
+import { calculateDrops } from './drops'
 import { PassiveHooks } from './skillEngine'
-import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, removeMonster } from './mapManager'
+import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, removeMonster, checkWarpCollision } from './mapManager'
 
 // 游戏循环状态
 export const gameState = reactive({
-  isAuto: false, 
-  currentMonster: null, // 当前锁定的目标
-  status: 'IDLE' // IDLE, MOVING, ATTACKING, SEARCHING
+    isAuto: false,
+    currentMonster: null, // 当前锁定的目标
+    status: 'IDLE' // IDLE, MOVING, ATTACKING, SEARCHING
 })
 
 let logCallback = null
 export function setLogCallback(fn) {
-  logCallback = fn
+    logCallback = fn
 }
 
 function log(msg, type = 'info') {
-  if (logCallback) logCallback(msg, type)
+    if (logCallback) logCallback(msg, type)
 }
 
 function getPlayerDelay() {
@@ -32,38 +32,38 @@ function getPlayerDelay() {
 let mainLoopId = null
 let monsterLoopId = null
 let recoveryTimer = null
-let combatSessionId = 0 
+let combatSessionId = 0
 
 export function startBot() {
-  if (gameState.isAuto) return
+    if (gameState.isAuto) return
 
-  if (player.hp <= 0) {
-    log('检测到玩家已死亡。正在执行紧急复苏协议...', 'warning')
-    player.hp = player.maxHp
-    player.sp = player.maxSp
-    log('生命体征恢复。状态：满血。', 'system')
-  }
+    if (player.hp <= 0) {
+        log('检测到玩家已死亡。正在执行紧急复苏协议...', 'warning')
+        player.hp = player.maxHp
+        player.sp = player.maxSp
+        log('生命体征恢复。状态：满血。', 'system')
+    }
 
-  gameState.isAuto = true
-  combatSessionId++
-  const currentSession = combatSessionId
+    gameState.isAuto = true
+    combatSessionId++
+    const currentSession = combatSessionId
 
-  // 初始化地图
-  initMap(player.currentMap)
+    // 初始化地图
+    initMap(player.currentMap)
 
-  log(`AI Initiated (Session ${currentSession}) on ${player.currentMap}.`, 'system')
-  
-  clearLoops()
-  aiTick(currentSession)
+    log(`AI Initiated (Session ${currentSession}) on ${player.currentMap}.`, 'system')
+
+    clearLoops()
+    aiTick(currentSession)
 }
 
 export function stopBot() {
-  gameState.isAuto = false
-  gameState.status = 'IDLE'
-  gameState.currentMonster = null
-  clearLoops()
-  combatSessionId++ 
-  log('AI Suspended.', 'system')
+    gameState.isAuto = false
+    gameState.status = 'IDLE'
+    gameState.currentMonster = null
+    clearLoops()
+    combatSessionId++
+    log('AI Suspended.', 'system')
 }
 
 function clearLoops() {
@@ -74,25 +74,25 @@ function clearLoops() {
 }
 
 export function startRecovery() {
-  if (recoveryTimer) return
-  recoveryLoop()
+    if (recoveryTimer) return
+    recoveryLoop()
 }
 
 function recoveryLoop() {
-  const TICK_RATE = 5000 
-  if (player.hp > 0) {
-      let hpRegen = 1 + Math.floor((player.vit || 1) / 5) + Math.floor(player.maxHp / 200)
-      const hpRecLv = player.skills['hp_recovery'] || 0
-      if (hpRecLv > 0) {
-           const skillBonus = 5 + (hpRecLv * 3) + (player.maxHp * 0.002 * hpRecLv)
-           hpRegen += Math.floor(skillBonus / 2)
-      }
-      if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + hpRegen)
+    const TICK_RATE = 5000
+    if (player.hp > 0) {
+        let hpRegen = 1 + Math.floor((player.vit || 1) / 5) + Math.floor(player.maxHp / 200)
+        const hpRecLv = player.skills['hp_recovery'] || 0
+        if (hpRecLv > 0) {
+            const skillBonus = 5 + (hpRecLv * 3) + (player.maxHp * 0.002 * hpRecLv)
+            hpRegen += Math.floor(skillBonus / 2)
+        }
+        if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + hpRegen)
 
-      let spRegen = 1 + Math.floor((player.int || 1) / 6) + Math.floor(player.maxSp / 100)
-      if (player.sp < player.maxSp) player.sp = Math.min(player.maxSp, player.sp + spRegen)
-  }
-  recoveryTimer = setTimeout(recoveryLoop, TICK_RATE)
+        let spRegen = 1 + Math.floor((player.int || 1) / 6) + Math.floor(player.maxSp / 100)
+        if (player.sp < player.maxSp) player.sp = Math.min(player.maxSp, player.sp + spRegen)
+    }
+    recoveryTimer = setTimeout(recoveryLoop, TICK_RATE)
 }
 
 function checkAutoPotion() {
@@ -123,7 +123,7 @@ async function aiTick(sessionId) {
         if (!gameState.currentMonster) {
             gameState.status = 'SEARCHING'
             const { monster, distance } = findNearestMonster(player.config.viewRange)
-            
+
             if (monster) {
                 gameState.currentMonster = monster
                 log(`Monster ${monster.name} detected at distance ${Math.floor(distance)}!`, 'dim')
@@ -136,7 +136,7 @@ async function aiTick(sessionId) {
         }
 
         const target = gameState.currentMonster
-        
+
         // 校验目标有效性 (是否已死亡)
         if (target.hp <= 0) {
             gameState.currentMonster = null
@@ -152,13 +152,30 @@ async function aiTick(sessionId) {
             // 距离太远，追击
             gameState.status = 'MOVING'
             movePlayerToward(target.x, target.y, 15) // 追击速度快一点
+
+            // 检查是否触碰传送点
+            const warpInfo = checkWarpCollision(player.x, player.y)
+            if (warpInfo) {
+                log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
+                stopBot()
+                setTimeout(() => {
+                    const res = warp(warpInfo.targetMap)
+                    if (res.success) {
+                        player.x = warpInfo.targetX
+                        player.y = warpInfo.targetY
+                        log(`已到达 ${warpInfo.targetMap} (${warpInfo.targetX}, ${warpInfo.targetY})`, 'success')
+                    }
+                }, 500)
+                return
+            }
+
             mainLoopId = setTimeout(() => aiTick(sessionId), 100)
             return
         }
 
         // 3. 开始攻击逻辑
         gameState.status = 'ATTACKING'
-        
+
         // 攻击逻辑 (保持原有的 formulas)
         const passiveRes = PassiveHooks.onNormalAttack(target)
         const res = calculateDamageFlow({
@@ -175,10 +192,10 @@ async function aiTick(sessionId) {
         } else {
             let damage = res.damage
             if (passiveRes.damageMod !== 1.0) damage = Math.floor(damage * passiveRes.damageMod)
-            
+
             if (res.type === 'crit') log(`CRITICAL! You deal ${damage} damage.`, 'warning')
             else log(`You attack ${target.name} for ${damage} damage.`, 'default')
-            
+
             passiveRes.logs.forEach(l => log(l.msg, l.type))
 
             target.hp -= damage
@@ -194,9 +211,9 @@ async function aiTick(sessionId) {
                     clearTimeout(monsterLoopId)
                     monsterLoopId = null
                 }
-                saveGame() 
+                saveGame()
                 mainLoopId = setTimeout(() => aiTick(sessionId), 500)
-                return 
+                return
             }
         }
 
@@ -240,14 +257,14 @@ async function monsterActionLoop(sessionId) {
                 player.hp = 0
                 gameState.currentMonster = null
                 saveGame()
-                stopBot() 
+                stopBot()
                 return
             }
         }
     }
 
     if (gameState.isAuto && gameState.currentMonster && gameState.currentMonster.hp > 0 && sessionId === combatSessionId) {
-        const delay = target.attackDelay || 2000 
+        const delay = target.attackDelay || 2000
         monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), delay)
     } else {
         monsterLoopId = null
@@ -255,30 +272,30 @@ async function monsterActionLoop(sessionId) {
 }
 
 function monsterDead(target) {
-  log(`${target.name} died.`, 'success')
-  
-  const jobExp = target.jobExp || Math.ceil(target.exp * 0.6)
-  const { leveledUp, jobLeveledUp } = addExp(target.exp, jobExp)
-  
-  log(`Base Exp + ${target.exp} | Job Exp + ${jobExp}`, 'info')
-  
-  if (leveledUp) log(`Level Up! Base Lv ${player.lv}`, 'levelup')
-  if (jobLeveledUp) log(`Job Up! Job Lv ${player.jobLv}`, 'levelup')
+    log(`${target.name} died.`, 'success')
 
-  const drops = calculateDrops(target.id)
-  drops.forEach(drop => {
-      addItem(drop.id, drop.count)
-      const info = getItemInfo(drop.id)
-      const typeStr = drop.type === 'rare' ? '[RARE] ' : ''
-      const style = drop.type === 'rare' ? 'warning' : 'success'
-      log(`Loot: ${typeStr}${info.name} x ${drop.count}`, style)
-  })
+    const jobExp = target.jobExp || Math.ceil(target.exp * 0.6)
+    const { leveledUp, jobLeveledUp, finalBase, finalJob } = addExp(target.exp, jobExp, target.lv)
 
-  // 从地图移除怪物
-  removeMonster(target.guid)
-  gameState.currentMonster = null
+    log(`Base Exp + ${finalBase} | Job Exp + ${finalJob}`, 'info')
+
+    if (leveledUp) log(`Level Up! Base Lv ${player.lv}`, 'levelup')
+    if (jobLeveledUp) log(`Job Up! Job Lv ${player.jobLv}`, 'levelup')
+
+    const drops = calculateDrops(target.id)
+    drops.forEach(drop => {
+        addItem(drop.id, drop.count)
+        const info = getItemInfo(drop.id)
+        const typeStr = drop.type === 'rare' ? '[RARE] ' : ''
+        const style = drop.type === 'rare' ? 'warning' : 'success'
+        log(`Loot: ${typeStr}${info.name} x ${drop.count}`, style)
+    })
+
+    // 从地图移除怪物
+    removeMonster(target.guid)
+    gameState.currentMonster = null
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise(resolve => setTimeout(resolve, ms))
 }

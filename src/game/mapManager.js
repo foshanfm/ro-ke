@@ -7,11 +7,13 @@ export const mapState = reactive({
     currentMapId: null,
     monsters: [], // 当前地图上的怪物实例列表 { guid, id, name, x, y, hp, maxHp ... }
     width: 0,
-    height: 0
+    height: 0,
+    activeWarps: [] // 当前地图的传送点列表
 })
 
 // 全局刷怪数据 - 将由 dataLoader 填充
 let spawnData = {}
+let warpData = {}
 
 let guidCounter = 0
 
@@ -21,6 +23,14 @@ let guidCounter = 0
 export function setSpawnData(newSpawnData) {
     spawnData = newSpawnData
     console.log('[MapManager] 刷怪数据已更新')
+}
+
+/**
+ * 设置传送点数据 (由 App.vue 调用)
+ */
+export function setWarpData(newWarpData) {
+    warpData = newWarpData
+    console.log('[MapManager] 传送点数据已更新')
 }
 
 /**
@@ -34,6 +44,12 @@ export function initMap(mapId) {
     mapState.width = mapInfo.width
     mapState.height = mapInfo.height
     mapState.monsters = []
+
+    // 加载当前地图的传送点
+    mapState.activeWarps = warpData[mapId] || []
+    if (mapState.activeWarps.length > 0) {
+        console.log(`[MapManager] 地图 ${mapId} 加载了 ${mapState.activeWarps.length} 个传送点`)
+    }
 
     // 初始化时刷出第一批怪
     fillMonsters()
@@ -194,4 +210,28 @@ export function randomWalk() {
  */
 export function isSpawnDataLoaded() {
     return Object.keys(spawnData).length > 0
+}
+
+/**
+ * 检查玩家是否触碰传送点
+ * @param {number} playerX - 玩家 X 坐标
+ * @param {number} playerY - 玩家 Y 坐标
+ * @returns {Object|null} 如果触碰返回传送点信息，否则返回 null
+ */
+export function checkWarpCollision(playerX, playerY) {
+    for (const warp of mapState.activeWarps) {
+        const dx = Math.abs(playerX - warp.x)
+        const dy = Math.abs(playerY - warp.y)
+
+        // 检查是否在传送点范围内
+        if (dx <= warp.spanX && dy <= warp.spanY) {
+            return {
+                targetMap: warp.targetMap,
+                targetX: warp.targetX,
+                targetY: warp.targetY,
+                name: warp.name
+            }
+        }
+    }
+    return null
 }

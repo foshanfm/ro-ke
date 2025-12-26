@@ -2,7 +2,7 @@
 // 数据管理器 - 负责静态数据的缓存和异步加载
 
 import { getStaticData, setStaticData, isStaticDataStale } from '../db/index.js';
-import { loadItemDB, loadMobDB, loadSpawnData } from './DataLoader.js';
+import { loadItemDB, loadMobDB, loadSpawnData, loadWarpData } from './dataLoader.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
 const DATA_VERSION = 1;
@@ -11,6 +11,7 @@ const DATA_VERSION = 1;
 let itemsCache = null;
 let mobsCache = null;
 let spawnCache = null;
+let warpCache = null;
 
 /**
  * 初始化游戏数据
@@ -45,15 +46,21 @@ export async function initializeGameData(maxLevel = 20) {
     console.log('[DataManager] 加载刷怪数据...');
     spawnCache = await loadSpawnData(mobsCache, maxLevel);
 
+    // 传送点数据总是重新加载 (文件较小)
+    console.log('[DataManager] 加载传送点数据...');
+    warpCache = await loadWarpData();
+
     console.log('[DataManager] 游戏数据初始化完成');
     console.log(`  - 物品: ${Object.keys(itemsCache).length} 个`);
     console.log(`  - 怪物: ${Object.keys(mobsCache).length} 个`);
     console.log(`  - 地图: ${Object.keys(spawnCache).length} 个`);
+    console.log(`  - 传送点: ${Object.values(warpCache).reduce((sum, arr) => sum + arr.length, 0)} 个`);
 
     return {
         itemsDB: itemsCache,
         mobsDB: mobsCache,
-        spawnData: spawnCache
+        spawnData: spawnCache,
+        warpDB: warpCache
     };
 }
 
@@ -112,6 +119,17 @@ export function getAllSpawns() {
 }
 
 /**
+ * 获取地图传送点信息
+ */
+export function getWarpInfo(mapId) {
+    if (!warpCache) {
+        console.error('[DataManager] 传送点数据未初始化');
+        return [];
+    }
+    return warpCache[mapId] || [];
+}
+
+/**
  * 强制刷新数据 (清除缓存并重新加载)
  */
 export async function refreshGameData(maxLevel = 20) {
@@ -119,5 +137,6 @@ export async function refreshGameData(maxLevel = 20) {
     itemsCache = null;
     mobsCache = null;
     spawnCache = null;
+    warpCache = null;
     return await initializeGameData(maxLevel);
 }

@@ -54,10 +54,36 @@ export const JobConfig = {
     }
 }
 
+import BaseExpTable from './data/base_exp.json'
+import JobExpTable from './data/job_exp.json'
+
 export function getNextBaseExp(lv) {
-    return Math.floor(100 * Math.pow(1.5, lv - 1))
+    if (lv >= 99) return 999999999
+    // Table is 0-indexed, but Lv 1 needs exp to reach Lv 2, which is index 0 in our array?
+    // Usually Array[0] is Exp for Lv 2.
+    // Let's assume input lv is CURRENT level.
+    // If table is [50, 100...], index 0 is 50.
+    // If I am Lv 1, I need 50 exp to reach Lv 2.
+    // So Array[lv - 1] should be correct if array starts with exp for next level.
+    // My wrote array: [0, 50, ...] -> Index 1 is 50.
+    // If I am Lv 1, I need Array[1] (50).
+    return BaseExpTable[lv] || 999999999
 }
 
-export function getNextJobExp(lv) {
-    return Math.floor(50 * Math.pow(1.4, lv - 1))
+export function getNextJobExp(lv, jobType = JobType.NOVICE) {
+    // Determine which table to use
+    let tableToCheck = JobExpTable.NOVICE // Default
+    if (jobType === JobType.NOVICE) {
+        tableToCheck = JobExpTable.NOVICE
+    } else {
+        // Assume 1st class for now as we don't have detailed 2nd class logic in this snippet yet
+        tableToCheck = JobExpTable['1ST_CLASS']
+    }
+
+    // Table format: [10, 18...] (Exp needed for next level)
+    // If I am Job Lv 1, I need table[0] (10) to reach Job Lv 2.
+    if (lv < 1) return 1
+    const idx = lv - 1
+    if (idx >= tableToCheck.length) return 999999999
+    return tableToCheck[idx]
 }

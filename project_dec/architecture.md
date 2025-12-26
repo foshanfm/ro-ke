@@ -20,6 +20,7 @@ Combat is **Real-time**, not Turn-based.
 All math logic resides in `src/game/formulas.js`.
 *   **Single Source of Truth:** Both `combat.js` (Real-time) and `simulator.js` (Headless) MUST import formulas from here.
 *   **No Hardcoding:** Never write `damage = atk - def` inside combat logic. Call `calculateDamageFlow()`.
+*   **Experience & Drops:** Use `calcLevelDiffRate(playerLv, monsterLv)` to scale rewards based on level gap.
 
 ## 2. Module Responsibilities
 
@@ -42,6 +43,10 @@ We prioritize "Feel" over "Academic Accuracy".
 *   **Movement:** `Speed = Base + (Agi * 0.05)`.
 *   **Search:** Scan `viewRange` for nearest entity.
 *   **Chase:** `movePlayerToward(target.x, target.y)` until `dist <= attackRange`.
+*   **Route / Warp:** 
+    - `checkWarpCollision(x, y)` scans current map's `activeWarps`.
+    - Portals have a `spanX/Y` (collision box).
+    - Transitions trigger `warp(targetMap)` and reset coords to `targetX/Y`.
 
 ### 3.3. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).

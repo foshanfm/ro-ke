@@ -71,17 +71,21 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Script-Based Spawning:** Map spawns now use standard RO spawn scripts (`mobs/fields/*.txt`).
 - [x] **Content Gating:** Implemented Level 20 restriction for initial open content.
 
-### Phase 6: Infrastructure & Persistence [Completed]
-- [x] **Storage Engine:** Deploy Dexie.js (IndexedDB wrapper).
-- [x] **Data Management:** Implement `DataManager.js` for async/cached loading of static assets.
-- [x] **User System:** Pseudo-Login screen with multiple save slots.
+### Phase 7: Authentic Experience System [Completed]
+- [x] **Renewal Exp Curve:** Implemented `base_exp.json` and `job_exp.json` for levels 1-99.
+- [x] **Level Difference Penalty:** Implemented `calcLevelDiffRate` for experience and drop scaling based on player-monster level gap.
+- [x] **Job Type Recognition:** Differentiated between Novice and 1st Class job experience requirements.
+
+### Phase 8: Real Route System [Completed]
+- [x] **Warp Database:** Parsed `src/game/data/airports/**/*.txt` (rAthena format).
+- [x] **Collision Detection:** Implemented `checkWarpCollision` in `mapManager.js`.
+- [x] **Automatic Logic:** Seamless map transitions when walking into portals during AI movement.
 
 ## 4. Current State
-*   **Version:** 1.0.0 (Phase 6 - Infrastructure & Persistence Complete)
-*   **Stability:** High. IndexedDB storage and character selection system verified.
-*   **Automation:** Fully autonomous loop with high-fidelity RO data.
+*   **Version:** 1.0.1 (Phase 8 - Real Route System Complete)
+*   **Stability:** High. Level penalty and warp systems verified.
+*   **Automation:** Full cyclic navigation possible via warp scripts.
 *   **New Features:**
-    - **IndexedDB Storage:** Scalable, asynchronous persistence for characters and static data.
-    - **Character Selection:** Support for multiple local save slots via "Pseudo-Login" screen.
-    - **Static Data Caching:** DataManager caches parsed `.txt` DBs into IndexedDB for 20x faster startup.
-*   **Next Objective:** Improve Map navigation UI and implement 1st Job skills.
+    - **Renewal Experience System:** Authentic RO experience tables and level-gap penalties.
+    - **Real Route System:** Coordinate-based map transitions using official RO warp points.
+*   **Next Objective:** Implement 1st Job active skills and sit/regen mechanics.
