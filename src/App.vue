@@ -1,14 +1,15 @@
 <script setup>
   import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue' 
-  import { player, loadGame, saveGame } from './game/player.js'
+  import { player, saveGame } from './game/player.js'
   import { setLogCallback, startRecovery, gameState } from './game/combat.js'
   import { JobConfig } from './game/jobs.js'
   import { Maps } from './game/maps.js'
   import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggestions } from './game/commands.js'
-  import { initializeGameData } from './game/dataLoader.js'
+  import { initializeGameData } from './game/DataManager.js'
   import { setItemsDB } from './game/items.js'
   import { setMonstersDB } from './game/monsters.js'
   import { setSpawnData } from './game/mapManager.js'
+  import LoginScreen from './components/LoginScreen.vue'
 
   // --- 核心状态 ---
   const logs = ref([]) 
@@ -16,6 +17,8 @@
   const cmdInput = ref(null)
   const userCommand = ref('')
   const isDataLoaded = ref(false) // 数据加载状态
+  const isLoggedIn = ref(false) // 登录状态
+  const isInitializing = ref(false) // 初始化状态
   
   // --- 智能提示状态 ---
   const showSuggestions = ref(false)
@@ -135,16 +138,31 @@
   // 移除深度 watch，改为每 30秒 自动保存
   let autoSaveTimer = null
   
-  onMounted(async () => {
-    setLogCallback(addLog)
-    startRecovery()
+  // 登录处理
+  const handleLogin = async (saveId) => {
+    isLoggedIn.value = true
+    isInitializing.value = true
 
-    // 加载游戏数据
+    // 初始化游戏数据
+    await initializeGameDataAsync()
+
+    const jobName = JobConfig[player.job] ? JobConfig[player.job].name : '初学者'
+    const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : '未知区域'
+    
+    addLog(`欢迎回来,${player.name} (Lv.${player.lv} ${jobName})`, 'system')
+    addLog(`当前位置: ${mapName}`, 'system')
+    addLog(`系统就绪。输入 'auto' 开始挂机,输入 'help' 查看帮助。`, 'system')
+    
+    isInitializing.value = false
+    focusInput()
+  }
+
+  // 异步加载游戏数据
+  const initializeGameDataAsync = async () => {
     addLog('正在加载游戏数据...', 'system')
     try {
-      const { itemsDB, mobsDB, spawnData } = await initializeGameData(20) // 限制等级 20
+      const { itemsDB, mobsDB, spawnData } = await initializeGameData(20)
       
-      // 设置数据到各个模块
       setItemsDB(itemsDB)
       setMonstersDB(mobsDB)
       setSpawnData(spawnData)
@@ -155,26 +173,15 @@
       addLog('游戏数据加载失败,将使用后备数据', 'warning')
       console.error(error)
     }
+  }
 
-    const hasSave = loadGame()
-    
-    const jobName = JobConfig[player.job] ? JobConfig[player.job].name : '初学者'
-    const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : '未知区域'
-    
-    if (hasSave) {
-      addLog(`读取存档成功。欢迎回来,${player.name} (Lv.${player.lv} ${jobName})`, 'system')
-      addLog(`当前位置: ${mapName}`, 'system')
-    } else {
-      addLog('未找到存档,初始化新角色...', 'system')
-    }
-    
-    addLog(`系统就绪。输入 'auto' 开始挂机,输入 'help' 查看帮助。`, 'system')
-    
-    focusInput()
+  onMounted(async () => {
+    setLogCallback(addLog)
+    startRecovery()
 
-    // 启动自动保存
-    autoSaveTimer = setInterval(() => {
-        saveGame()
+    // 启动自动保存 (异步)
+    autoSaveTimer = setInterval(async () => {
+        await saveGame()
         // addLog('Auto saved.', 'dim') // 可选提示
     }, 30000)
   })
@@ -209,7 +216,19 @@
   </script>
   
   <template>
-    <div class="bg-black text-gray-300 font-mono h-screen flex overflow-hidden text-sm select-text">
+    <!-- 登录界面 -->
+    <LoginScreen v-if="!isLoggedIn" @login="handleLogin" />
+
+    <!-- 加载中界面 -->
+    <div v-else-if="isInitializing" class="bg-black text-gray-300 font-mono h-screen flex items-center justify-center">
+      <div class="text-center">
+        <div class="text-2xl mb-4">加载中...</div>
+        <div class="text-sm text-gray-500">正在初始化游戏数据</div>
+      </div>
+    </div>
+
+    <!-- 主游戏界面 -->
+    <div v-else class="bg-black text-gray-300 font-mono h-screen flex overflow-hidden text-sm select-text">
       
       <!-- Left Sidebar: Character Status (Always visible now) -->
       <div class="w-64 bg-gray-900 border-r border-gray-700 flex flex-col p-4 gap-4 shrink-0">

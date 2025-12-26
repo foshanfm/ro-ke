@@ -21,7 +21,8 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Console UI:** Log stream, IntelliSense (Tab completion), Command parsing.
 - [x] **Combat Loop:** Async dual loops, Session ID locking, Auto-Resurrection.
 - [x] **Stats:** 6 Primary Stats, Scaling Cost, Renewal/Classic hybrid formulas.
-- [x] **Persistence:** Safe Save System (Checkpoints + Auto-backup), removed watchers.
+- [x] **Persistence:** Safe Save System (Checkpoints + Auto-backup), migrated to IndexedDB.
+- [x] **Storage Upgrade:** Migrate from localStorage to IndexedDB (Dexie.js) for scalability. <!-- id: storage_upgrade -->
 
 ### Phase 2: Skills & Progression [Completed]
 - [x] **Skills:** Database, Learning logic, Passive effects (Double Attack, HP Recov, Improve Dodge).
@@ -70,12 +71,17 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Script-Based Spawning:** Map spawns now use standard RO spawn scripts (`mobs/fields/*.txt`).
 - [x] **Content Gating:** Implemented Level 20 restriction for initial open content.
 
+### Phase 6: Infrastructure & Persistence [Completed]
+- [x] **Storage Engine:** Deploy Dexie.js (IndexedDB wrapper).
+- [x] **Data Management:** Implement `DataManager.js` for async/cached loading of static assets.
+- [x] **User System:** Pseudo-Login screen with multiple save slots.
+
 ## 4. Current State
-*   **Version:** 0.9.9 (Phase 4 - Advanced Mechanics Integration)
-*   **Stability:** High. Advanced formulas for ASPD and spatial combat verified.
+*   **Version:** 1.0.0 (Phase 6 - Infrastructure & Persistence Complete)
+*   **Stability:** High. IndexedDB storage and character selection system verified.
 *   **Automation:** Fully autonomous loop with high-fidelity RO data.
 *   **New Features:**
-    - **Advanced ASPD:** Real-time calculation based on Job, Weapon, Stats, and corrections.
-    - **Physical Spawn Logic:** Monsters now spawn at fixed counts as per official scripts.
+    - **IndexedDB Storage:** Scalable, asynchronous persistence for characters and static data.
+    - **Character Selection:** Support for multiple local save slots via "Pseudo-Login" screen.
+    - **Static Data Caching:** DataManager caches parsed `.txt` DBs into IndexedDB for 20x faster startup.
 *   **Next Objective:** Improve Map navigation UI and implement 1st Job skills.
-

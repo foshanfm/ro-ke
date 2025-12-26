@@ -5,6 +5,7 @@ import { EquipDB, EquipType, WeaponType } from './equipment'
 import { getItemInfo, ItemType } from './items'
 import { Maps } from './maps'
 import * as Formulas from './formulas'
+import { saveSave, getSave, getAllSaves } from '../db/index.js'
 
 const defaultStats = {
     name: 'Novice',
@@ -33,6 +34,9 @@ const defaultStats = {
 }
 
 export const player = reactive({ ...defaultStats })
+
+// 当前存档 ID (用于更新现有存档)
+export let currentSaveId = null
 
 export const getStatPointCost = Formulas.getStatPointCost
 
@@ -142,89 +146,153 @@ export function recalculateMaxStats() {
     player.moveSpeed = Formulas.calcMoveSpeed(finalAgi, 0, equipMoveSpeedBonus)
 }
 
-const SAVE_KEY = 'ro_ke_save_v2'
+/**
+ * 保存游戏 (异步)
+ * 如果 currentSaveId 存在,则更新现有存档,否则创建新存档
+ */
+export async function saveGame() {
+    try {
+        console.log('[Player] 开始保存游戏...')
+        console.log('[Player] currentSaveId:', currentSaveId)
+        console.log('[Player] player.name:', player.name)
 
-export function saveGame() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(player))
+        // 创建一个干净的 player 数据副本
+        const playerData = JSON.parse(JSON.stringify(player))
+
+        const saveData = {
+            id: currentSaveId,
+            name: player.name,
+            data: playerData
+        }
+
+        console.log('[Player] saveData 结构:', {
+            id: saveData.id,
+            name: saveData.name,
+            dataKeys: Object.keys(saveData.data)
+        })
+
+        const savedId = await saveSave(saveData)
+        console.log('[Player] 保存成功, savedId:', savedId)
+
+        if (!currentSaveId) {
+            currentSaveId = savedId
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('[Player] 保存失败 - 错误类型:', error.name)
+        console.error('[Player] 保存失败 - 错误信息:', error.message)
+        console.error('[Player] 保存失败 - 完整错误:', error)
+        console.error('[Player] 保存失败 - 堆栈:', error.stack)
+        return { success: false, error }
+    }
 }
 
-export function loadGame() {
-    const savedData = localStorage.getItem(SAVE_KEY)
-    if (savedData) {
-        try {
-            const parsed = JSON.parse(savedData)
-
-            if (parsed.equipment) {
-                Object.keys(parsed.equipment).forEach(slot => {
-                    const val = parsed.equipment[slot]
-                    if (val !== null && typeof val !== 'object') {
-                        const info = EquipDB[val]
-                        parsed.equipment[slot] = {
-                            id: val,
-                            cards: info && info.slots ? new Array(info.slots).fill(null) : []
-                        }
-                    }
-                })
-            }
-
-            Object.assign(player, parsed)
-
-            if (!player.inventory) player.inventory = []
-
-            // 兼容性处理：将旧的职业枚举值转换为新格式
-            const jobMapping = {
-                'Novice': 'NOVICE',
-                'Swordman': 'SWORDMAN',
-                'Mage': 'MAGICIAN',
-                'Archer': 'ARCHER',
-                'Thief': 'THIEF',
-                'Acolyte': 'ACOLYTE'
-            }
-            if (player.job && jobMapping[player.job]) {
-                player.job = jobMapping[player.job]
-            }
-            if (!player.job) player.job = JobType.NOVICE
-
-            if (!player.jobLv) player.jobLv = 1
-            if (player.jobExp === undefined) player.jobExp = 0
-            if (!player.nextJobExp) player.nextJobExp = getNextJobExp(player.jobLv)
-            if (!player.skillPoints) player.skillPoints = 0
-            if (player.statPoints === undefined) player.statPoints = 0
-            if (!player.skills) player.skills = {}
-            if (!player.config) player.config = {}
-
-            if (!player.currentMap) player.currentMap = 'prt_fild08'
-            if (player.zeny === undefined) player.zeny = 0
-
-            if (!player.equipment) {
-                player.equipment = {
-                    [EquipType.WEAPON]: null,
-                    [EquipType.SHIELD]: null,
-                    [EquipType.ARMOR]: null,
-                    [EquipType.HEAD]: null,
-                    [EquipType.ACCESSORY]: null
-                }
-            }
-
-            const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
-            keys.forEach(k => {
-                if (player[k] === undefined || player[k] === null || isNaN(player[k])) {
-                    player[k] = 1
-                }
-            })
-
-            player.nextExp = getNextBaseExp(player.lv)
-            player.nextJobExp = getNextJobExp(player.jobLv)
-            recalculateMaxStats()
-
-            console.log('[System] Save loaded successfully.')
-            return true
-        } catch (e) {
-            console.error('[System] Save file corrupted, resetting.', e)
+/**
+ * 加载游戏 (异步)
+ * @param {number} saveId - 存档 ID
+ */
+export async function loadGame(saveId) {
+    try {
+        const saveRecord = await getSave(saveId)
+        if (!saveRecord) {
+            console.error('[Player] 存档不存在:', saveId)
             return false
         }
+
+        const parsed = saveRecord.data
+
+        // 装备兼容性处理
+        if (parsed.equipment) {
+            Object.keys(parsed.equipment).forEach(slot => {
+                const val = parsed.equipment[slot]
+                if (val !== null && typeof val !== 'object') {
+                    const info = EquipDB[val]
+                    parsed.equipment[slot] = {
+                        id: val,
+                        cards: info && info.slots ? new Array(info.slots).fill(null) : []
+                    }
+                }
+            })
+        }
+
+        Object.assign(player, parsed)
+
+        if (!player.inventory) player.inventory = []
+
+        // 兼容性处理:将旧的职业枚举值转换为新格式
+        const jobMapping = {
+            'Novice': 'NOVICE',
+            'Swordman': 'SWORDMAN',
+            'Mage': 'MAGICIAN',
+            'Archer': 'ARCHER',
+            'Thief': 'THIEF',
+            'Acolyte': 'ACOLYTE'
+        }
+        if (player.job && jobMapping[player.job]) {
+            player.job = jobMapping[player.job]
+        }
+        if (!player.job) player.job = JobType.NOVICE
+
+        if (!player.jobLv) player.jobLv = 1
+        if (player.jobExp === undefined) player.jobExp = 0
+        if (!player.nextJobExp) player.nextJobExp = getNextJobExp(player.jobLv)
+        if (!player.skillPoints) player.skillPoints = 0
+        if (player.statPoints === undefined) player.statPoints = 0
+        if (!player.skills) player.skills = {}
+        if (!player.config) player.config = {}
+
+        if (!player.currentMap) player.currentMap = 'prt_fild08'
+        if (player.zeny === undefined) player.zeny = 0
+
+        if (!player.equipment) {
+            player.equipment = {
+                [EquipType.WEAPON]: null,
+                [EquipType.SHIELD]: null,
+                [EquipType.ARMOR]: null,
+                [EquipType.HEAD]: null,
+                [EquipType.ACCESSORY]: null
+            }
+        }
+
+        const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
+        keys.forEach(k => {
+            if (player[k] === undefined || player[k] === null || isNaN(player[k])) {
+                player[k] = 1
+            }
+        })
+
+        player.nextExp = getNextBaseExp(player.lv)
+        player.nextJobExp = getNextJobExp(player.jobLv)
+        recalculateMaxStats()
+
+        // 设置当前存档 ID
+        currentSaveId = saveId
+
+        console.log('[Player] 存档加载成功:', player.name)
+        return true
+    } catch (error) {
+        console.error('[Player] 加载存档失败:', error)
+        return false
     }
-    return false
+}
+
+/**
+ * 获取所有存档列表 (异步)
+ */
+export async function listSaves() {
+    return await getAllSaves()
+}
+
+/**
+ * 创建新角色
+ */
+export function createNewCharacter(name) {
+    Object.assign(player, defaultStats)
+    player.name = name
+    player.nextExp = getNextBaseExp(1)
+    player.nextJobExp = getNextJobExp(1)
+    currentSaveId = null // 重置存档 ID
 }
 
 

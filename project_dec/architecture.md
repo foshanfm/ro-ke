@@ -12,8 +12,9 @@ Combat is **Real-time**, not Turn-based.
 
 ### 1.2. Explicit Persistence
 *   **No Watchers:** We do NOT use `watch(player)` for saving.
+*   **IndexedDB (Dexie.js):** Primary storage for characters and static data.
 *   **Checkpoints:** Save only on key events: Battle End, Map Change, Manual Action (Equip/Stat/Buy/Sell).
-*   **Backup:** A background timer (30s) acts as a fail-safe.
+*   **Backup:** A background timer (30s) acts as a fail-safe async save.
 
 ### 1.3. Pure Formulas
 All math logic resides in `src/game/formulas.js`.
@@ -22,15 +23,10 @@ All math logic resides in `src/game/formulas.js`.
 
 ## 2. Module Responsibilities
 
-*   **`player.js`**: State Owner. Handles Inventory, Stats, Config, Persistence.
-*   **`combat.js`**: Loop Manager. Handles AI State Machine (Search -> Move -> Attack), Timers, Session IDs.
-*   **`formulas.js`**: Pure Math. Stat calculation, Damage formulas, Move Speed.
-*   **`drops.js`**: RNG Engine. Handles Drop Tables and Pity Counters.
-*   **`simulator.js`**: Analytics. Runs Monte Carlo simulations for efficiency analysis.
-*   **`commands.js`**: Registry Pattern. Handles all console commands and their executions.
-*   **`skillEngine.js`**: Unified Skill Logic. Handles Casting, SP Check, Damage Modifiers, Passive Hooks.
-*   **`mapManager.js`**: Spatial Engine. Handles Map Instances, Monster Spawning (Fixed Count/Spawn Files), Coordinates, Pathfinding.
-*   **`dataLoader.js`**: Data ETL. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts into the game's reactive state.
+*   **`player.js`**: State Owner. Handles Inventory, Stats, Config. Delegates persistence to `db/index.js`.
+*   **`db/index.js`**: Dexie.js Database Wrapper. Manages `saves` and `static_data` object stores.
+*   **`DataManager.js`**: Logic Orchestrator. Manages the lifecycle of game data, including parsing, caching to IndexedDB, and memory retrieval.
+*   **`dataLoader.js`**: Parser. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts. Called by `DataManager` if cache is stale.
 
 ## 3. Core Algorithms (Standard)
 
