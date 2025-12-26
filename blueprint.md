@@ -1,55 +1,60 @@
-# 项目蓝图: RO-Idle-Bot (仙境传说挂机版)
+# Project Blueprint: RO-Idle-Bot
 
-## 1. 概述 (Overview)
-一个基于 Web 的放置类游戏，旨在复刻使用自动化外挂（如 Kore Easy/OpenKore）挂机《仙境传说 Online》(RO) 的体验。核心特色是**异步双轨战斗**、**纯文本控制台交互**以及**深度的数据模拟**。
+## 1. Overview
+A web-based idle game recreating the experience of using automated botting software (like Kore Easy/OpenKore) for Ragnarok Online. The core features include **asynchronous dual-track combat**, **text-based console interaction**, **deep data simulation**, and an **industrial-grade economy/drop system**.
 
-## 2. 架构与设计 (Architecture & Design)
-*   **前端:** Vue 3 + Vite + Tailwind CSS。
-*   **状态管理:** Vue `reactive`/`ref` 模拟游戏服务器数据。
-*   **持久化:** `localStorage` (通过 `watch` 监听玩家状态自动保存)。
-*   **游戏循环 (Game Loop):** 
-    *   **异步双轨系统 (Dual Track Async System):** 
-        *   **Player Loop:** 由玩家 ASPD 驱动 (Delay = `(200-ASPD)*20` ms)，负责索敌和攻击。
-        *   **Monster Loop:** 由怪物 Attack Delay 驱动 (不同怪物攻速不同)，独立攻击玩家。
-    *   **Recovery Loop:** 独立于战斗的自然回血/回蓝循环 (Tick rate: 5s)。
-*   **交互体验 (UX):**
-    *   **智能提示 (IntelliSense):** 命令行支持指令与参数的实时补全 (Tab/Enter)。
-    *   **全中文环境:** 物品、怪物、帮助文档全面汉化。
+## 2. Architecture & Design
+*   **Frontend:** Vue 3 + Vite + Tailwind CSS.
+*   **State Management:** Vue `reactive` (Player State) + Explicit Persistence Strategy.
+*   **Core Engine:**
+    *   **Dual-Track Async Loop:** Player and Monster act independently based on ASPD/Delay.
+    *   **Session Lock:** Prevents race conditions during state transitions.
+    *   **Pure Formulas:** All math (Damage, Hit, Drop) is isolated in `formulas.js`.
+*   **Drop System:** Layered RNG with "Normal" (Trash) vs "Rare" (Equip/Card) tables, featuring a **Soft Pity** mechanism.
 
-## 3. 路线图 (Roadmap)
+## 3. Roadmap
 
-### 第一阶段: 核心引擎与地基 (Phase 1) - [已完成]
-- [x] **控制台 UI:** 基础日志显示、命令解析、自动滚动。
-- [x] **战斗循环:** 异步双轨战斗，会话锁解决竞态问题。
-- [x] **数值体系:** 六维属性、素质点递增消耗、Renewal/Classic 混合公式。
-- [x] **持久化:** 安全存档机制。
+### Phase 1: Core Engine & Foundation [Completed]
+- [x] **Console UI:** Log stream, IntelliSense (Tab completion), Command parsing.
+- [x] **Combat Loop:** Async dual loops, Session ID locking, Auto-Resurrection.
+- [x] **Stats:** 6 Primary Stats, Scaling Cost, Renewal/Classic hybrid formulas.
+- [x] **Persistence:** Safe Save System (Checkpoints + Auto-backup), removed watchers.
 
-### 第二阶段: 技能与进阶 (Phase 2) - [已完成]
-- [x] **技能系统:** 数据库、学习逻辑、被动技能实装。
-- [x] **装备系统:** 装备位、属性加成。
-- [x] **消耗品:** 药水使用、Config 自动喝药。
-- [x] **怪物图鉴:** 实装 Lv 1-10 所有怪物 (12种)。
+### Phase 2: Skills & Progression [Completed]
+- [x] **Skills:** Database, Learning logic, Passive effects (Double Attack, HP Recov, Improve Dodge).
+- [x] **Equipment:** Slots (Weapon/Armor), Stat aggregation, Weapon Type ASPD base.
+- [x] **Consumables:** Item usage, Config-based Auto-Potion.
+- [x] **Monsters:** Full Lv 1-10 DB with correct stats/drops.
 
-### 第三阶段: 世界与经济 (Phase 3) - [已完成]
-- [x] **地图系统:** 
-    - [x] `maps.js` 定义区域。
-    - [x] **生态修正:** 修复沙漠出现波利/疯兔等不合理分布。
-    - [x] `map` 指令移动，区域化刷怪。
-- [x] **经济系统:** Zeny、`sell`/`buy` 指令。
-- [x] **数据工具:** 战斗模拟器 (`sim`)。
+### Phase 3: World & Economy [Completed]
+- [x] **Map System:** `maps.js` with ecological spawn tables. `map` command.
+- [x] **Economy:** Zeny currency.
+    - [x] **Smart Sell:** `sell all` only sells junk (ETC), protecting Rares.
+    - [x] **Auto Buy:** `auto_buy_potion` config to replenish supplies automatically.
+- [x] **Simulation:** `sim` command to run 1000+ battles instantly and analyze DPS/Efficiency/Profit.
+- [x] **Technical Refactor:** 
+    - [x] Extracted `formulas.js` (Pure Math).
+    - [x] Implemented `drops.js` (Weighted Tables + Pity).
 
-### 第四阶段: 转职与进阶 (Phase 4: Job Change) - [待开始]
-- [ ] **转职系统:**
-    - [ ] `job change` 指令。
-    - [ ] 转职条件检查 (Job Lv 10)。
-    - [ ] 转职奖励 (属性重置/赠送装备)。
-- [ ] **一转职业实装:**
-    - [ ] **剑士 (Swordman):** 狂击 (Bash), 怒爆 (Magnum Break), 挑衅 (Provoke)。
-    - [ ] **法师 (Mage):** 读条系统 (Cast Time), 元素箭。
-    - [ ] **弓箭手 (Archer):** 箭矢消耗机制, 二连矢。
-- [ ] **坐下 (Sitting):** `sit` 命令加速回复。
+### Phase 4: Job Change & Advancement [Next Step]
+- [ ] **Job Change System:**
+    - [ ] `job change` command.
+    - [ ] Requirements check (Job Lv 10).
+    - [ ] Stat/Skill reset and bonus application.
+- [ ] **1st Jobs Implementation:**
+    - [ ] **Swordman:** Bash, Magnum Break, Provoke.
+    - [ ] **Mage:** Cast Time system, Elemental Bolts.
+    - [ ] **Archer:** Arrow consumption, Double Strafe.
+    - [ ] **Thief:** Envenom, Hiding.
+    - [ ] **Acolyte:** Heal, Blessing, Agi Up.
+- [ ] **World Interaction:**
+    - [ ] `sit` command (2x Regen).
 
-## 4. 当前状态 (Current State)
-*   **版本:** 0.9.1 (Map Ecology Fix)
-*   **优化:** 修正了 `moc_fild12` (沙漠) 的怪物刷新列表，使其符合 RO 设定。
-*   **下一步:** 推进 Phase 4 转职系统的开发。
+## 4. Current State
+*   **Version:** 0.9.5 (Refactor & Automation Update)
+*   **Stability:** Enterprise-grade. Protected against race conditions and save corruption.
+*   **Automation:** Fully autonomous loop (Fight -> Auto Potion -> Loot -> Auto Sell -> Auto Buy).
+*   **Data Integrity:** 
+    - Damage formulas behave correctly (High Agi = Dodge, High Luk = Crit).
+    - Drop system ensures "Bad Luck Protection" for rares.
+*   **Next Objective:** Begin Phase 4 (Job Change) to break the Novice limit.

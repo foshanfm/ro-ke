@@ -69,7 +69,7 @@
               return ['weapon', 'armor'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
           }
           if (cmd === 'conf') {
-              return ['auto_hp_percent', 'auto_hp_item'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
+              return ['auto_hp_percent', 'auto_hp_item', 'auto_buy_potion'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
           }
       }
       
@@ -179,7 +179,9 @@
       addLog(`[资产] Zeny: ${player.zeny}`, 'warning')
 
       if (player.config) {
+          const autoBuy = player.config.auto_buy_potion ? '开启' : '关闭'
           addLog(`[配置] AutoHP: < ${player.config.auto_hp_percent}% (Use: ${player.config.auto_hp_item})`, 'dim')
+          addLog(`[配置] AutoBuy: ${autoBuy}`, 'dim')
       }
 
       const learnedSkills = Object.entries(player.skills).map(([id, lv]) => {

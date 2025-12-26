@@ -5,8 +5,9 @@ import { EquipDB, EquipType, WeaponType } from './equipment'
 import { getItemInfo, ItemType } from './items' 
 import { Maps } from './maps' 
 import * as Formulas from './formulas' 
+// 移除未使用的 isNormalDrop 引用，保持代码整洁
+// import { isNormalDrop } from './drops' 
 
-// ... defaultStats 保持不变 ...
 const defaultStats = {
   name: 'Novice',
   job: JobType.NOVICE,
@@ -20,7 +21,11 @@ const defaultStats = {
       [EquipType.HEAD]: null,
       [EquipType.ACCESSORY]: null
   },
-  config: { auto_hp_percent: 0, auto_hp_item: '红色药水' },
+  config: { 
+      auto_hp_percent: 0, 
+      auto_hp_item: '红色药水',
+      auto_buy_potion: 0 
+  },
   currentMap: 'prt_fild08', 
   hp: 100, maxHp: 100, sp: 20, maxSp: 20,
   atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0,  
@@ -46,7 +51,6 @@ function recalculateMaxStats() {
     player.maxHp = Formulas.calcMaxHp(baseLv, vit, jobCfg.hpMod)
     player.maxSp = Formulas.calcMaxSp(baseLv, int, jobCfg.spMod)
 
-    // 状态修正
     if (isNaN(player.hp)) player.hp = player.maxHp
     if (player.hp > player.maxHp) player.hp = player.maxHp
     if (isNaN(player.sp)) player.sp = player.maxSp
@@ -94,7 +98,6 @@ const SAVE_KEY = 'ro_ke_save_v2'
 
 export function saveGame() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(player))
-  // console.log('[System] Checkpoint Saved.') // 调试用
 }
 
 export function loadGame() {
@@ -104,7 +107,6 @@ export function loadGame() {
         const parsed = JSON.parse(savedData)
         Object.assign(player, parsed)
         
-        // 数据迁移与修复...
         if (!player.inventory) player.inventory = []
         if (!player.job) player.job = JobType.NOVICE
         if (!player.jobLv) player.jobLv = 1
@@ -113,7 +115,11 @@ export function loadGame() {
         if (!player.skillPoints) player.skillPoints = 0
         if (player.statPoints === undefined) player.statPoints = 0
         if (!player.skills) player.skills = {}
-        if (!player.config) player.config = { auto_hp_percent: 0, auto_hp_item: '红色药水' }
+        if (!player.config) player.config = {}
+        if (player.config.auto_hp_percent === undefined) player.config.auto_hp_percent = 0
+        if (player.config.auto_hp_item === undefined) player.config.auto_hp_item = '红色药水'
+        if (player.config.auto_buy_potion === undefined) player.config.auto_buy_potion = 0
+
         if (!player.currentMap) player.currentMap = 'prt_fild08'
         if (player.zeny === undefined) player.zeny = 0 
 
@@ -155,7 +161,6 @@ export function resetGame() {
   saveGame()
 }
 
-// 修改：addItem 不再自动存档，由业务层决定何时存档
 export function addItem(itemId, count = 1) {
     if (!player.inventory) player.inventory = []
     const existingItem = player.inventory.find(i => i.id === itemId)
@@ -165,7 +170,6 @@ export function addItem(itemId, count = 1) {
     } else {
       player.inventory.push({ id: itemId, count: count })
     }
-    // saveGame() // 移除
 }
 
 export function addExp(baseAmount, jobAmount) {
@@ -221,14 +225,14 @@ export function increaseStat(stat, amount = 1) {
 
   if (player.statPoints < cost) {
     const nextCost = Formulas.getStatPointCost(player[s])
-    return { success: false, msg: `素质点不足 (需要: ${cost}, 剩余: ${player.statPoints})。注: 当前 ${s.toUpperCase()} 提升需要 ${nextCost} 点` }
+    return { success: false, msg: `素质点不足 (需要: ${cost}, 剩余: ${player.statPoints})。` }
   }
   
   player[s] += amount
   player.statPoints -= cost
   
   recalculateMaxStats()
-  saveGame() // 关键操作，立即存档
+  saveGame()
   
   return { success: true, msg: `${s.toUpperCase()} 提升了 ${amount} 点 (消耗 ${cost} 点)` }
 }
@@ -255,14 +259,13 @@ export function learnSkill(skillId, levels = 1) {
   player.skillPoints -= levels
   
   recalculateMaxStats()
-  saveGame() // 关键操作，立即存档
+  saveGame()
 
   return { success: true, msg: `已习得技能: ${skill.name} Lv.${player.skills[skillId]}` }
 }
 
 export function equipItem(itemNameOrId) {
     let slotIndex = -1
-    
     if (typeof itemNameOrId === 'number') {
         slotIndex = player.inventory.findIndex(i => i.id === itemNameOrId)
     } else {
@@ -303,7 +306,7 @@ export function equipItem(itemNameOrId) {
     }
     
     recalculateMaxStats()
-    saveGame() // 关键操作，立即存档
+    saveGame()
     
     return { success: true, msg: `已装备: ${equipData.name}` }
 }
@@ -319,7 +322,7 @@ export function unequipItem(type) {
     player.equipment[type] = null
     
     recalculateMaxStats()
-    saveGame() // 关键操作，立即存档
+    saveGame()
     
     const info = getItemInfo(currentId)
     return { success: true, msg: `已卸下: ${info.name}` }
@@ -336,6 +339,14 @@ export function useItem(itemNameOrId) {
             const info = getItemInfo(i.id)
             return info.name.toLowerCase().includes(lowerName)
         })
+    }
+
+    // --- 自动补给逻辑 ---
+    if (slotIndex === -1 && player.config.auto_buy_potion > 0 && itemNameOrId === '红色药水') {
+        const buyRes = buyItem('红色药水', 50)
+        if (buyRes.success) {
+            slotIndex = player.inventory.findIndex(i => i.id === 501)
+        }
     }
 
     if (slotIndex === -1) {
@@ -364,7 +375,7 @@ export function useItem(itemNameOrId) {
         player.inventory.splice(slotIndex, 1)
     }
 
-    saveGame() // 关键操作，立即存档 (包括自动吃药)
+    saveGame()
     return { success: true, msg: `使用了 ${info.name} ${effectMsg}` }
 }
 
@@ -373,17 +384,25 @@ export function setConfig(key, value) {
     
     if (key === 'auto_hp_percent') {
         let v = parseInt(value)
-        if (isNaN(v)) return { success: false, msg: '必须是数字 (0-100)' }
+        if (isNaN(v)) v = 0
         if (v < 0) v = 0
         if (v > 100) v = 100
         player.config.auto_hp_percent = v
-        saveGame() // 关键操作
+        saveGame()
         return { success: true, msg: `自动吃药设定为: HP < ${v}%` }
     }
     else if (key === 'auto_hp_item') {
         player.config.auto_hp_item = value
-        saveGame() // 关键操作
+        saveGame()
         return { success: true, msg: `自动药品设定为: ${value}` }
+    }
+    else if (key === 'auto_buy_potion') {
+        let v = parseInt(value)
+        if (isNaN(v) || v < 0) v = 0
+        if (v > 1) v = 1
+        player.config.auto_buy_potion = v
+        saveGame()
+        return { success: true, msg: `自动买药 (红药水): ${v === 1 ? '开启' : '关闭'}` }
     }
     
     return { success: false, msg: `未知配置项: ${key}` }
@@ -398,7 +417,7 @@ export function warp(mapId) {
     }
     
     player.currentMap = mapId
-    saveGame() // 关键操作
+    saveGame()
     return { success: true, msg: `Warped to ${map.name}` } 
 }
 
@@ -409,8 +428,12 @@ export function sellItem(itemNameOrId, count = 1) {
         for (let i = player.inventory.length - 1; i >= 0; i--) {
             const slot = player.inventory[i]
             const info = getItemInfo(slot.id)
+            
+            // 安全判定：只卖 ETC 类型
             if (info.type === ItemType.ETC) {
-                const earning = info.price * slot.count
+                // 安全判定：确保价格不是 NaN
+                const price = info.price || 0
+                const earning = price * slot.count
                 totalZeny += earning
                 soldCount += slot.count
                 player.inventory.splice(i, 1) 
@@ -418,7 +441,7 @@ export function sellItem(itemNameOrId, count = 1) {
         }
         if (soldCount > 0) {
             player.zeny += totalZeny
-            saveGame() // 关键操作
+            saveGame()
             return { success: true, msg: `卖出了 ${soldCount} 个杂物，获得 ${totalZeny} Zeny。` }
         } else {
             return { success: false, msg: '背包里没有可贩卖的杂物。' }
@@ -456,7 +479,7 @@ export function sellItem(itemNameOrId, count = 1) {
         player.inventory.splice(slotIndex, 1)
     }
     
-    saveGame() // 关键操作
+    saveGame()
     return { success: true, msg: `卖出 ${info.name} x ${amountToSell}，获得 ${unitPrice * amountToSell} Zeny。` }
 }
 
@@ -490,7 +513,7 @@ export function buyItem(itemName, count = 1) {
     player.zeny -= totalCost
     addItem(shopItem.id, count)
     
-    saveGame() // 关键操作
+    saveGame()
     
     const info = getItemInfo(shopItem.id)
     return { success: true, msg: `购买了 ${info.name} x ${count}。` }

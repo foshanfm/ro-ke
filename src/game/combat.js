@@ -1,8 +1,9 @@
 import { reactive } from 'vue'
-import { player, addExp, addItem, useItem, saveGame } from './player' // 引入 saveGame
+import { player, addExp, addItem, useItem, saveGame } from './player' 
 import { spawnMonster } from './monsters'
 import { getItemInfo } from './items'
-import { calcAspdDelay, calcHitRate } from './formulas' 
+import { calcAspdDelay, calculateDamageFlow } from './formulas' 
+import { calculateDrops } from './drops' // 引入新掉落系统
 
 // 游戏循环状态
 export const gameState = reactive({
@@ -24,19 +25,15 @@ function getPlayerDelay() {
     return calcAspdDelay(aspd)
 }
 
-// --- 循环控制与会话锁 ---
+// --- 循环控制 ---
 let playerLoopId = null
 let monsterLoopId = null
 let recoveryTimer = null
-
-// 核心改动：战斗会话 ID
-// 每次 startBot 时 +1，所有 async loop 必须持有并在执行时校验此 ID
 let combatSessionId = 0 
 
 export function startBot() {
   if (gameState.isAuto) return
 
-  // Auto-Resurrection
   if (player.hp <= 0) {
     log('检测到玩家已死亡。正在执行紧急复苏协议...', 'warning')
     player.hp = player.maxHp
@@ -45,23 +42,17 @@ export function startBot() {
   }
 
   gameState.isAuto = true
-  
-  // 1. 递增会话 ID，立即使所有旧的 loop 失效
   combatSessionId++
   const currentSession = combatSessionId
 
-  log(`AI Initiated (Session ${currentSession}). Auto-attack mode engaged.`, 'system')
-  
+  log(`AI Initiated (Session ${currentSession}).`, 'system')
   clearLoops()
-  
-  // 启动玩家循环，传入当前 Session ID
   playerActionLoop(currentSession)
 }
 
 export function stopBot() {
   gameState.isAuto = false
   clearLoops()
-  // 增加 session id 防止停止后旧 loop 还在跑
   combatSessionId++ 
   log('AI Suspended.', 'system')
 }
@@ -73,7 +64,6 @@ function clearLoops() {
     monsterLoopId = null
 }
 
-// --- 独立回复循环 (始终运行) ---
 export function startRecovery() {
   if (recoveryTimer) return
   recoveryLoop()
@@ -81,51 +71,34 @@ export function startRecovery() {
 
 function recoveryLoop() {
   const TICK_RATE = 5000 
-  
   if (player.hp > 0) {
       let hpRegen = 1 + Math.floor((player.vit || 1) / 5) + Math.floor(player.maxHp / 200)
-      
       const hpRecLv = player.skills['hp_recovery'] || 0
       if (hpRecLv > 0) {
            const skillBonus = 5 + (hpRecLv * 3) + (player.maxHp * 0.002 * hpRecLv)
            hpRegen += Math.floor(skillBonus / 2)
       }
-
-      if (player.hp < player.maxHp) {
-          player.hp = Math.min(player.maxHp, player.hp + hpRegen)
-      }
+      if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + hpRegen)
 
       let spRegen = 1 + Math.floor((player.int || 1) / 6) + Math.floor(player.maxSp / 100)
-      
-      if (player.sp < player.maxSp) {
-           player.sp = Math.min(player.maxSp, player.sp + spRegen)
-      }
+      if (player.sp < player.maxSp) player.sp = Math.min(player.maxSp, player.sp + spRegen)
   }
-
-  // 回复循环通常不需要 session lock，因为它不依赖战斗状态，
-  // 但为了防止组件卸载后还在跑，可以加个全局开关检查（这里简化处理，一直跑）
   recoveryTimer = setTimeout(recoveryLoop, TICK_RATE)
 }
 
 function checkAutoPotion() {
     if (!player.config || player.config.auto_hp_percent <= 0) return
-
     const threshold = player.maxHp * (player.config.auto_hp_percent / 100)
-    
     if (player.hp < threshold) {
         const itemToUse = player.config.auto_hp_item || '红色药水'
         const res = useItem(itemToUse)
-        if (res.success) {
-            log(`[Auto] ${res.msg}`, 'success')
-        }
+        if (res.success) log(`[Auto] ${res.msg}`, 'success')
     }
 }
 
-// --- 异步双轨循环系统 ---
+// --- 异步双轨循环 ---
 
-// 轨道 1: 玩家行动循环
 async function playerActionLoop(sessionId) {
-    // 🔒 会话锁校验：如果当前全局 session 不等于传入的 session，说明这已经是“旧时代的残党”了
     if (!gameState.isAuto || sessionId !== combatSessionId) return
 
     try {
@@ -140,17 +113,13 @@ async function playerActionLoop(sessionId) {
         if (!gameState.currentMonster) {
             log('Searching for target...', 'dim')
             await sleep(800) 
-            
-            // 🔒 再次校验：await 之后世界可能已经变了
             if (!gameState.isAuto || sessionId !== combatSessionId) return 
 
             const mapId = player.currentMap || 'prt_fild08'
             gameState.currentMonster = spawnMonster(mapId)
-            
             log(`Monster ${gameState.currentMonster.name} appeared! (HP: ${gameState.currentMonster.hp})`, 'warning')
             
             if (!monsterLoopId) {
-                // 启动怪物循环，传入相同的 Session ID
                 setTimeout(() => monsterActionLoop(sessionId), Math.random() * 500)
             }
         }
@@ -158,32 +127,29 @@ async function playerActionLoop(sessionId) {
         const target = gameState.currentMonster
         
         if (target && target.hp > 0) {
-             const isCrit = Math.random() * 100 < player.crit
-             let isHit = false
-             
-             if (isCrit) {
-                 isHit = true
+             // 1. 调用新的伤害公式
+             const res = calculateDamageFlow({
+                 attackerAtk: player.atk,
+                 attackerHit: player.hit,
+                 attackerCrit: player.crit,
+                 defenderDef: target.def || 0,
+                 defenderFlee: target.flee || 1,
+                 isPlayerAttacking: true
+             })
+
+             if (res.type === 'miss') {
+                 log(`You miss ${target.name}!`, 'dim')
              } else {
-                 const monsterFlee = target.flee || 1
-                 const hitRate = calcHitRate(player.hit, monsterFlee)
-                 isHit = Math.random() * 100 < hitRate
-             }
-
-             if (isHit) {
-                 const variance = (Math.random() * 0.2) + 0.9
-                 let damage = Math.floor(player.atk * variance)
-                 
-                 const monsterDef = target.def || 0
-                 damage = Math.max(1, damage - monsterDef)
-
-                 if (isCrit) {
-                     let rawDmg = Math.floor(player.atk * variance)
-                     damage = Math.floor(rawDmg * 1.4)
+                 let damage = res.damage
+                 if (res.type === 'crit') {
                      log(`CRITICAL! You deal ${damage} damage to ${target.name}.`, 'warning')
                  } else {
                      log(`You attack ${target.name} for ${damage} damage.`, 'default')
                  }
                  
+                 // Double Attack (独立判定，还是作为 Bonus 伤害？RO里是两次黄字，这里简单做成一次大伤害)
+                 // 修正：Double Attack 其实是技能，应该在 formula 外面判断，或者传入 formula
+                 // 这里保持现状
                  const doubleAttackLv = player.skills['double_attack'] || 0
                  if (doubleAttackLv > 0 && Math.random() * 100 < (doubleAttackLv * 5)) {
                      log(`Double Attack! You deal ${damage} damage.`, 'warning')
@@ -194,19 +160,14 @@ async function playerActionLoop(sessionId) {
 
                  if (target.hp <= 0) {
                      monsterDead(target)
-                     // 怪物死，清除旧的 monster loop
                      if (monsterLoopId) {
                          clearTimeout(monsterLoopId)
                          monsterLoopId = null
                      }
-                     // 此时是存档的最佳时机：战斗结束，结算完毕
                      saveGame() 
-                     
                      playerLoopId = setTimeout(() => playerActionLoop(sessionId), 500)
                      return 
                  }
-             } else {
-                 log(`You miss ${target.name}!`, 'dim')
              }
         }
 
@@ -221,9 +182,7 @@ async function playerActionLoop(sessionId) {
     }
 }
 
-// 轨道 2: 怪物行动循环
 async function monsterActionLoop(sessionId) {
-    // 🔒 会话锁校验
     if (!gameState.isAuto || !gameState.currentMonster || sessionId !== combatSessionId) {
         monsterLoopId = null
         return
@@ -232,27 +191,31 @@ async function monsterActionLoop(sessionId) {
     const target = gameState.currentMonster
 
     if (target.hp > 0 && player.hp > 0) {
-        const monsterHit = target.hit || 50
-        const hitRate = calcHitRate(monsterHit, player.flee)
-        const isMonsterHit = Math.random() * 100 < hitRate
+        // 2. 怪物攻击调用公式
+        const res = calculateDamageFlow({
+            attackerAtk: target.atk,
+            attackerHit: target.hit || 50,
+            attackerCrit: 0,
+            defenderDef: player.def,
+            defenderFlee: player.flee,
+            isPlayerAttacking: false
+        })
 
-        if (isMonsterHit) {
-            let dmg = Math.max(1, target.atk - player.def)
-            player.hp -= dmg
-            log(`${target.name} attacks you for ${dmg} damage!`, 'error')
-            
+        if (res.type === 'miss') {
+            log(`${target.name} missed you!`, 'success')
+        } else {
+            player.hp -= res.damage
+            log(`${target.name} attacks you for ${res.damage} damage!`, 'error')
             checkAutoPotion()
 
             if (player.hp <= 0) {
                 log('You died!', 'error')
                 player.hp = 0
                 gameState.currentMonster = null
-                saveGame() // 死亡也存档
+                saveGame()
                 stopBot() 
                 return
             }
-        } else {
-            log(`${target.name} missed you!`, 'success')
         }
     }
 
@@ -264,7 +227,6 @@ async function monsterActionLoop(sessionId) {
     }
 }
 
-
 function monsterDead(target) {
   log(`${target.name} died.`, 'success')
   
@@ -273,25 +235,21 @@ function monsterDead(target) {
   
   log(`Base Exp + ${target.exp} | Job Exp + ${jobExp}`, 'info')
   
-  if (leveledUp) {
-      log(`Congratulations! You reached Base Level ${player.lv}!`, 'levelup')
-  }
-  if (jobLeveledUp) {
-      log(`Job Up! You reached Job Level ${player.jobLv}!`, 'levelup')
-  }
+  if (leveledUp) log(`Level Up! Base Lv ${player.lv}`, 'levelup')
+  if (jobLeveledUp) log(`Job Up! Job Lv ${player.jobLv}`, 'levelup')
 
-  if (target.drops) {
-    target.drops.forEach(drop => {
-      if (Math.random() < drop.rate) {
-        addItem(drop.id, 1) // addItem 内部也会 saveGame，但这里我们稍后在外部统一 save
-        const info = getItemInfo(drop.id)
-        log(`Item Added: ${info.name} x 1`, 'success')
-      }
-    })
-  }
+  // 3. 调用新的掉落系统
+  const drops = calculateDrops(target.id)
+  
+  drops.forEach(drop => {
+      addItem(drop.id, drop.count)
+      const info = getItemInfo(drop.id)
+      const typeStr = drop.type === 'rare' ? '[RARE] ' : ''
+      const style = drop.type === 'rare' ? 'warning' : 'success'
+      log(`Loot: ${typeStr}${info.name} x ${drop.count}`, style)
+  })
 
   gameState.currentMonster = null
-  // 注意：这里我们不再依赖 addItem 的 saveGame，而是在调用者那里统一 saveGame，防止多次写入
 }
 
 function sleep(ms) {

@@ -1,7 +1,7 @@
 // src/game/formulas.js
 import { WeaponType } from './equipment'
 
-// ... (之前的属性计算保持不变) ...
+// --- 素质点消耗 ---
 export function getStatPointCost(currentVal) {
     if (currentVal < 11) return 2
     if (currentVal < 21) return 3
@@ -14,6 +14,8 @@ export function getStatPointCost(currentVal) {
     if (currentVal < 91) return 10
     return 11 
 }
+
+// --- 基础属性 ---
 
 export function calcMaxHp(baseLv, vit, jobMod) {
     const base = 100 + (baseLv * 10)
@@ -79,65 +81,45 @@ export function calcAspdDelay(aspd) {
     return Math.max(100, delay)
 }
 
-export function calcHitRate(attackerHit, defenderFlee) {
-    const rate = 80 + (attackerHit - defenderFlee)
-    return Math.max(5, Math.min(100, rate))
-}
-
-// --- 新增：伤害计算核心 (纯函数，方便模拟器调用) ---
-
-export function resolvePlayerDamage(playerAtk, playerCrit, playerDex, targetDef, targetFlee) {
-    // 1. 判定暴击
-    const isCrit = Math.random() * 100 < playerCrit
-    let isHit = false
-    
-    if (isCrit) {
-        isHit = true
-    } else {
-        // 2. 判定命中
-        // 玩家命中判定：如果 Dex 极低，可能有浮动？暂忽略
-        const hitRate = calcHitRate(100, targetFlee) // 这里的 playerHit 传入逻辑在外部处理
-        // 注意：外部调用时应该把 player.hit 传进来，这里简化了参数，修正如下
-        // 我们需要传入 playerHit
-    }
-    
-    // 重新设计函数签名以更通用
-    return { damage: 0, isHit: false, isCrit: false, type: 'miss' }
-}
-
-// 更好的设计：分别计算 Player vs Monster 和 Monster vs Player
-// 返回结果结构: { damage: number, type: 'hit'|'crit'|'miss'|'double' }
+// --- 核心战斗逻辑 (Behavioral Correctness Template) ---
 
 export function calculateDamageFlow({
     attackerAtk, attackerHit, attackerCrit, 
-    defenderDef, defenderFlee, 
-    isPlayerAttacking = true // 用于区分行为 (如玩家有双刀)
+    defenderDef, defenderFlee, defenderLuk = 1,
+    isPlayerAttacking = true 
 }) {
-    // 1. 暴击判定 (仅玩家有暴击，怪物暂无暴击)
-    const isCrit = isPlayerAttacking ? (Math.random() * 100 < attackerCrit) : false
+    // 1. 暴击判定 (Crit - TargetLuk)
+    // 暴击率限制: 1% ~ 50% (玩家)
+    // 怪物暂无暴击，或者给予固定低暴击
+    let critChance = attackerCrit - defenderLuk
+    critChance = Math.max(1, Math.min(50, critChance))
+    
+    // 怪物攻击时不暴击 (或者以后加)
+    const isCrit = isPlayerAttacking ? (Math.random() * 100 < critChance) : false
     
     if (isCrit) {
         // 暴击：1.4倍伤害，无视防御
-        const variance = (Math.random() * 0.2) + 0.9 // 0.9~1.1 浮动
+        // 浮动: 0.9 ~ 1.1
+        const variance = (Math.random() * 0.2) + 0.9 
         const rawDamage = Math.floor(attackerAtk * variance)
         const finalDamage = Math.floor(rawDamage * 1.4)
-        return { damage: finalDamage, type: 'crit' }
+        return { damage: Math.max(1, finalDamage), type: 'crit' }
     }
 
-    // 2. 命中判定
-    const hitRate = calcHitRate(attackerHit, defenderFlee)
-    const isHit = Math.random() * 100 < hitRate
+    // 2. 命中判定 (Hit - Flee + 80)
+    // 命中率限制: 5% ~ 95%
+    let hitChance = attackerHit - defenderFlee + 80
+    hitChance = Math.max(5, Math.min(95, hitChance))
+    
+    const isHit = Math.random() * 100 < hitChance
 
     if (!isHit) {
         return { damage: 0, type: 'miss' }
     }
 
-    // 3. 普通伤害计算
+    // 3. 普通伤害计算 ( (Atk - Def) * Variance )
     const variance = (Math.random() * 0.2) + 0.9
-    let damage = Math.floor(attackerAtk * variance)
+    let damage = Math.floor((attackerAtk - defenderDef) * variance)
     
-    // 减防 (简单减算)
-    damage = Math.max(1, damage - defenderDef)
-    
-    return { damage, type: 'hit' }
+    return { damage: Math.max(1, damage), type: 'hit' }
 }
