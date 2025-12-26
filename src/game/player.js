@@ -5,7 +5,7 @@ import { EquipDB, EquipType, WeaponType } from './equipment'
 import { getItemInfo, ItemType } from './items'
 import { Maps } from './maps'
 import * as Formulas from './formulas'
-import { saveSave, getSave, getAllSaves } from '../db/index.js'
+import { saveSave, getSave, getAllSaves, deleteSave } from '../db/index.js'
 
 const defaultStats = {
     name: 'Novice',
@@ -27,6 +27,7 @@ const defaultStats = {
         auto_buy_potion: 0
     },
     currentMap: 'prt_fild08',
+    x: 200, y: 200,
     hp: 100, maxHp: 100, sp: 20, maxSp: 20,
     atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0, moveSpeed: 5,
     str: 1, agi: 1, dex: 1, vit: 1, int: 1, luk: 1,
@@ -262,6 +263,10 @@ export async function loadGame(saveId) {
             }
         })
 
+        // 坐标校验与修复
+        if (player.x === undefined || player.x === null || isNaN(player.x)) player.x = 200
+        if (player.y === undefined || player.y === null || isNaN(player.y)) player.y = 200
+
         player.nextExp = getNextBaseExp(player.lv)
         player.nextJobExp = getNextJobExp(player.jobLv)
         recalculateMaxStats()
@@ -293,6 +298,26 @@ export function createNewCharacter(name) {
     player.nextExp = getNextBaseExp(1)
     player.nextJobExp = getNextJobExp(1)
     currentSaveId = null // 重置存档 ID
+}
+
+/**
+ * 删除存档
+ * @param {number} saveId - 存档 ID
+ */
+export async function deleteCharacter(saveId) {
+    try {
+        await deleteSave(saveId)
+
+        // 如果删除的是当前正在运行的角色,重置 player 状态
+        if (currentSaveId === saveId) {
+            Object.assign(player, defaultStats)
+            currentSaveId = null
+        }
+        return true
+    } catch (error) {
+        console.error('[Player] 删除存档失败:', error)
+        return false
+    }
 }
 
 

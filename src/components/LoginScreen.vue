@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { listSaves, createNewCharacter, loadGame, saveGame } from '../game/player.js'
+import { listSaves, createNewCharacter, loadGame, saveGame, deleteCharacter } from '../game/player.js'
 
 const emit = defineEmits(['login'])
 
@@ -33,6 +33,26 @@ const selectSave = async (save) => {
   } catch (error) {
     console.error('[LoginScreen] 加载存档失败:', error)
     alert('加载存档失败')
+  }
+}
+
+// 删除存档
+const confirmDelete = async (event, save) => {
+  event.stopPropagation() // 阻止触发 selectSave
+  
+  if (confirm(`确定要删除角色 "${save.name}" 吗？此操作无法撤销。`)) {
+    try {
+      const success = await deleteCharacter(save.id)
+      if (success) {
+        // 重新加载存档列表
+        saves.value = await listSaves()
+      } else {
+        alert('删除存档失败')
+      }
+    } catch (error) {
+      console.error('[LoginScreen] 删除存档失败:', error)
+      alert('删除存档失败')
+    }
   }
 }
 
@@ -85,34 +105,44 @@ const formatDate = (timestamp) => {
         <div class="text-gray-500">加载中...</div>
       </div>
 
-      <!-- 存档列表 -->
       <div v-else-if="!showNewCharacter" class="space-y-4">
-        <!-- 存档卡片 -->
-        <div 
-          v-for="save in saves" 
-          :key="save.id"
-          @click="selectSave(save)"
-          class="bg-gray-800 border border-gray-700 rounded p-4 cursor-pointer hover:bg-gray-750 hover:border-gray-600 transition-all"
-        >
-          <div class="flex justify-between items-start">
-            <div>
-              <div class="text-lg font-bold text-white">{{ save.name }}</div>
-              <div class="text-sm text-gray-400 mt-1">
-                Lv.{{ save.data.lv }} {{ save.data.job }}
+        <!-- 存档列表 - 增加滚动区域 -->
+        <div class="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+          <!-- 存档卡片 -->
+          <div 
+            v-for="save in saves" 
+            :key="save.id"
+            @click="selectSave(save)"
+            class="bg-gray-800 border border-gray-700 rounded p-4 cursor-pointer hover:bg-gray-750 hover:border-gray-600 transition-all group relative"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">{{ save.name }}</div>
+                <div class="text-sm text-gray-400 mt-1">
+                  Lv.{{ save.data.lv }} {{ save.data.job }}
+                </div>
+                <div class="text-xs text-gray-500 mt-2">
+                  最后保存: {{ formatDate(save.updatedAt) }}
+                </div>
               </div>
-              <div class="text-xs text-gray-500 mt-2">
-                最后保存: {{ formatDate(save.updatedAt) }}
+              <div class="text-right flex flex-col items-end gap-4">
+                <div class="text-yellow-500 font-mono">{{ save.data.zeny?.toLocaleString() || 0 }} z</div>
+                
+                <!-- 删除按钮 -->
+                <button 
+                  @click="confirmDelete($event, save)"
+                  class="text-xs text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-gray-900/50 px-2 py-1 rounded"
+                >
+                  删除
+                </button>
               </div>
-            </div>
-            <div class="text-right text-sm">
-              <div class="text-yellow-500">{{ save.data.zeny?.toLocaleString() || 0 }} z</div>
             </div>
           </div>
-        </div>
 
-        <!-- 无存档提示 -->
-        <div v-if="saves.length === 0" class="text-center py-8 text-gray-500">
-          暂无存档,请创建新角色
+          <!-- 无存档提示 -->
+          <div v-if="saves.length === 0" class="text-center py-8 text-gray-500 border border-dashed border-gray-700 rounded">
+            暂无存档，请创建新角色
+          </div>
         </div>
 
         <!-- 创建新角色按钮 -->
@@ -166,5 +196,21 @@ const formatDate = (timestamp) => {
 <style scoped>
 .bg-gray-750 {
   background-color: #2d3748;
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1a202c;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #718096;
 }
 </style>

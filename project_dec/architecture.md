@@ -52,6 +52,7 @@ We prioritize "Feel" over "Academic Accuracy".
     - `checkWarpCollision(x, y)` scans current map's `activeWarps`.
     - Portals have a `spanX/Y` (collision box).
     - Transitions trigger `warp(targetMap)` and reset coords to `targetX/Y`.
+    - **Deduplication**: `dataLoader.js` performs aggressive deduplication, keeping only one portal per destination map to ensure a clean UI.
 
 ### 3.3. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
@@ -88,4 +89,5 @@ Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 ## 5. Known Risks
 
 *   **NaN Propagation:** Always check `isNaN()` when loading saves or calculating stats.
+    - **Coordinate Protection**: `player.js` validates and corrects `x/y` coordinates during the load process to prevent startup failures.
 *   **Zombie Timers:** Always clear timers and increment Session ID in `stopBot()`.

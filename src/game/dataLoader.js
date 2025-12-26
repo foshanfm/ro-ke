@@ -288,7 +288,10 @@ export async function loadWarpData() {
         const match = line.match(warpRegex)
 
         if (match) {
-          const [_, sourceMap, x, y, npcName, spanX, spanY, targetMap, targetX, targetY] = match
+          const [_, sourceMapRaw, x, y, npcName, spanX, spanY, targetMapRaw, targetX, targetY] = match
+
+          const sourceMap = sourceMapRaw.toLowerCase()
+          const targetMap = targetMapRaw.toLowerCase()
 
           // 初始化源地图的传送点数组
           if (!warpDB[sourceMap]) {
@@ -299,13 +302,11 @@ export async function loadWarpData() {
           // 也可以注册目标地图 (防止跳转到黑洞)
           registerMap(targetMap, { name: targetMap })
 
-          // 获取当前地图已有的传送点，进行近距离去重
+          // 获取当前地图已有的传送点，进行精细去重
           const existingWarps = warpDB[sourceMap]
-          const isDuplicate = existingWarps.some(w =>
-            w.targetMap === targetMap &&
-            Math.abs(w.x - parseInt(x)) < 5 &&
-            Math.abs(w.y - parseInt(y)) < 5
-          )
+
+          // 强力去重：同一个地图对同一个目的地仅保留一个传送点
+          const isDuplicate = existingWarps.some(w => w.targetMap === targetMap)
 
           if (!isDuplicate) {
             warpDB[sourceMap].push({

@@ -114,12 +114,20 @@ A web-based idle game recreating the experience of using automated botting softw
   - [x] **Deduplication**: Implemented proximity-based de-dupe logic in `dataLoader.js` to merge redundant portals (< 5 units apart).
 - [x] **Recursive Data Discovery**: Enabled recursive globbing for all monster and warp data files.
 
+### Phase 12: Account Experience & Data Integrity [Completed]
+- [x] **Multi-Character UX Optimization**:
+  - [x] Implemented scrollable character list to handle 4+ accounts.
+  - [x] Added character deletion functionality with absolute confirmation.
+- [x] **Data Stability Fixes**:
+  - [x] Resolved "NaN Coordinate" bug for new characters via default initialization and load-time validation.
+- [x] **Aggressive Warp Deduplication**:
+  - [x] Refined `loadWarpData` to strictly enforce one portal per destination per map, drastically cleaning up the navigation UI.
+
 ## 4. Current State
-*   **Version:** 1.2.0 (Phase 11 - World Connectivity & Navigation Refinement Complete)
-*   **Stability:** High. Map connectivity verified via BFS analysis.
-*   **Performance:** Optimized warp data processing with de-duplication.
+*   **Version:** 1.3.0 (Phase 12 - Account Experience & Data Integrity Complete)
+*   **Stability:** High. Character creation and map transitions are robust.
+*   **Performance:** Optimal. Data parsing includes target-based deduplication.
 *   **New Features:**
-    - **Global Interconnectivity**: Major cities and fields are now linked bidirectionally.
-    - **Smart Navigation**: UI cleaned of redundant portal buttons.
-    - **Safe Landing**: Warp transitions are smooth and non-blocking.
+    - **Account Management**: Supports infinite characters with deletion capability.
+    - **Polished Navigation**: Minimalist and accurate warp list in UI.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.
