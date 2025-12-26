@@ -1,7 +1,7 @@
 // src/game/formulas.js
 import { WeaponType } from './equipment'
 
-// --- 素质点消耗 ---
+// ... (之前的属性计算保持不变) ...
 export function getStatPointCost(currentVal) {
     if (currentVal < 11) return 2
     if (currentVal < 21) return 3
@@ -15,8 +15,6 @@ export function getStatPointCost(currentVal) {
     return 11 
 }
 
-// --- 基础属性 ---
-
 export function calcMaxHp(baseLv, vit, jobMod) {
     const base = 100 + (baseLv * 10)
     return Math.floor((base + vit * 5) * jobMod)
@@ -26,8 +24,6 @@ export function calcMaxSp(baseLv, int, jobMod) {
     const base = 20 + (baseLv * 2)
     return Math.floor((base + int * 2) * jobMod)
 }
-
-// --- 战斗属性 ---
 
 export function calcAtk(baseLv, str, dex, luk, weaponAtk = 0, masteryAtk = 0) {
     const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2))
@@ -63,43 +59,85 @@ export function calcCrit(luk, equipCrit = 0) {
     return 1 + Math.floor(luk / 3) + equipCrit
 }
 
-// 基础攻速表
 const BaseAspdTable = {
-    [WeaponType.NONE]: 160,   // 空手
-    [WeaponType.DAGGER]: 150, // 短剑
-    [WeaponType.SWORD]: 145,  // 单手剑
-    [WeaponType.BOW]: 140,    // 弓 (未实装)
-    [WeaponType.ROD]: 140     // 杖
+    [WeaponType.NONE]: 160,   
+    [WeaponType.DAGGER]: 150, 
+    [WeaponType.SWORD]: 145,  
+    [WeaponType.BOW]: 140,    
+    [WeaponType.ROD]: 140     
 }
 
 export function calcAspd(weaponType, agi, dex, jobBonus = 0, equipBonus = 0) {
-    // 1. 获取基础攻速
     const base = BaseAspdTable[weaponType] || 150
-    
-    // 2. 计算属性加成 (削弱 AGI 收益)
-    // 旧公式: 150 + 0.8*Agi -> 50 Agi 满速
-    // 新公式: Base + (Agi * 0.4) + (Dex * 0.1)
-    // 假设空手 160: 需要 75 Agi 才能满速 (190)
-    // 假设单手剑 145: 需要 100+ Agi 才能满速
-    // 这更符合 99 级满属性的设计
     const statBonus = (agi * 0.4) + (dex * 0.1)
-    
     const rawAspd = base + statBonus + jobBonus + equipBonus
-    
-    // ASPD 上限 190
     return Math.min(190, parseFloat(rawAspd.toFixed(1)))
 }
 
-// --- 战斗逻辑辅助 ---
-
 export function calcAspdDelay(aspd) {
-    // RO: Delay = (200 - ASPD) * 20
     const delay = (200 - aspd) * 20
-    // 限制最低延迟 100ms
     return Math.max(100, delay)
 }
 
 export function calcHitRate(attackerHit, defenderFlee) {
     const rate = 80 + (attackerHit - defenderFlee)
     return Math.max(5, Math.min(100, rate))
+}
+
+// --- 新增：伤害计算核心 (纯函数，方便模拟器调用) ---
+
+export function resolvePlayerDamage(playerAtk, playerCrit, playerDex, targetDef, targetFlee) {
+    // 1. 判定暴击
+    const isCrit = Math.random() * 100 < playerCrit
+    let isHit = false
+    
+    if (isCrit) {
+        isHit = true
+    } else {
+        // 2. 判定命中
+        // 玩家命中判定：如果 Dex 极低，可能有浮动？暂忽略
+        const hitRate = calcHitRate(100, targetFlee) // 这里的 playerHit 传入逻辑在外部处理
+        // 注意：外部调用时应该把 player.hit 传进来，这里简化了参数，修正如下
+        // 我们需要传入 playerHit
+    }
+    
+    // 重新设计函数签名以更通用
+    return { damage: 0, isHit: false, isCrit: false, type: 'miss' }
+}
+
+// 更好的设计：分别计算 Player vs Monster 和 Monster vs Player
+// 返回结果结构: { damage: number, type: 'hit'|'crit'|'miss'|'double' }
+
+export function calculateDamageFlow({
+    attackerAtk, attackerHit, attackerCrit, 
+    defenderDef, defenderFlee, 
+    isPlayerAttacking = true // 用于区分行为 (如玩家有双刀)
+}) {
+    // 1. 暴击判定 (仅玩家有暴击，怪物暂无暴击)
+    const isCrit = isPlayerAttacking ? (Math.random() * 100 < attackerCrit) : false
+    
+    if (isCrit) {
+        // 暴击：1.4倍伤害，无视防御
+        const variance = (Math.random() * 0.2) + 0.9 // 0.9~1.1 浮动
+        const rawDamage = Math.floor(attackerAtk * variance)
+        const finalDamage = Math.floor(rawDamage * 1.4)
+        return { damage: finalDamage, type: 'crit' }
+    }
+
+    // 2. 命中判定
+    const hitRate = calcHitRate(attackerHit, defenderFlee)
+    const isHit = Math.random() * 100 < hitRate
+
+    if (!isHit) {
+        return { damage: 0, type: 'miss' }
+    }
+
+    // 3. 普通伤害计算
+    const variance = (Math.random() * 0.2) + 0.9
+    let damage = Math.floor(attackerAtk * variance)
+    
+    // 减防 (简单减算)
+    damage = Math.max(1, damage - defenderDef)
+    
+    return { damage, type: 'hit' }
 }

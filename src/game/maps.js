@@ -15,14 +15,14 @@ export const Maps = {
     },
     'prt_fild06': {
         id: 'prt_fild06',
-        name: '普隆德拉西门', // 蝗虫区(暂时用小鸡代替)
+        name: '普隆德拉西门', 
         minLv: 3,
         maxLv: 7,
         monsters: [
-            { id: 1005, rate: 0.4 },  // 小鸡 40% (掉衣服)
+            { id: 1005, rate: 0.35 }, // 小鸡 35%
             { id: 1006, rate: 0.3 },  // 苍蝇 30%
-            { id: 1004, rate: 0.2 },  // 疯兔 20%
-            { id: 1010, rate: 0.1 }   // 盗虫 10%
+            { id: 1010, rate: 0.2 },  // 盗虫 20%
+            { id: 1001, rate: 0.15 }  // 波利 15%
         ]
     },
     'pay_fild04': {
@@ -32,8 +32,8 @@ export const Maps = {
         maxLv: 10,
         monsters: [
             { id: 1007, rate: 0.4 },  // 树木精 40%
-            { id: 1008, rate: 0.3 },  // 小野猪 30%
-            { id: 1002, rate: 0.2 },  // 绿棉虫 20%
+            { id: 1002, rate: 0.3 },  // 绿棉虫 30%
+            { id: 1011, rate: 0.2 },  // 大嘴鸟蛋 20%
             { id: 1001, rate: 0.1 }   // 波利 10%
         ]
     },
@@ -46,7 +46,7 @@ export const Maps = {
             { id: 1009, rate: 0.4 },  // 秃鹰 40%
             { id: 1005, rate: 0.3 },  // 小鸡 30%
             { id: 1011, rate: 0.2 },  // 大嘴鸟蛋 20%
-            { id: 1004, rate: 0.1 }   // 疯兔 10%
+            { id: 1008, rate: 0.1 }   // 小野猪 10%
         ]
     },
     'prt_sewb1': {
@@ -55,9 +55,9 @@ export const Maps = {
         minLv: 9,
         maxLv: 15,
         monsters: [
-            { id: 1010, rate: 0.5 },  // 盗虫 50%
+            { id: 1010, rate: 0.6 },  // 盗虫 60%
             { id: 1006, rate: 0.3 },  // 苍蝇 30%
-            { id: 1009, rate: 0.2 }   // 秃鹰 20% (暂代)
+            { id: 1001, rate: 0.1 }   // 波利 10% (偶尔迷路的)
         ]
     }
 }

@@ -7,6 +7,7 @@
   import { Skills } from './game/skills.js'
   import { getEquipInfo, EquipType } from './game/equipment.js'
   import { Maps } from './game/maps.js'
+  import { runSimulation } from './game/simulator.js' 
 
   // --- 核心状态 ---
   const logs = ref([]) 
@@ -21,7 +22,7 @@
   // 基础指令库
   const baseCommands = [
       'auto', 'start', 'stop', 'map', 'conf', 's', 'stat', 'i', 'item', 
-      'add', 'skill', 'use', 'equip', 'unequip', 'sell', 'buy', 'help', 'clear'
+      'add', 'skill', 'use', 'equip', 'unequip', 'sell', 'buy', 'help', 'clear', 'sim'
   ]
 
   // 计算当前的提示列表
@@ -38,7 +39,7 @@
       }
 
       if (parts.length === 2) {
-          if (cmd === 'map') {
+          if (cmd === 'map' || cmd === 'sim') {
               return Object.entries(Maps)
                   .filter(([id, m]) => id.includes(arg) || m.name.includes(arg))
                   .map(([id, m]) => ({ text: id, hint: m.name, type: 'arg' }))
@@ -362,6 +363,34 @@
             }
         }
     }
+    else if (cmd === 'sim') {
+        const mapId = args[0] || player.currentMap
+        const times = parseInt(args[1]) || 1000
+        addLog(`正在模拟 ${mapId} 战斗 ${times} 次...`, 'system')
+        
+        setTimeout(() => {
+            const res = runSimulation(mapId, times)
+            addLog(`================ [ 模拟报告 ] ================`, 'warning')
+            addLog(`[概况] 胜率: ${(res.wins/res.iterations*100).toFixed(1)}% | 死亡: ${res.deaths}`, 'system')
+            addLog(`[战斗] DPS: ${res.dps.toFixed(1)} | 击杀: ${res.avgHitsToKill.toFixed(1)}刀`, 'system')
+            addLog(`[命中] Hit: ${res.hitRate.toFixed(1)}% | Crit: ${res.critRate.toFixed(1)}%`, 'dim')
+            
+            const hours = res.totalTime / 1000 / 3600
+            const zenyPerHour = Math.floor(res.totalLootVal / hours)
+            const expPerHour = Math.floor(res.totalExp / hours)
+            const potionPerHour = Math.floor(res.potionsUsed / hours)
+            const netZeny = zenyPerHour - (potionPerHour * 50) // 假设红药50z
+
+            addLog(`[效率] Exp: ${expPerHour}/h | 毛利: ${zenyPerHour}z/h`, 'warning')
+            addLog(`[消耗] 药水: ${potionPerHour}/h (成本: ${potionPerHour*50}z)`, 'dim')
+            
+            const color = netZeny > 0 ? 'success' : 'error'
+            addLog(`[净利] ${netZeny} Zeny/h`, color)
+            
+            addLog(`安全线: 战斗结束时最低血量 ${res.minHpEnd}`, 'dim')
+            addLog(`==============================================`, 'warning')
+        }, 100)
+    }
     else if (cmd === 'i'|| cmd === 'item') { 
       if (!player.inventory || player.inventory.length === 0) {
         addLog('背包是空的。', 'system')
@@ -393,6 +422,7 @@
       addLog(`  unequip <k> : 卸下装备`, 'dim')
       addLog(`  sell <n>    : 贩卖 (sell all 卖杂物)`, 'dim')
       addLog(`  buy <n>     : 购买物品`, 'dim')
+      addLog(`  sim <map>   : 战斗模拟 (测试用)`, 'dim')
       addLog(`  clear       : 清空日志`, 'dim')
       addLog(`[提示] 输入指令时按 Tab 键可智能补全`, 'system')
       addLog(`==================================`, 'system')
