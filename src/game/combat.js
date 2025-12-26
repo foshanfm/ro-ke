@@ -74,12 +74,11 @@ export function startBot() {
 export function stopBot() {
     gameState.isAuto = false
     gameState.status = 'IDLE'
-    gameState.goalMap = null // Clear goal on stop
-    gameState.currentMonster = null
-    gameState.manualTarget = null
-    clearLoops()
-    combatSessionId++
-    log('AI Suspended.', 'system')
+    gameState.goalMap = null // 停止时清除目标
+    gameState.manualTarget = null // 停止时清除手动移动目标
+    // 注意：不清除 currentMonster，不清除 Loops，不增加 sessionId
+    // 这样 aiTick 会因为 isAuto=false 而停止，但 monsterActionLoop 会继续执行直到战斗结束
+    log('AI Suspended. (Combat may continue)', 'system')
 }
 
 /**
@@ -353,7 +352,8 @@ async function aiTick(sessionId) {
             // 怪物被攻击，激活怪物 AI
             if (!monsterLoopId && target.hp > 0) {
                 // 延迟启动怪物反击 (模拟反应)
-                monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), 200)
+                const startMapId = mapState.currentMapId
+                monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, startMapId), 200)
             }
 
             if (target.hp <= 0) {
@@ -378,8 +378,8 @@ async function aiTick(sessionId) {
     }
 }
 
-async function monsterActionLoop(sessionId) {
-    if (!gameState.isAuto || !gameState.currentMonster || sessionId !== combatSessionId) {
+async function monsterActionLoop(sessionId, monsterMapId) {
+    if (!gameState.currentMonster || sessionId !== combatSessionId || mapState.currentMapId !== monsterMapId) {
         monsterLoopId = null
         return
     }
@@ -407,7 +407,7 @@ async function monsterActionLoop(sessionId) {
         target.x += Math.cos(angle) * moveSpeed
         target.y += Math.sin(angle) * moveSpeed
 
-        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), reactDelay)
+        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), reactDelay)
     } else {
         // [攻击模式]
         const res = calculateDamageFlow({
@@ -439,7 +439,7 @@ async function monsterActionLoop(sessionId) {
 
         // 攻击后摇 (Attack Delay)
         const delay = targetTemplate.attackDelay || 2000
-        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), delay)
+        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), delay)
     }
 }
 

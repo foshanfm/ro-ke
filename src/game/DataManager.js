@@ -26,7 +26,11 @@ export async function initializeGameData(maxLevel = 99) {
     if (itemsStale) {
         console.log('[DataManager] 物品数据缓存过期,重新解析...');
         itemsCache = await loadItemDB();
-        await setStaticData('items', itemsCache, DATA_VERSION);
+        try {
+            await setStaticData('items', itemsCache, DATA_VERSION);
+        } catch (e) {
+            console.warn('[DataManager] 缓存物品及数据失败(不影响游戏启动):', e);
+        }
     } else {
         console.log('[DataManager] 从缓存加载物品数据...');
         itemsCache = await getStaticData('items');
@@ -37,7 +41,11 @@ export async function initializeGameData(maxLevel = 99) {
     if (mobsStale) {
         console.log('[DataManager] 怪物数据缓存过期,重新解析...');
         mobsCache = await loadMobDB(maxLevel);
-        await setStaticData('monsters', mobsCache, DATA_VERSION);
+        try {
+            await setStaticData('monsters', mobsCache, DATA_VERSION);
+        } catch (e) {
+            console.warn('[DataManager] 缓存怪物数据失败(不影响游戏启动):', e);
+        }
     } else {
         console.log('[DataManager] 从缓存加载怪物数据...');
         mobsCache = await getStaticData('monsters');

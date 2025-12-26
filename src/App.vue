@@ -273,10 +273,15 @@
       setSpawnData(spawnData)
       setWarpData(warpDB)
       
+      // 确保当前地图 ID 是小写的
+      if (player.currentMap) player.currentMap = player.currentMap.toLowerCase()
+      
       isDataLoaded.value = true
       
-      // 数据加载后，初始化当前地图
-      initMap(player.currentMap)
+      // 数据加载后，显式初始化当前地图
+      if (player.currentMap) {
+          initMap(player.currentMap)
+      }
 
       addLog('游戏数据加载完成!', 'success')
     } catch (error) {
@@ -464,7 +469,7 @@
           <div class="pt-2 border-t border-gray-700">
                <div class="text-xs text-yellow-500 font-bold flex justify-between">
                    <span>Zeny</span>
-                   <span>{{ player.zeny.toLocaleString() }} z</span>
+                  <span>{{ (player.zeny || 0).toLocaleString() }} z</span>
                </div>
           </div>
           

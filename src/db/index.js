@@ -5,7 +5,7 @@ import Dexie from 'dexie';
 
 // 数据库版本号 - 用于控制数据迁移和缓存失效
 // 注意:每次修改 schema 时必须增加版本号
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 // 创建数据库实例
 export const db = new Dexie('RO_Idle_Bot');

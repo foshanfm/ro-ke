@@ -103,7 +103,12 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Case-Insensitive Map Engine**: Standardized all Map IDs to lowercase.
 - [x] **Universal Content Unlock**: Removed Level 20 gating; all 1k+ monsters and 400+ maps accessible.
 - [x] **Persistence Safety (Serialization Fix)**: Post-load hydration logic (`injectRuntimeEffects`) to fix IndexedDB crashes.
-- [x] **Initialization Polish**: Resolved login race-conditions and refined warp de-duplication.
+- [x] **Initialization Polish**: 
+  - [x] Resolved login race-conditions and refined warp de-duplication.
+  - [x] **Zeny Stability**: Fixed `toLocaleString` crash in UI rendering.
+- [x] **Combat Realism**:
+  - [x] **Monster Persistence**: Monsters continue attacking if player stops bot but remains in range.
+  - [x] **Safety Checks**: Prevented cross-map zombie loops.
 
 ### Phase 19: SP Mechanics & Skills [Upcoming]
 - [ ] **SP Consumption**: Integrate cast costs into `castSkill`.
@@ -111,11 +116,12 @@ A web-based idle game recreating the experience of using automated botting softw
 - [ ] **Cast Time System**: Variable cast times based on DEX and skill level.
 
 ## 4. Current State
-*   **Version:** 2.1.0 (Phase 18 - Stability & Content Unlocked)
+*   **Version:** 2.1.1 (Phase 18 - Stability & Realism)
 *   **Stability:** High. Content fully synchronized and ID case-sensitivity resolved.
 *   **Performance:** Elite. Safe persistence with post-load logic injection.
 *   **New Features:**
     - **Global Content**: All maps and monsters (Lv 1-99) now fully spawning.
     - **Robust Saving**: Eliminated DataCloneErrors by isolating non-serializable logic.
+    - **Combat Realism**: Monsters don't evaporate when you stop the bot.
     - **Precise Warp Deduplication**: Preserve multi-entrance layouts while cleaning redundant data.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.
