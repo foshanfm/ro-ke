@@ -49,7 +49,9 @@ A web-based idle game recreating the experience of using automated botting softw
     - [x] **Skill Engine:** `castSkill` (Active) & `PassiveHooks` (Double Attack).
     - [x] **Spatial System:** `mapManager` handling X, Y coordinates and `moveSpeed`.
     - [x] **Card System:** Weapon/Armor slots, `card` command, and attribute bonuses.
-    - [x] **Equipment:** Added `SHIELD` slot.
+- [x] **Equipment:** Added `SHIELD` slot.
+- [x] **ASPD Overhaul:** Comprehensive Renewal-based calculation engine with `job_base_aspd.json` backing.
+
 - [ ] **1st Jobs Implementation:**
     - [ ] **Swordman:** Bash, Magnum Break, Provoke.
     - [ ] **Mage:** Cast Time system, Elemental Bolts.
@@ -59,12 +61,21 @@ A web-based idle game recreating the experience of using automated botting softw
 - [ ] **World Interaction:**
     - [ ] `sit` command (2x Regen).
 
+### Phase 5: Data-Driven Infrastructure [Completed]
+- [x] **Universal Database:** Transitioned from hardcoded JS objects to `.txt` (rAthena format) parsing.
+- [x] **ETL Engine:** Implemented `dataLoader.js` for asynchronous asset loading on startup.
+- [x] **Massive Content Enrichment:**
+    - [x] Items: 12k+ entries loaded.
+    - [x] Monsters: 200+ (Lv 1-20) entries loaded.
+- [x] **Script-Based Spawning:** Map spawns now use standard RO spawn scripts (`mobs/fields/*.txt`).
+- [x] **Content Gating:** Implemented Level 20 restriction for initial open content.
+
 ## 4. Current State
-*   **Version:** 0.9.7 (Phase 4 Alpha - Spatial & Skills)
-*   **Stability:** Enterprise-grade. Protected against race conditions and save corruption.
-*   **Automation:** Fully autonomous loop (Search -> Move -> Fight -> Loot -> Auto Sell -> Auto Buy).
+*   **Version:** 0.9.9 (Phase 4 - Advanced Mechanics Integration)
+*   **Stability:** High. Advanced formulas for ASPD and spatial combat verified.
+*   **Automation:** Fully autonomous loop with high-fidelity RO data.
 *   **New Features:**
-    - **Visual Sidebar:** Real-time HP/SP bars, Exp bars, Stats, and Coordinates (X, Y).
-    - **Spatial AI:** Bot now searches for targets and physically moves to them.
-    - **Card System:** Fully functional card insertion and stat calculation.
-*   **Next Objective:** Implement specific 1st Job skills to utilize the new Skill Engine.
+    - **Advanced ASPD:** Real-time calculation based on Job, Weapon, Stats, and corrections.
+    - **Physical Spawn Logic:** Monsters now spawn at fixed counts as per official scripts.
+*   **Next Objective:** Improve Map navigation UI and implement 1st Job skills.
+

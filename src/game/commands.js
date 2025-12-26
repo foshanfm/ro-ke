@@ -11,13 +11,14 @@ import { castSkill } from './skillEngine.js'
 const commands = {}
 
 /**
- * Register a command.
- * @param {Object} def - Command definition
- * @param {string} def.name - Primary command name
- * @param {string[]} [def.aliases] - Aliases
- * @param {string} [def.description] - Help text
- * @param {string} [def.usage] - Usage example
- * @param {function(string[], Object): void} def.execute - Execution logic. args: string[], context: { log: fn, clear: fn }
+ * 注册一个命令。
+ * @param {Object} def - 命令定义
+ * @param {string} def.name - 主命令名
+ * @param {string[]} [def.aliases] - 别名列表
+ * @param {string} [def.description] - 帮助文本
+ * @param {string} [def.usage] - 用法示例
+ * @param {function(string[], Object): void} def.execute - 执行逻辑。args: string[], context: { log: fn, clear: fn }
+ * @param {function(string): Array<{text: string, hint?: string, type: string}>} [def.suggest] - 智能提示函数。接收参数字符串，返回提示项数组
  */
 export function registerCommand(def) {
     commands[def.name] = def
@@ -57,6 +58,34 @@ export function executeGameCommand(cmdName, args, context) {
     }
     cmd.execute(args, context)
     return true
+}
+
+/**
+ * 获取命令的智能提示列表
+ * @param {string} rawInput - 用户输入的原始字符串
+ * @returns {Array<{text: string, hint?: string, type: string}>} 提示项数组
+ */
+export function getCommandSuggestions(rawInput) {
+    if (!rawInput) return []
+
+    const parts = rawInput.split(/\s+/)
+    const cmdName = parts[0].toLowerCase()
+    const arg = parts.length > 1 ? parts.slice(1).join(' ').toLowerCase() : ''
+
+    // 第一段：命令名补全
+    if (parts.length === 1) {
+        return getCommandNames()
+            .filter(c => c.startsWith(cmdName))
+            .map(c => ({ text: c, type: 'cmd' }))
+    }
+
+    // 第二段及以后：参数补全
+    const cmd = commands[cmdName]
+    if (cmd && cmd.suggest) {
+        return cmd.suggest(arg)
+    }
+
+    return []
 }
 
 // --- Command Definitions ---
@@ -112,7 +141,7 @@ registerCommand({
         }
         const cardName = args[0]
         const slotName = args[1].toLowerCase()
-        
+
         let type = null
         if (slotName === 'weapon' || slotName === 'w') type = EquipType.WEAPON
         if (slotName === 'shield' || slotName === 's') type = EquipType.SHIELD
@@ -141,14 +170,14 @@ registerCommand({
     execute: (args, { log }) => {
         const jobName = JobConfig[player.job] ? JobConfig[player.job].name : player.job
         const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : player.currentMap
-        
+
         log(`----------------[ 角色状态 ]----------------`, 'system')
         log(`名字: ${player.name} | 职业: ${jobName}`, 'system')
         log(`位置: ${mapName} (${player.currentMap})`, 'system')
-        log(`Base Lv: ${player.lv} | Exp: ${player.exp}/${player.nextExp} (${((player.exp/player.nextExp)*100).toFixed(2)}%)`, 'system')
-        log(`Job  Lv: ${player.jobLv} | Exp: ${player.jobExp}/${player.nextJobExp} (${((player.jobExp/player.nextJobExp)*100).toFixed(2)}%)`, 'system')
+        log(`Base Lv: ${player.lv} | Exp: ${player.exp}/${player.nextExp} (${((player.exp / player.nextExp) * 100).toFixed(2)}%)`, 'system')
+        log(`Job  Lv: ${player.jobLv} | Exp: ${player.jobExp}/${player.nextJobExp} (${((player.jobExp / player.nextJobExp) * 100).toFixed(2)}%)`, 'system')
         log(`HP: ${player.hp}/${player.maxHp} | SP: ${player.sp}/${player.maxSp}`, 'system')
-        
+
         log(`[战斗属性]`, 'dim')
         log(`Atk: ${player.atk} | Matk: ${player.matk} | Aspd: ${player.aspd}`, 'system')
         log(`Def: ${player.def} | Mdef: ${player.mdef}`, 'system')
@@ -157,22 +186,22 @@ registerCommand({
         log(`[基础属性] (剩余素质点: ${player.statPoints})`, 'dim')
         log(`Str: ${player.str} | Agi: ${player.agi} | Dex: ${player.dex}`, 'system')
         log(`Vit: ${player.vit} | Int: ${player.int} | Luk: ${player.luk}`, 'system')
-        
-        if (player.equipment) {
-           const w = player.equipment[EquipType.WEAPON]
-           const s = player.equipment[EquipType.SHIELD]
-           const a = player.equipment[EquipType.ARMOR]
-           
-           const getEquipName = (inst) => {
-               if (!inst) return '(无)'
-               const info = getEquipInfo(inst.id)
-               const cardNames = inst.cards && inst.cards.filter(c => c).map(c => getItemInfo(c).name).join(', ')
-               return cardNames ? `${info.name} [${cardNames}]` : info.name
-           }
 
-           log(`[装备] 武器: ${getEquipName(w)}`, 'dim')
-           log(`[装备] 副手: ${getEquipName(s)}`, 'dim')
-           log(`[装备] 身体: ${getEquipName(a)}`, 'dim')
+        if (player.equipment) {
+            const w = player.equipment[EquipType.WEAPON]
+            const s = player.equipment[EquipType.SHIELD]
+            const a = player.equipment[EquipType.ARMOR]
+
+            const getEquipName = (inst) => {
+                if (!inst) return '(无)'
+                const info = getEquipInfo(inst.id)
+                const cardNames = inst.cards && inst.cards.filter(c => c).map(c => getItemInfo(c).name).join(', ')
+                return cardNames ? `${info.name} [${cardNames}]` : info.name
+            }
+
+            log(`[装备] 武器: ${getEquipName(w)}`, 'dim')
+            log(`[装备] 副手: ${getEquipName(s)}`, 'dim')
+            log(`[装备] 身体: ${getEquipName(a)}`, 'dim')
         }
 
         log(`[资产] Zeny: ${player.zeny}`, 'warning')
@@ -198,6 +227,10 @@ registerCommand({
 registerCommand({
     name: 'add',
     description: '分配素质点 (用法: add <属性> <点数>)',
+    suggest: (arg) => {
+        const stats = ['str', 'agi', 'vit', 'int', 'dex', 'luk']
+        return stats.filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length < 2) {
             log('用法: add <属性> <点数>', 'error')
@@ -224,15 +257,15 @@ registerCommand({
     description: '查看/学习技能',
     execute: (args, { log }) => {
         if (args.length === 0) {
-             const jobName = JobConfig[player.job] ? JobConfig[player.job].name : player.job
-             log(`[${jobName}] 可学习技能:`, 'system')
-             for (const [id, skill] of Object.entries(Skills)) {
-                 if (skill.req.job === player.job || skill.req.job === 'Novice') {
-                     const curLv = player.skills[id] || 0
-                     log(`  ${id} : ${skill.name} (Lv.${curLv}/${skill.maxLv}) - ${skill.desc}`, 'dim')
-                 }
-             }
-             log(`输入 'skill <id> <Lv>' 进行学习。`, 'system')
+            const jobName = JobConfig[player.job] ? JobConfig[player.job].name : player.job
+            log(`[${jobName}] 可学习技能:`, 'system')
+            for (const [id, skill] of Object.entries(Skills)) {
+                if (skill.req.job === player.job || skill.req.job === 'Novice') {
+                    const curLv = player.skills[id] || 0
+                    log(`  ${id} : ${skill.name} (Lv.${curLv}/${skill.maxLv}) - ${skill.desc}`, 'dim')
+                }
+            }
+            log(`输入 'skill <id> <Lv>' 进行学习。`, 'system')
         } else {
             const skillId = args[0]
             const level = parseInt(args[1]) || 1
@@ -250,19 +283,29 @@ registerCommand({
     name: 'equip',
     aliases: ['eq'],
     description: '装备物品 (用法: equip <物品名>)',
+    suggest: (arg) => {
+        const uniqueItems = new Set()
+        player.inventory.forEach(slot => {
+            const info = getItemInfo(slot.id)
+            if (info.name.toLowerCase().includes(arg)) {
+                uniqueItems.add(info.name)
+            }
+        })
+        return Array.from(uniqueItems).map(name => ({ text: name, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length === 0) {
-             log('用法: equip <物品名>', 'error')
+            log('用法: equip <物品名>', 'error')
         } else {
-             const target = args.join(' ') 
-             const asId = parseInt(target)
-             const res = equipItem(isNaN(asId) ? target : asId)
-             
-             if (res.success) {
-                 log(res.msg, 'success')
-             } else {
-                 log(res.msg, 'error')
-             }
+            const target = args.join(' ')
+            const asId = parseInt(target)
+            const res = equipItem(isNaN(asId) ? target : asId)
+
+            if (res.success) {
+                log(res.msg, 'success')
+            } else {
+                log(res.msg, 'error')
+            }
         }
     }
 })
@@ -271,46 +314,59 @@ registerCommand({
     name: 'unequip',
     aliases: ['ueq'],
     description: '卸下装备 (用法: unequip <部位>)',
+    suggest: (arg) => {
+        return ['weapon', 'shield', 'armor'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
+    },
     execute: (args, { log }) => {
-         if (args.length === 0) {
-              log('用法: unequip <部位>', 'error')
-         } else {
-              const slot = args[0].toLowerCase()
-              let type = null
-              if (slot === 'weapon' || slot === 'w' || slot === '武器') type = EquipType.WEAPON
-              if (slot === 'shield' || slot === 's' || slot === '副手' || slot === '盾牌') type = EquipType.SHIELD
-              if (slot === 'armor' || slot === 'a' || slot === '防具') type = EquipType.ARMOR
-              
-              if (type) {
-                  const res = unequipItem(type)
-                  if (res.success) {
-                      log(res.msg, 'success')
-                  } else {
-                      log(res.msg, 'error')
-                  }
-              } else {
-                  log('未知部位。请使用 weapon, shield 或 armor。', 'error')
-              }
-         }
+        if (args.length === 0) {
+            log('用法: unequip <部位>', 'error')
+        } else {
+            const slot = args[0].toLowerCase()
+            let type = null
+            if (slot === 'weapon' || slot === 'w' || slot === '武器') type = EquipType.WEAPON
+            if (slot === 'shield' || slot === 's' || slot === '副手' || slot === '盾牌') type = EquipType.SHIELD
+            if (slot === 'armor' || slot === 'a' || slot === '防具') type = EquipType.ARMOR
+
+            if (type) {
+                const res = unequipItem(type)
+                if (res.success) {
+                    log(res.msg, 'success')
+                } else {
+                    log(res.msg, 'error')
+                }
+            } else {
+                log('未知部位。请使用 weapon, shield 或 armor。', 'error')
+            }
+        }
     }
 })
 
 registerCommand({
     name: 'use',
     description: '使用物品 (用法: use <物品名>)',
+    suggest: (arg) => {
+        const uniqueItems = new Set()
+        player.inventory.forEach(slot => {
+            const info = getItemInfo(slot.id)
+            if (info.name.toLowerCase().includes(arg)) {
+                uniqueItems.add(info.name)
+            }
+        })
+        return Array.from(uniqueItems).map(name => ({ text: name, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length === 0) {
-             log('用法: use <物品名>', 'error')
+            log('用法: use <物品名>', 'error')
         } else {
-             const target = args.join(' ') 
-             const asId = parseInt(target)
-             const res = useItem(isNaN(asId) ? target : asId)
-             
-             if (res.success) {
-                 log(res.msg, 'success')
-             } else {
-                 log(res.msg, 'error')
-             }
+            const target = args.join(' ')
+            const asId = parseInt(target)
+            const res = useItem(isNaN(asId) ? target : asId)
+
+            if (res.success) {
+                log(res.msg, 'success')
+            } else {
+                log(res.msg, 'error')
+            }
         }
     }
 })
@@ -318,19 +374,30 @@ registerCommand({
 registerCommand({
     name: 'sell',
     description: '贩卖物品 (用法: sell <物品名> [数量] 或 sell all)',
+    suggest: (arg) => {
+        const uniqueItems = new Set()
+        uniqueItems.add('all')
+        player.inventory.forEach(slot => {
+            const info = getItemInfo(slot.id)
+            if (info.name.toLowerCase().includes(arg)) {
+                uniqueItems.add(info.name)
+            }
+        })
+        return Array.from(uniqueItems).map(name => ({ text: name, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length === 0) {
-             log('用法: sell <物品名> [数量] 或 sell all', 'error')
+            log('用法: sell <物品名> [数量] 或 sell all', 'error')
         } else {
-             const target = args[0]
-             const count = args.length > 1 ? parseInt(args[1]) : 1
-             const asId = parseInt(target)
-             const res = sellItem(isNaN(asId) ? target : asId, isNaN(count) ? 1 : count)
-             if (res.success) {
-                 log(res.msg, 'success')
-             } else {
-                 log(res.msg, 'error')
-             }
+            const target = args[0]
+            const count = args.length > 1 ? parseInt(args[1]) : 1
+            const asId = parseInt(target)
+            const res = sellItem(isNaN(asId) ? target : asId, isNaN(count) ? 1 : count)
+            if (res.success) {
+                log(res.msg, 'success')
+            } else {
+                log(res.msg, 'error')
+            }
         }
     }
 })
@@ -338,23 +405,28 @@ registerCommand({
 registerCommand({
     name: 'buy',
     description: '购买物品 (用法: buy <物品名>)',
+    suggest: (arg) => {
+        const shop = getShopList()
+        return shop.filter(item => item.name.toLowerCase().includes(arg))
+            .map(item => ({ text: item.name, hint: `${item.price}z`, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length === 0) {
-             const list = getShopList()
-             log('[ 商店列表 ]', 'system')
-             list.forEach(item => {
-                 log(`  ${item.name} - ${item.price}z`, 'dim')
-             })
-             log('输入 buy <物品名> [数量] 进行购买。', 'system')
+            const list = getShopList()
+            log('[ 商店列表 ]', 'system')
+            list.forEach(item => {
+                log(`  ${item.name} - ${item.price}z`, 'dim')
+            })
+            log('输入 buy <物品名> [数量] 进行购买。', 'system')
         } else {
-             const target = args[0]
-             const count = args.length > 1 ? parseInt(args[1]) : 1
-             const res = buyItem(target, isNaN(count) ? 1 : count)
-             if (res.success) {
-                 log(res.msg, 'success')
-             } else {
-                 log(res.msg, 'error')
-             }
+            const target = args[0]
+            const count = args.length > 1 ? parseInt(args[1]) : 1
+            const res = buyItem(target, isNaN(count) ? 1 : count)
+            if (res.success) {
+                log(res.msg, 'success')
+            } else {
+                log(res.msg, 'error')
+            }
         }
     }
 })
@@ -363,18 +435,21 @@ registerCommand({
     name: 'conf',
     aliases: ['config'],
     description: '修改配置 (用法: conf <key> <value>)',
+    suggest: (arg) => {
+        return ['auto_hp_percent', 'auto_hp_item', 'auto_buy_potion'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length < 2) {
-             log('用法: conf <key> <value>', 'error')
+            log('用法: conf <key> <value>', 'error')
         } else {
-             const key = args[0]
-             const val = args[1]
-             const res = setConfig(key, val)
-             if (res.success) {
-                 log(res.msg, 'success')
-             } else {
-                 log(res.msg, 'error')
-             }
+            const key = args[0]
+            const val = args[1]
+            const res = setConfig(key, val)
+            if (res.success) {
+                log(res.msg, 'success')
+            } else {
+                log(res.msg, 'error')
+            }
         }
     }
 })
@@ -382,6 +457,11 @@ registerCommand({
 registerCommand({
     name: 'map',
     description: '查看地图/移动 (用法: map [id])',
+    suggest: (arg) => {
+        return Object.entries(Maps)
+            .filter(([id, m]) => id.includes(arg) || m.name.includes(arg))
+            .map(([id, m]) => ({ text: id, hint: m.name, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         if (args.length === 0) {
             log('[ 世界地图 ]', 'system')
@@ -419,19 +499,24 @@ registerCommand({
 registerCommand({
     name: 'sim',
     description: '战斗模拟 (用法: sim <map> [times])',
+    suggest: (arg) => {
+        return Object.entries(Maps)
+            .filter(([id, m]) => id.includes(arg) || m.name.includes(arg))
+            .map(([id, m]) => ({ text: id, hint: m.name, type: 'arg' }))
+    },
     execute: (args, { log }) => {
         const mapId = args[0] || player.currentMap
         const times = parseInt(args[1]) || 1000
         log(`正在模拟 ${mapId} 战斗 ${times} 次...`, 'system')
-        
+
         // 异步执行避免卡顿
         setTimeout(() => {
             const res = runSimulation(mapId, times)
             log(`================ [ 模拟报告 ] ================`, 'warning')
-            log(`[概况] 胜率: ${(res.wins/res.iterations*100).toFixed(1)}% | 死亡: ${res.deaths}`, 'system')
+            log(`[概况] 胜率: ${(res.wins / res.iterations * 100).toFixed(1)}% | 死亡: ${res.deaths}`, 'system')
             log(`[战斗] DPS: ${res.dps.toFixed(1)} | 击杀: ${res.avgHitsToKill.toFixed(1)}刀`, 'system')
             log(`[命中] Hit: ${res.hitRate.toFixed(1)}% | Crit: ${res.critRate.toFixed(1)}%`, 'dim')
-            
+
             const hours = res.totalTime / 1000 / 3600
             const zenyPerHour = Math.floor(res.totalLootVal / hours)
             const expPerHour = Math.floor(res.totalExp / hours)
@@ -439,11 +524,11 @@ registerCommand({
             const netZeny = zenyPerHour - (potionPerHour * 50) // 假设红药50z
 
             log(`[效率] Exp: ${expPerHour}/h | 毛利: ${zenyPerHour}z/h`, 'warning')
-            log(`[消耗] 药水: ${potionPerHour}/h (成本: ${potionPerHour*50}z)`, 'dim')
-            
+            log(`[消耗] 药水: ${potionPerHour}/h (成本: ${potionPerHour * 50}z)`, 'dim')
+
             const color = netZeny > 0 ? 'success' : 'error'
             log(`[净利] ${netZeny} Zeny/h`, color)
-            
+
             log(`安全线: 战斗结束时最低血量 ${res.minHpEnd}`, 'dim')
             log(`==============================================`, 'warning')
         }, 100)
@@ -454,25 +539,25 @@ registerCommand({
     name: 'item',
     aliases: ['i'],
     description: '查看背包',
-    execute: (args, { log }) => { 
-      if (!player.inventory || player.inventory.length === 0) {
-        log('背包是空的。', 'system')
-      } else {
-        log('=== 背包物品 ===', 'system')
-        player.inventory.forEach((slot, index) => {
-          const info = getItemInfo(slot.id)
-          let extra = ''
-          if (info.type === ItemType.EQUIP) {
-              extra = info.atk ? ` (Atk:${info.atk})` : (info.def ? ` (Def:${info.def})` : '')
-              if (slot.instance && slot.instance.cards) {
-                  const cardCount = slot.instance.cards.filter(c => c).length
-                  if (cardCount > 0) extra += ` [Cards: ${cardCount}]`
-              }
-          }
-          log(`${index + 1}. ${info.name} x ${slot.count}${extra}`, 'info')
-        })
-        log('================', 'system')
-      }
+    execute: (args, { log }) => {
+        if (!player.inventory || player.inventory.length === 0) {
+            log('背包是空的。', 'system')
+        } else {
+            log('=== 背包物品 ===', 'system')
+            player.inventory.forEach((slot, index) => {
+                const info = getItemInfo(slot.id)
+                let extra = ''
+                if (info.type === ItemType.EQUIP) {
+                    extra = info.atk ? ` (Atk:${info.atk})` : (info.def ? ` (Def:${info.def})` : '')
+                    if (slot.instance && slot.instance.cards) {
+                        const cardCount = slot.instance.cards.filter(c => c).length
+                        if (cardCount > 0) extra += ` [Cards: ${cardCount}]`
+                    }
+                }
+                log(`${index + 1}. ${info.name} x ${slot.count}${extra}`, 'info')
+            })
+            log('================', 'system')
+        }
     }
 })
 
@@ -489,17 +574,17 @@ registerCommand({
     aliases: ['h', '?'],
     description: '显示帮助信息',
     execute: (args, { log }) => {
-      log(`========== [ 帮助手册 ] ==========`, 'system')
-      
-      const list = getCommandList()
-      list.forEach(cmd => {
-          if (cmd.description) {
-              const nameStr = [cmd.name, ...(cmd.aliases || [])].join(' / ')
-              log(`  ${nameStr.padEnd(12)}: ${cmd.description}`, 'dim')
-          }
-      })
-      
-      log(`[提示] 输入指令时按 Tab 键可智能补全`, 'system')
-      log(`==================================`, 'system')
+        log(`========== [ 帮助手册 ] ==========`, 'system')
+
+        const list = getCommandList()
+        list.forEach(cmd => {
+            if (cmd.description) {
+                const nameStr = [cmd.name, ...(cmd.aliases || [])].join(' / ')
+                log(`  ${nameStr.padEnd(12)}: ${cmd.description}`, 'dim')
+            }
+        })
+
+        log(`[提示] 输入指令时按 Tab 键可智能补全`, 'system')
+        log(`==================================`, 'system')
     }
 })

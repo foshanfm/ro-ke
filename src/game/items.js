@@ -9,21 +9,24 @@ export const ItemType = {
   CARD: 'Card'
 }
 
-// 静态物品数据库
-const itemsDB = {
+// 全局物品数据库 - 将由 dataLoader 填充
+let itemsDB = {}
+
+// 静态物品数据库 (保留作为后备)
+const fallbackItemsDB = {
   // --- Usable ---
-  501: { 
-      name: '红色药水', 
-      type: ItemType.USABLE, 
-      price: 50, 
-      desc: '恢复少量 HP (约45点)。',
-      effect: (player) => {
-          // 恢复 30 ~ 60 点 HP
-          const healAmount = Math.floor(30 + Math.random() * 30)
-          const oldHp = player.hp
-          player.hp = Math.min(player.maxHp, player.hp + healAmount)
-          return player.hp - oldHp // 返回实际恢复量
-      }
+  501: {
+    name: '红色药水',
+    type: ItemType.USABLE,
+    price: 50,
+    desc: '恢复少量 HP (约45点)。',
+    effect: (player) => {
+      // 恢复 30 ~ 60 点 HP
+      const healAmount = Math.floor(30 + Math.random() * 30)
+      const oldHp = player.hp
+      player.hp = Math.min(player.maxHp, player.hp + healAmount)
+      return player.hp - oldHp // 返回实际恢复量
+    }
   },
 
   // --- Etc ---
@@ -38,13 +41,41 @@ const itemsDB = {
   4005: { name: '疯兔卡片', type: ItemType.CARD, desc: 'Luk +2, Crit +2' } // Lunatic Card
 }
 
+/**
+ * 设置物品数据库 (由 dataLoader 调用)
+ */
+export function setItemsDB(newItemsDB) {
+  itemsDB = newItemsDB
+  console.log('[Items] 物品数据库已更新')
+}
+
+/**
+ * 获取物品信息
+ */
 export function getItemInfo(id) {
   // 1. 先查装备库
   const equip = EquipDB[id]
   if (equip) {
-      return { ...equip, type: ItemType.EQUIP }
+    return { ...equip, type: ItemType.EQUIP }
   }
-  
-  // 2. 再查普通物品库
-  return itemsDB[id] || { name: `未知物品 (${id})`, type: ItemType.ETC }
+
+  // 2. 查询加载的物品库
+  if (itemsDB[id]) {
+    return itemsDB[id]
+  }
+
+  // 3. 查询后备物品库
+  if (fallbackItemsDB[id]) {
+    return fallbackItemsDB[id]
+  }
+
+  // 4. 返回未知物品
+  return { name: `未知物品 (${id})`, type: ItemType.ETC }
+}
+
+/**
+ * 检查物品数据库是否已加载
+ */
+export function isItemsDBLoaded() {
+  return Object.keys(itemsDB).length > 0
 }

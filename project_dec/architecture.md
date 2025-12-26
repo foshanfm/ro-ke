@@ -29,15 +29,19 @@ All math logic resides in `src/game/formulas.js`.
 *   **`simulator.js`**: Analytics. Runs Monte Carlo simulations for efficiency analysis.
 *   **`commands.js`**: Registry Pattern. Handles all console commands and their executions.
 *   **`skillEngine.js`**: Unified Skill Logic. Handles Casting, SP Check, Damage Modifiers, Passive Hooks.
-*   **`mapManager.js`**: Spatial Engine. Handles Map Instances, Monster Spawning (ViewPort), Coordinates, Pathfinding.
+*   **`mapManager.js`**: Spatial Engine. Handles Map Instances, Monster Spawning (Fixed Count/Spawn Files), Coordinates, Pathfinding.
+*   **`dataLoader.js`**: Data ETL. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts into the game's reactive state.
 
 ## 3. Core Algorithms (Standard)
 
 ### 3.1. Combat Formula (Behavioral)
 We prioritize "Feel" over "Academic Accuracy".
-*   **Hit:** `clamp(80 + Hit - Flee, 5, 95)`%
-*   **Crit:** `clamp(Crit - Luk, 1, 50)`%. Deals 1.4x Damage, Ignores Def.
 *   **Damage:** `floor((Atk - Def) * random(0.9, 1.1))`. Min 1.
+*   **ASPD (Standard):** Based on RO Renewal mechanics.
+    *   `StatBonus = sqrt(Agi^2 + Dex^2/4) * 0.1`
+    *   `BaseASPD` is job/weapon specific (from `job_base_aspd.json`).
+    *   `Final = (Base + StatBonus) + CatchUpCorrections + FlatBonus`. Max 193.
+
 
 ### 3.2. Spatial & AI Logic
 *   **Movement:** `Speed = Base + (Agi * 0.05)`.
@@ -54,8 +58,16 @@ Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 
 ### How to add a new Feature?
 
-1.  **New Item/Monster:** Update `items.js` / `monsters.js`. **Always** add price to items if sellable.
-2.  **New Skill:**
+    *   Add raw data to `src/game/data/item_db.txt` or `mob_db.txt` following the rAthena/eAthena format.
+    *   `dataLoader.js` will automatically parse and inject them into `items.js` / `monsters.js` on startup.
+    *   Monster objects include `attackDelay` (ms), `aspd` (display value), and `aps` (attacks per second).
+2.  **ASPD Balancing:**
+    *   Update `src/game/data/system/job_base_aspd.json` to adjust base attack speeds or shield penalties for specific jobs.
+
+2.  **New Map/Spawn:** 
+    *   Update `src/game/maps.js` for metadata (Width/Height/Name).
+    *   Add spawn script to `src/game/data/mobs/fields/*.txt`.
+3.  **New Skill:**
     *   Add definition to `skills.js`.
     *   If passive stat bonus: Update `formulas.js` or `PassiveHooks` in `skillEngine.js`.
     *   If active combat logic: `skillEngine.js` handles it automatically via `castSkill`.

@@ -1,17 +1,21 @@
 <script setup>
   import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue' 
-  import { player, loadGame, saveGame, getShopList, sellItem } from './game/player.js'
-  import { getItemInfo, ItemType } from './game/items.js'
+  import { player, loadGame, saveGame } from './game/player.js'
   import { setLogCallback, startRecovery, gameState } from './game/combat.js'
   import { JobConfig } from './game/jobs.js'
   import { Maps } from './game/maps.js'
-  import { executeGameCommand, getCommandNames, registerCommand } from './game/commands.js'
+  import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggestions } from './game/commands.js'
+  import { initializeGameData } from './game/dataLoader.js'
+  import { setItemsDB } from './game/items.js'
+  import { setMonstersDB } from './game/monsters.js'
+  import { setSpawnData } from './game/mapManager.js'
 
   // --- 核心状态 ---
   const logs = ref([]) 
   const logContainer = ref(null) 
   const cmdInput = ref(null)
   const userCommand = ref('')
+  const isDataLoaded = ref(false) // 数据加载状态
   
   // --- 智能提示状态 ---
   const showSuggestions = ref(false)
@@ -39,53 +43,7 @@
 
   // 计算当前的提示列表
   const suggestions = computed(() => {
-      const raw = userCommand.value
-      if (!raw) return []
-
-      const parts = raw.split(/\s+/)
-      const cmd = parts[0].toLowerCase()
-      const arg = parts.length > 1 ? parts[1].toLowerCase() : ''
-
-      if (parts.length === 1) {
-          return baseCommands.value.filter(c => c.startsWith(cmd)).map(c => ({ text: c, type: 'cmd' }))
-      }
-
-      if (parts.length === 2) {
-          if (cmd === 'map' || cmd === 'sim') {
-              return Object.entries(Maps)
-                  .filter(([id, m]) => id.includes(arg) || m.name.includes(arg))
-                  .map(([id, m]) => ({ text: id, hint: m.name, type: 'arg' }))
-          }
-          if (cmd === 'add') {
-              const stats = ['str', 'agi', 'vit', 'int', 'dex', 'luk']
-              return stats.filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
-          }
-          if (cmd === 'equip' || cmd === 'use' || cmd === 'sell') {
-               const uniqueItems = new Set()
-               if (cmd === 'sell') uniqueItems.add('all') 
-               
-               player.inventory.forEach(slot => {
-                   const info = getItemInfo(slot.id)
-                   if (info.name.toLowerCase().includes(arg)) {
-                       uniqueItems.add(info.name)
-                   }
-               })
-               return Array.from(uniqueItems).map(name => ({ text: name, type: 'arg' }))
-          }
-          if (cmd === 'buy') {
-              const shop = getShopList()
-              return shop.filter(item => item.name.toLowerCase().includes(arg))
-                         .map(item => ({ text: item.name, hint: `${item.price}z`, type: 'arg' }))
-          }
-          if (cmd === 'unequip' || cmd === 'ueq') {
-              return ['weapon', 'armor'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
-          }
-          if (cmd === 'conf') {
-              return ['auto_hp_percent', 'auto_hp_item', 'auto_buy_potion'].filter(s => s.startsWith(arg)).map(s => ({ text: s, type: 'arg' }))
-          }
-      }
-      
-      return []
+      return getCommandSuggestions(userCommand.value)
   })
 
   // 监听输入，重置选择索引
@@ -177,9 +135,26 @@
   // 移除深度 watch，改为每 30秒 自动保存
   let autoSaveTimer = null
   
-  onMounted(() => {
+  onMounted(async () => {
     setLogCallback(addLog)
     startRecovery()
+
+    // 加载游戏数据
+    addLog('正在加载游戏数据...', 'system')
+    try {
+      const { itemsDB, mobsDB, spawnData } = await initializeGameData(20) // 限制等级 20
+      
+      // 设置数据到各个模块
+      setItemsDB(itemsDB)
+      setMonstersDB(mobsDB)
+      setSpawnData(spawnData)
+      
+      isDataLoaded.value = true
+      addLog('游戏数据加载完成!', 'success')
+    } catch (error) {
+      addLog('游戏数据加载失败,将使用后备数据', 'warning')
+      console.error(error)
+    }
 
     const hasSave = loadGame()
     
@@ -187,13 +162,13 @@
     const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : '未知区域'
     
     if (hasSave) {
-      addLog(`读取存档成功。欢迎回来，${player.name} (Lv.${player.lv} ${jobName})`, 'system')
+      addLog(`读取存档成功。欢迎回来,${player.name} (Lv.${player.lv} ${jobName})`, 'system')
       addLog(`当前位置: ${mapName}`, 'system')
     } else {
-      addLog('未找到存档，初始化新角色...', 'system')
+      addLog('未找到存档,初始化新角色...', 'system')
     }
     
-    addLog(`系统就绪。输入 'auto' 开始挂机，输入 'help' 查看帮助。`, 'system')
+    addLog(`系统就绪。输入 'auto' 开始挂机,输入 'help' 查看帮助。`, 'system')
     
     focusInput()
 

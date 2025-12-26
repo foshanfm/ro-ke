@@ -2,34 +2,34 @@ import { reactive, watch } from 'vue'
 import { JobType, JobConfig, getNextBaseExp, getNextJobExp } from './jobs'
 import { Skills, canLearnSkill } from './skills'
 import { EquipDB, EquipType, WeaponType } from './equipment'
-import { getItemInfo, ItemType } from './items' 
-import { Maps } from './maps' 
-import * as Formulas from './formulas' 
+import { getItemInfo, ItemType } from './items'
+import { Maps } from './maps'
+import * as Formulas from './formulas'
 
 const defaultStats = {
-  name: 'Novice',
-  job: JobType.NOVICE,
-  lv: 1, exp: 0, nextExp: 100, 
-  jobLv: 1, jobExp: 0, nextJobExp: 50, 
-  statPoints: 0, skillPoints: 0, zeny: 0, 
-  skills: {}, 
-  equipment: {
-      [EquipType.WEAPON]: null,
-      [EquipType.SHIELD]: null,
-      [EquipType.ARMOR]: null,
-      [EquipType.HEAD]: null,
-      [EquipType.ACCESSORY]: null
-  },
-  config: { 
-      auto_hp_percent: 0, 
-      auto_hp_item: '红色药水',
-      auto_buy_potion: 0 
-  },
-  currentMap: 'prt_fild08', 
-  hp: 100, maxHp: 100, sp: 20, maxSp: 20,
-  atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0, moveSpeed: 5,
-  str: 1, agi: 1, dex: 1, vit: 1, int: 1, luk: 1,
-  inventory: [] 
+    name: 'Novice',
+    job: JobType.NOVICE,
+    lv: 1, exp: 0, nextExp: 100,
+    jobLv: 1, jobExp: 0, nextJobExp: 50,
+    statPoints: 0, skillPoints: 0, zeny: 0,
+    skills: {},
+    equipment: {
+        [EquipType.WEAPON]: null,
+        [EquipType.SHIELD]: null,
+        [EquipType.ARMOR]: null,
+        [EquipType.HEAD]: null,
+        [EquipType.ACCESSORY]: null
+    },
+    config: {
+        auto_hp_percent: 0,
+        auto_hp_item: '红色药水',
+        auto_buy_potion: 0
+    },
+    currentMap: 'prt_fild08',
+    hp: 100, maxHp: 100, sp: 20, maxSp: 20,
+    atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0, aspd: 0, moveSpeed: 5,
+    str: 1, agi: 1, dex: 1, vit: 1, int: 1, luk: 1,
+    inventory: []
 }
 
 export const player = reactive({ ...defaultStats })
@@ -37,8 +37,8 @@ export const player = reactive({ ...defaultStats })
 export const getStatPointCost = Formulas.getStatPointCost
 
 export function recalculateMaxStats() {
-    const jobCfg = JobConfig[player.job] || JobConfig.Novice
-    
+    const jobCfg = JobConfig[player.job] || JobConfig.NOVICE
+
     const str = player.str || 1
     const agi = player.agi || 1
     const vit = player.vit || 1
@@ -57,10 +57,18 @@ export function recalculateMaxStats() {
 
     let weaponAtk = 0
     let equipDef = 0
-    let equipAspdBonus = 0 
     let equipMoveSpeedBonus = 0
-    let weaponType = WeaponType.NONE 
-    
+    let weaponType = WeaponType.NONE
+    let hasShield = false
+
+    // ASPD 修正值收集
+    const aspdModifiers = {
+        potionRate: 0,   // 药水加成 (暂未实装)
+        skillRate: 0,    // 技能加成 (暂未实装)
+        equipRate: 0,    // 装备百分比加成
+        flatBonus: 0     // 固定加成
+    }
+
     const bonus = {
         str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0,
         atk: 0, def: 0, hp: 0, sp: 0, crit: 0, flee: 0
@@ -71,24 +79,31 @@ export function recalculateMaxStats() {
             if (!instance) return
             const e = EquipDB[instance.id]
             if (!e) return
-            
+
             if (e.type === EquipType.WEAPON) {
                 weaponAtk = e.atk || 0
                 weaponType = e.subType || WeaponType.NONE
             }
+            if (e.type === EquipType.SHIELD) {
+                hasShield = true
+            }
             if (e.def) equipDef += e.def
+
+            // 收集装备的 ASPD 加成 (如果装备数据中定义了)
+            if (e.aspdRate) aspdModifiers.equipRate += e.aspdRate
+            if (e.aspdFlat) aspdModifiers.flatBonus += e.aspdFlat
 
             if (instance.cards) {
                 instance.cards.forEach(cardId => {
                     if (!cardId) return
-                    if (cardId === 4001) bonus.luk += 2 
-                    if (cardId === 4002) { bonus.vit += 1; bonus.hp += 100 } 
-                    if (cardId === 4005) { bonus.luk += 2; bonus.crit += 2 } 
+                    if (cardId === 4001) bonus.luk += 2
+                    if (cardId === 4002) { bonus.vit += 1; bonus.hp += 100 }
+                    if (cardId === 4005) { bonus.luk += 2; bonus.crit += 2 }
                 })
             }
         })
     }
-    
+
     const finalStr = str + bonus.str
     const finalAgi = agi + bonus.agi
     const finalVit = vit + bonus.vit
@@ -104,112 +119,135 @@ export function recalculateMaxStats() {
     player.def = Formulas.calcDef(baseLv, finalVit, finalAgi, equipDef + bonus.def)
     player.mdef = Formulas.calcMdef(baseLv, finalInt, finalVit, finalDex)
     player.hit = Formulas.calcHit(baseLv, finalDex, finalLuk)
-    
+
     let fleeBonus = bonus.flee
     if (player.skills['improve_dodge']) {
         fleeBonus += (player.skills['improve_dodge'] || 0) * 3
     }
     player.flee = Formulas.calcFlee(baseLv, finalAgi, finalLuk, fleeBonus)
-    
+
     player.crit = Formulas.calcCrit(finalLuk, bonus.crit)
-    player.aspd = Formulas.calcAspd(weaponType, finalAgi, finalDex, jobCfg.aspdBonus, equipAspdBonus)
-    
+
+    // 使用新的 ASPD 计算接口
+    player.aspd = Formulas.calcAspd(
+        player.job,      // 职业类型
+        weaponType,      // 武器类型
+        hasShield,       // 是否装备盾牌
+        finalAgi,        // AGI (含装备加成)
+        finalDex,        // DEX (含装备加成)
+        aspdModifiers    // 修正值对象
+    )
+
     // 计算移动速度
     player.moveSpeed = Formulas.calcMoveSpeed(finalAgi, 0, equipMoveSpeedBonus)
 }
 
-const SAVE_KEY = 'ro_ke_save_v2' 
+const SAVE_KEY = 'ro_ke_save_v2'
 
 export function saveGame() {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(player))
+    localStorage.setItem(SAVE_KEY, JSON.stringify(player))
 }
 
 export function loadGame() {
     const savedData = localStorage.getItem(SAVE_KEY)
     if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData)
-        
-        if (parsed.equipment) {
-            Object.keys(parsed.equipment).forEach(slot => {
-                const val = parsed.equipment[slot]
-                if (val !== null && typeof val !== 'object') {
-                    const info = EquipDB[val]
-                    parsed.equipment[slot] = {
-                        id: val,
-                        cards: info && info.slots ? new Array(info.slots).fill(null) : []
+        try {
+            const parsed = JSON.parse(savedData)
+
+            if (parsed.equipment) {
+                Object.keys(parsed.equipment).forEach(slot => {
+                    const val = parsed.equipment[slot]
+                    if (val !== null && typeof val !== 'object') {
+                        const info = EquipDB[val]
+                        parsed.equipment[slot] = {
+                            id: val,
+                            cards: info && info.slots ? new Array(info.slots).fill(null) : []
+                        }
                     }
+                })
+            }
+
+            Object.assign(player, parsed)
+
+            if (!player.inventory) player.inventory = []
+
+            // 兼容性处理：将旧的职业枚举值转换为新格式
+            const jobMapping = {
+                'Novice': 'NOVICE',
+                'Swordman': 'SWORDMAN',
+                'Mage': 'MAGICIAN',
+                'Archer': 'ARCHER',
+                'Thief': 'THIEF',
+                'Acolyte': 'ACOLYTE'
+            }
+            if (player.job && jobMapping[player.job]) {
+                player.job = jobMapping[player.job]
+            }
+            if (!player.job) player.job = JobType.NOVICE
+
+            if (!player.jobLv) player.jobLv = 1
+            if (player.jobExp === undefined) player.jobExp = 0
+            if (!player.nextJobExp) player.nextJobExp = getNextJobExp(player.jobLv)
+            if (!player.skillPoints) player.skillPoints = 0
+            if (player.statPoints === undefined) player.statPoints = 0
+            if (!player.skills) player.skills = {}
+            if (!player.config) player.config = {}
+
+            if (!player.currentMap) player.currentMap = 'prt_fild08'
+            if (player.zeny === undefined) player.zeny = 0
+
+            if (!player.equipment) {
+                player.equipment = {
+                    [EquipType.WEAPON]: null,
+                    [EquipType.SHIELD]: null,
+                    [EquipType.ARMOR]: null,
+                    [EquipType.HEAD]: null,
+                    [EquipType.ACCESSORY]: null
+                }
+            }
+
+            const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
+            keys.forEach(k => {
+                if (player[k] === undefined || player[k] === null || isNaN(player[k])) {
+                    player[k] = 1
                 }
             })
+
+            player.nextExp = getNextBaseExp(player.lv)
+            player.nextJobExp = getNextJobExp(player.jobLv)
+            recalculateMaxStats()
+
+            console.log('[System] Save loaded successfully.')
+            return true
+        } catch (e) {
+            console.error('[System] Save file corrupted, resetting.', e)
+            return false
         }
-
-        Object.assign(player, parsed)
-        
-        if (!player.inventory) player.inventory = []
-        if (!player.job) player.job = JobType.NOVICE
-        if (!player.jobLv) player.jobLv = 1
-        if (player.jobExp === undefined) player.jobExp = 0
-        if (!player.nextJobExp) player.nextJobExp = getNextJobExp(player.jobLv)
-        if (!player.skillPoints) player.skillPoints = 0
-        if (player.statPoints === undefined) player.statPoints = 0
-        if (!player.skills) player.skills = {}
-        if (!player.config) player.config = {}
-        
-        if (!player.currentMap) player.currentMap = 'prt_fild08'
-        if (player.zeny === undefined) player.zeny = 0 
-
-        if (!player.equipment) {
-            player.equipment = {
-                [EquipType.WEAPON]: null,
-                [EquipType.SHIELD]: null,
-                [EquipType.ARMOR]: null,
-                [EquipType.HEAD]: null,
-                [EquipType.ACCESSORY]: null
-            }
-        }
-
-        const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
-        keys.forEach(k => {
-            if (player[k] === undefined || player[k] === null || isNaN(player[k])) {
-                player[k] = 1
-            }
-        })
-
-        player.nextExp = getNextBaseExp(player.lv)
-        player.nextJobExp = getNextJobExp(player.jobLv)
-        recalculateMaxStats()
-
-        console.log('[System] Save loaded successfully.')
-        return true
-      } catch (e) {
-        console.error('[System] Save file corrupted, resetting.', e)
-        return false
-      }
     }
     return false
-  }
+}
 
 
 export function resetGame() {
-  Object.assign(player, defaultStats)
-  player.nextExp = getNextBaseExp(1)
-  player.nextJobExp = getNextJobExp(1)
-  saveGame()
+    Object.assign(player, defaultStats)
+    player.nextExp = getNextBaseExp(1)
+    player.nextJobExp = getNextJobExp(1)
+    saveGame()
 }
 
 export function addItem(itemId, count = 1) {
     if (!player.inventory) player.inventory = []
-    
+
     const info = getItemInfo(itemId)
     if (info.type === ItemType.EQUIP) {
         for (let i = 0; i < count; i++) {
-            player.inventory.push({ 
-                id: itemId, 
-                count: 1, 
-                instance: { 
-                    id: itemId, 
-                    cards: info.slots ? new Array(info.slots).fill(null) : [] 
-                } 
+            player.inventory.push({
+                id: itemId,
+                count: 1,
+                instance: {
+                    id: itemId,
+                    cards: info.slots ? new Array(info.slots).fill(null) : []
+                }
             })
         }
         return
@@ -217,9 +255,9 @@ export function addItem(itemId, count = 1) {
 
     const existingItem = player.inventory.find(i => i.id === itemId)
     if (existingItem) {
-      existingItem.count += count
+        existingItem.count += count
     } else {
-      player.inventory.push({ id: itemId, count: count })
+        player.inventory.push({ id: itemId, count: count })
     }
 }
 
@@ -232,14 +270,14 @@ export function addExp(baseAmount, jobAmount) {
         player.lv++
         player.exp -= player.nextExp
         player.nextExp = getNextBaseExp(player.lv)
-        
+
         const pointReward = Math.min(20, Math.floor(player.lv / 5) + 5)
         player.statPoints += pointReward
 
         recalculateMaxStats()
         player.hp = player.maxHp
         player.sp = player.maxSp
-        
+
         leveledUp = true
     }
 
@@ -250,8 +288,8 @@ export function addExp(baseAmount, jobAmount) {
             player.jobLv++
             player.jobExp -= player.nextJobExp
             player.nextJobExp = getNextJobExp(player.jobLv)
-            player.skillPoints++ 
-            
+            player.skillPoints++
+
             jobLeveledUp = true
         }
     }
@@ -274,68 +312,68 @@ export function changeJob(newJob) {
     player.jobLv = 1
     player.jobExp = 0
     player.nextJobExp = getNextJobExp(1)
-    
+
     recalculateMaxStats()
     player.hp = player.maxHp
     player.sp = player.maxSp
-    
+
     saveGame()
     return { success: true, msg: `恭喜！你已成功转职为 ${JobConfig[newJob].name}！` }
 }
 
 export function increaseStat(stat, amount = 1) {
-  const s = stat.toLowerCase()
-  const validStats = ['str', 'agi', 'vit', 'int', 'dex', 'luk']
-  
-  if (!validStats.includes(s)) {
-    return { success: false, msg: `未知属性: ${stat}` }
-  }
-  
-  let cost = 0
-  let currentVal = player[s]
-  
-  for (let i = 0; i < amount; i++) {
-      cost += Formulas.getStatPointCost(currentVal + i)
-  }
+    const s = stat.toLowerCase()
+    const validStats = ['str', 'agi', 'vit', 'int', 'dex', 'luk']
 
-  if (player.statPoints < cost) {
-    return { success: false, msg: `素质点不足 (需要: ${cost}, 剩余: ${player.statPoints})。` }
-  }
-  
-  player[s] += amount
-  player.statPoints -= cost
-  
-  recalculateMaxStats()
-  saveGame()
-  
-  return { success: true, msg: `${s.toUpperCase()} 提升了 ${amount} 点 (消耗 ${cost} 点)` }
+    if (!validStats.includes(s)) {
+        return { success: false, msg: `未知属性: ${stat}` }
+    }
+
+    let cost = 0
+    let currentVal = player[s]
+
+    for (let i = 0; i < amount; i++) {
+        cost += Formulas.getStatPointCost(currentVal + i)
+    }
+
+    if (player.statPoints < cost) {
+        return { success: false, msg: `素质点不足 (需要: ${cost}, 剩余: ${player.statPoints})。` }
+    }
+
+    player[s] += amount
+    player.statPoints -= cost
+
+    recalculateMaxStats()
+    saveGame()
+
+    return { success: true, msg: `${s.toUpperCase()} 提升了 ${amount} 点 (消耗 ${cost} 点)` }
 }
 
 export function learnSkill(skillId, levels = 1) {
-  const skill = Skills[skillId]
-  if (!skill) return { success: false, msg: `技能不存在: ${skillId}` }
+    const skill = Skills[skillId]
+    if (!skill) return { success: false, msg: `技能不存在: ${skillId}` }
 
-  if (player.skillPoints < levels) {
-    return { success: false, msg: `技能点不足 (剩余: ${player.skillPoints})` }
-  }
+    if (player.skillPoints < levels) {
+        return { success: false, msg: `技能点不足 (剩余: ${player.skillPoints})` }
+    }
 
-  const check = canLearnSkill(player, skillId)
-  if (!check.ok) {
-    return { success: false, msg: check.msg }
-  }
+    const check = canLearnSkill(player, skillId)
+    if (!check.ok) {
+        return { success: false, msg: check.msg }
+    }
 
-  const currentLv = player.skills[skillId] || 0
-  if (currentLv + levels > skill.maxLv) {
-    return { success: false, msg: `${skill.name} 已达上限或超过上限 (Lv.${skill.maxLv})` }
-  }
+    const currentLv = player.skills[skillId] || 0
+    if (currentLv + levels > skill.maxLv) {
+        return { success: false, msg: `${skill.name} 已达上限或超过上限 (Lv.${skill.maxLv})` }
+    }
 
-  player.skills[skillId] = currentLv + levels
-  player.skillPoints -= levels
-  
-  recalculateMaxStats()
-  saveGame()
+    player.skills[skillId] = currentLv + levels
+    player.skillPoints -= levels
 
-  return { success: true, msg: `已习得技能: ${skill.name} Lv.${player.skills[skillId]}` }
+    recalculateMaxStats()
+    saveGame()
+
+    return { success: true, msg: `已习得技能: ${skill.name} Lv.${player.skills[skillId]}` }
 }
 
 export function equipItem(itemNameOrId) {
@@ -349,42 +387,42 @@ export function equipItem(itemNameOrId) {
             return info.name.toLowerCase().includes(lowerName)
         })
     }
-    
+
     if (slotIndex === -1) {
         return { success: false, msg: '背包中未找到该物品。' }
     }
-    
+
     const invSlot = player.inventory[slotIndex]
     const equipData = EquipDB[invSlot.id]
-    
+
     if (!equipData) {
         return { success: false, msg: '这不是一件可装备的物品。' }
     }
-    
+
     if (player.lv < equipData.reqLv) {
         return { success: false, msg: `等级不足 (需要 Lv.${equipData.reqLv})` }
     }
-    
-    const type = equipData.type 
-    
+
+    const type = equipData.type
+
     if (player.equipment[type]) {
         const oldInstance = player.equipment[type]
-        addItem(oldInstance.id, 1) 
+        addItem(oldInstance.id, 1)
     }
-    
-    player.equipment[type] = invSlot.instance || { 
-        id: invSlot.id, 
-        cards: equipData.slots ? new Array(equipData.slots).fill(null) : [] 
+
+    player.equipment[type] = invSlot.instance || {
+        id: invSlot.id,
+        cards: equipData.slots ? new Array(equipData.slots).fill(null) : []
     }
-    
+
     invSlot.count--
     if (invSlot.count <= 0) {
         player.inventory.splice(slotIndex, 1)
     }
-    
+
     recalculateMaxStats()
     saveGame()
-    
+
     return { success: true, msg: `已装备: ${equipData.name}` }
 }
 
@@ -393,19 +431,19 @@ export function unequipItem(type) {
     if (!currentInstance) {
         return { success: false, msg: '该部位没有装备。' }
     }
-    
+
     const info = getItemInfo(currentInstance.id)
     player.inventory.push({
         id: currentInstance.id,
         count: 1,
         instance: currentInstance
     })
-    
+
     player.equipment[type] = null
-    
+
     recalculateMaxStats()
     saveGame()
-    
+
     return { success: true, msg: `已卸下: ${info.name}` }
 }
 
@@ -448,7 +486,7 @@ export function insertCard(cardName, equipType) {
 
 export function useItem(itemNameOrId) {
     let slotIndex = -1
-    
+
     if (typeof itemNameOrId === 'number') {
         slotIndex = player.inventory.findIndex(i => i.id === itemNameOrId)
     } else {
@@ -498,7 +536,7 @@ export function useItem(itemNameOrId) {
 
 export function setConfig(key, value) {
     if (!player.config) player.config = {}
-    
+
     if (key === 'auto_hp_percent') {
         let v = parseInt(value)
         if (isNaN(v)) v = 0
@@ -521,21 +559,21 @@ export function setConfig(key, value) {
         saveGame()
         return { success: true, msg: `自动买药 (红药水): ${v === 1 ? '开启' : '关闭'}` }
     }
-    
+
     return { success: false, msg: `未知配置项: ${key}` }
 }
 
 export function warp(mapId) {
     const map = Maps[mapId]
     if (!map) return { success: false, msg: `未知地图 ID: ${mapId}` }
-    
+
     if (player.currentMap === mapId) {
         return { success: false, msg: `你已经在 ${map.name} 了。` }
     }
-    
+
     player.currentMap = mapId
     saveGame()
-    return { success: true, msg: `Warped to ${map.name}` } 
+    return { success: true, msg: `Warped to ${map.name}` }
 }
 
 export function sellItem(itemNameOrId, count = 1) {
@@ -550,7 +588,7 @@ export function sellItem(itemNameOrId, count = 1) {
                 const earning = price * slot.count
                 totalZeny += earning
                 soldCount += slot.count
-                player.inventory.splice(i, 1) 
+                player.inventory.splice(i, 1)
             }
         }
         if (soldCount > 0) {
@@ -579,26 +617,26 @@ export function sellItem(itemNameOrId, count = 1) {
 
     const slot = player.inventory[slotIndex]
     const info = getItemInfo(slot.id)
-    
+
     if (info.type !== ItemType.ETC && info.type !== ItemType.EQUIP) {
         return { success: false, msg: '该物品暂时无法贩卖 (仅限杂物和装备)。' }
     }
 
     const amountToSell = Math.min(slot.count, count)
-    const unitPrice = info.price || 100 
-    
+    const unitPrice = info.price || 100
+
     player.zeny += unitPrice * amountToSell
     slot.count -= amountToSell
     if (slot.count <= 0) {
         player.inventory.splice(slotIndex, 1)
     }
-    
+
     saveGame()
     return { success: true, msg: `卖出 ${info.name} x ${amountToSell}，获得 ${unitPrice * amountToSell} Zeny。` }
 }
 
 const ShopList = [
-    { id: 501, price: 50 }, 
+    { id: 501, price: 50 },
 ]
 
 export function getShopList() {
@@ -626,9 +664,9 @@ export function buyItem(itemName, count = 1) {
 
     player.zeny -= totalCost
     addItem(shopItem.id, count)
-    
+
     saveGame()
-    
+
     const info = getItemInfo(shopItem.id)
     return { success: true, msg: `购买了 ${info.name} x ${count}。` }
 }

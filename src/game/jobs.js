@@ -1,20 +1,20 @@
 // src/game/jobs.js
 
 export const JobType = {
-    NOVICE: 'Novice',
-    SWORDMAN: 'Swordman',
-    MAGE: 'Mage',
-    ARCHER: 'Archer',
-    THIEF: 'Thief',
-    ACOLYTE: 'Acolyte'
+    NOVICE: 'NOVICE',
+    SWORDMAN: 'SWORDMAN',
+    MAGICIAN: 'MAGICIAN',  // 统一为 MAGICIAN 以匹配数据表
+    ARCHER: 'ARCHER',
+    THIEF: 'THIEF',
+    ACOLYTE: 'ACOLYTE'
 }
-  
+
 export const JobConfig = {
     [JobType.NOVICE]: {
         name: '初学者', // Novice
         maxJobLv: 10,
-        hpMod: 1.0, 
-        spMod: 1.0, 
+        hpMod: 1.0,
+        spMod: 1.0,
         aspdBonus: 0
     },
     [JobType.SWORDMAN]: {

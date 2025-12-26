@@ -1,0 +1,152 @@
+{
+    "ASPD_DATA": {
+        "NOVICE": {
+            "NONE": 150,
+            "DAGGER": 140,
+            "SWORD": 130,
+            "AXE": 120,
+            "MACE": 130,
+            "STAFF": 130,
+            "SHIELD_PENALTY": -10
+        },
+        "SWORDMAN": {
+            "NONE": 156,
+            "DAGGER": 145,
+            "SWORD": 150,
+            "TWO_HAND_SWORD": 140,
+            "AXE": 135,
+            "MACE": 140,
+            "SPEAR": 140,
+            "SHIELD_PENALTY": -3
+        },
+        "KNIGHT": {
+            "NONE": 156,
+            "DAGGER": 145,
+            "SWORD": 150,
+            "TWO_HAND_SWORD": 145,
+            "AXE": 135,
+            "MACE": 140,
+            "SPEAR": 140,
+            "TWO_HAND_SPEAR": 135,
+            "SHIELD_PENALTY": -2
+        },
+        "CRUSADER": {
+            "NONE": 156,
+            "DAGGER": 140,
+            "SWORD": 145,
+            "TWO_HAND_SWORD": 135,
+            "MACE": 140,
+            "SPEAR": 142,
+            "TWO_HAND_SPEAR": 138,
+            "SHIELD_PENALTY": -3
+        },
+        "MAGICIAN": {
+            "NONE": 151,
+            "DAGGER": 140,
+            "STAFF": 130,
+            "SHIELD_PENALTY": -5
+        },
+        "WIZARD": {
+            "NONE": 151,
+            "DAGGER": 140,
+            "STAFF": 130,
+            "TWO_HAND_STAFF": 120,
+            "SHIELD_PENALTY": -5
+        },
+        "SAGE": {
+            "NONE": 153,
+            "DAGGER": 140,
+            "STAFF": 130,
+            "TWO_HAND_STAFF": 120,
+            "BOOK": 148,
+            "SHIELD_PENALTY": -5
+        },
+        "ARCHER": {
+            "NONE": 156,
+            "DAGGER": 140,
+            "BOW": 148,
+            "SHIELD_PENALTY": -5
+        },
+        "HUNTER": {
+            "NONE": 156,
+            "DAGGER": 140,
+            "BOW": 148,
+            "SHIELD_PENALTY": -5
+        },
+        "BARD_DANCER": {
+            "NONE": 156,
+            "DAGGER": 145,
+            "BOW": 140,
+            "INSTRUMENT": 148,
+            "WHIP": 148,
+            "SHIELD_PENALTY": -5
+        },
+        "ACOLYTE": {
+            "NONE": 153,
+            "MACE": 145,
+            "STAFF": 135,
+            "SHIELD_PENALTY": -5
+        },
+        "PRIEST": {
+            "NONE": 153,
+            "MACE": 145,
+            "STAFF": 135,
+            "BOOK": 140,
+            "SHIELD_PENALTY": -5
+        },
+        "MONK": {
+            "NONE": 158,
+            "MACE": 145,
+            "STAFF": 135,
+            "KNUCKLE": 152,
+            "SHIELD_PENALTY": -5
+        },
+        "MERCHANT": {
+            "NONE": 155,
+            "DAGGER": 140,
+            "SWORD": 140,
+            "AXE": 142,
+            "MACE": 140,
+            "SHIELD_PENALTY": -4
+        },
+        "BLACKSMITH": {
+            "NONE": 155,
+            "DAGGER": 140,
+            "SWORD": 140,
+            "AXE": 142,
+            "TWO_HAND_AXE": 138,
+            "MACE": 140,
+            "SHIELD_PENALTY": -4
+        },
+        "ALCHEMIST": {
+            "NONE": 155,
+            "DAGGER": 140,
+            "SWORD": 140,
+            "AXE": 140,
+            "TWO_HAND_AXE": 135,
+            "MACE": 140,
+            "SHIELD_PENALTY": -4
+        },
+        "THIEF": {
+            "NONE": 158,
+            "DAGGER": 150,
+            "SWORD": 145,
+            "BOW": 130,
+            "SHIELD_PENALTY": -5
+        },
+        "ASSASSIN": {
+            "NONE": 158,
+            "DAGGER": 150,
+            "SWORD": 140,
+            "KATAR": 153,
+            "SHIELD_PENALTY": -5
+        },
+        "ROGUE": {
+            "NONE": 156,
+            "DAGGER": 150,
+            "SWORD": 145,
+            "BOW": 142,
+            "SHIELD_PENALTY": -5
+        }
+    }
+}

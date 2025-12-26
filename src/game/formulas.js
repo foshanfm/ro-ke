@@ -1,5 +1,6 @@
 // src/game/formulas.js
 import { WeaponType } from './equipment'
+import { aspdCalculator } from './modules/aspd'
 
 // --- 素质点消耗 ---
 export function getStatPointCost(currentVal) {
@@ -12,7 +13,7 @@ export function getStatPointCost(currentVal) {
     if (currentVal < 71) return 8
     if (currentVal < 81) return 9
     if (currentVal < 91) return 10
-    return 11 
+    return 11
 }
 
 // --- 基础属性 ---
@@ -34,7 +35,7 @@ export function calcAtk(baseLv, str, dex, luk, weaponAtk = 0, masteryAtk = 0) {
 }
 
 export function calcMatk(baseLv, int, dex, luk) {
-    const intBonus = Math.floor(Math.pow(Math.floor(int / 10), 2)) 
+    const intBonus = Math.floor(Math.pow(Math.floor(int / 10), 2))
     const statusMatk = Math.floor(baseLv / 4 + int * 1.5 + intBonus + dex / 5 + luk / 3)
     return statusMatk
 }
@@ -70,19 +71,32 @@ export function calcMoveSpeed(agi, jobBonus = 0, equipBonus = 0) {
     return parseFloat((base + agiBonus + jobBonus + equipBonus).toFixed(2))
 }
 
-const BaseAspdTable = {
-    [WeaponType.NONE]: 160,   
-    [WeaponType.DAGGER]: 150, 
-    [WeaponType.SWORD]: 145,  
-    [WeaponType.BOW]: 140,    
-    [WeaponType.ROD]: 140     
-}
-
-export function calcAspd(weaponType, agi, dex, jobBonus = 0, equipBonus = 0) {
-    const base = BaseAspdTable[weaponType] || 150
-    const statBonus = (agi * 0.4) + (dex * 0.1)
-    const rawAspd = base + statBonus + jobBonus + equipBonus
-    return Math.min(190, parseFloat(rawAspd.toFixed(1)))
+/**
+ * 计算 ASPD (使用新的复杂计算模块)
+ * @param {string} jobType - 职业类型 (如 'NOVICE', 'SWORDMAN')
+ * @param {string} weaponType - 武器类型 (如 'SWORD', 'DAGGER')
+ * @param {boolean} hasShield - 是否装备盾牌
+ * @param {number} agi - AGI 素质点 (包含装备加成)
+ * @param {number} dex - DEX 素质点 (包含装备加成)
+ * @param {Object} modifiers - 修正值对象
+ * @param {number} modifiers.potionRate - 药水攻速加成百分比
+ * @param {number} modifiers.skillRate - 技能攻速加成百分比
+ * @param {number} modifiers.equipRate - 装备攻速加成百分比
+ * @param {number} modifiers.flatBonus - 固定攻速加成
+ * @returns {number} 最终 ASPD 数值
+ */
+export function calcAspd(jobType, weaponType, hasShield, agi, dex, modifiers = {}) {
+    return aspdCalculator.calculate({
+        jobType,
+        weaponType,
+        hasShield,
+        agi,
+        dex,
+        potionRate: modifiers.potionRate || 0,
+        skillRate: modifiers.skillRate || 0,
+        equipRate: modifiers.equipRate || 0,
+        flatBonus: modifiers.flatBonus || 0
+    })
 }
 
 export function calcAspdDelay(aspd) {
@@ -93,23 +107,23 @@ export function calcAspdDelay(aspd) {
 // --- 核心战斗逻辑 (Behavioral Correctness Template) ---
 
 export function calculateDamageFlow({
-    attackerAtk, attackerHit, attackerCrit, 
+    attackerAtk, attackerHit, attackerCrit,
     defenderDef, defenderFlee, defenderLuk = 1,
-    isPlayerAttacking = true 
+    isPlayerAttacking = true
 }) {
     // 1. 暴击判定 (Crit - TargetLuk)
     // 暴击率限制: 1% ~ 50% (玩家)
     // 怪物暂无暴击，或者给予固定低暴击
     let critChance = attackerCrit - defenderLuk
     critChance = Math.max(1, Math.min(50, critChance))
-    
+
     // 怪物攻击时不暴击 (或者以后加)
     const isCrit = isPlayerAttacking ? (Math.random() * 100 < critChance) : false
-    
+
     if (isCrit) {
         // 暴击：1.4倍伤害，无视防御
         // 浮动: 0.9 ~ 1.1
-        const variance = (Math.random() * 0.2) + 0.9 
+        const variance = (Math.random() * 0.2) + 0.9
         const rawDamage = Math.floor(attackerAtk * variance)
         const finalDamage = Math.floor(rawDamage * 1.4)
         return { damage: Math.max(1, finalDamage), type: 'crit' }
@@ -119,7 +133,7 @@ export function calculateDamageFlow({
     // 命中率限制: 5% ~ 95%
     let hitChance = attackerHit - defenderFlee + 80
     hitChance = Math.max(5, Math.min(95, hitChance))
-    
+
     const isHit = Math.random() * 100 < hitChance
 
     if (!isHit) {
@@ -129,6 +143,6 @@ export function calculateDamageFlow({
     // 3. 普通伤害计算 ( (Atk - Def) * Variance )
     const variance = (Math.random() * 0.2) + 0.9
     let damage = Math.floor((attackerAtk - defenderDef) * variance)
-    
+
     return { damage: Math.max(1, damage), type: 'hit' }
 }

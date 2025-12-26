@@ -8,13 +8,26 @@ export const EquipType = {
     ACCESSORY: 'Accessory'
 }
 
-// 武器类型 (用于技能判定)
+// 武器类型 (用于技能判定和攻速计算)
 export const WeaponType = {
-    DAGGER: 'Dagger', // 短剑
-    SWORD: 'Sword',   // 单手剑
-    BOW: 'Bow',       // 弓
-    ROD: 'Rod',       // 杖
-    NONE: 'None'      // 空手
+    NONE: 'NONE',                     // 空手
+    DAGGER: 'DAGGER',                 // 短剑
+    SWORD: 'SWORD',                   // 单手剑
+    TWO_HAND_SWORD: 'TWO_HAND_SWORD', // 双手剑
+    AXE: 'AXE',                       // 斧
+    TWO_HAND_AXE: 'TWO_HAND_AXE',     // 双手斧
+    MACE: 'MACE',                     // 钝器
+    SPEAR: 'SPEAR',                   // 长矛
+    TWO_HAND_SPEAR: 'TWO_HAND_SPEAR', // 双手矛
+    STAFF: 'STAFF',                   // 法杖
+    TWO_HAND_STAFF: 'TWO_HAND_STAFF', // 双手杖
+    BOW: 'BOW',                       // 弓
+    KNUCKLE: 'KNUCKLE',               // 拳套
+    KATAR: 'KATAR',                   // 拳刃
+    INSTRUMENT: 'INSTRUMENT',         // 乐器
+    WHIP: 'WHIP',                     // 鞭子
+    BOOK: 'BOOK',                     // 书
+    ROD: 'ROD'                        // 杖 (向后兼容，映射到 STAFF)
 }
 
 export const EquipDB = {
@@ -30,8 +43,8 @@ export const EquipDB = {
         slots: 0,
         desc: '新手常用的小刀。'
     },
-    1202: { 
-        id: 1202, 
+    1202: {
+        id: 1202,
         name: '短剑 [3]',
         type: EquipType.WEAPON,
         subType: WeaponType.DAGGER,
@@ -39,7 +52,7 @@ export const EquipDB = {
         weight: 40,
         reqLv: 1,
         slots: 3,
-        desc: '有插槽的短剑。' 
+        desc: '有插槽的短剑。'
     },
     // --- Shields ---
     2101: {
