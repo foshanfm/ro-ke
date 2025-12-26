@@ -62,9 +62,8 @@ export function startBot() {
     initMap(player.currentMap)
 
     // 设置目标地图为当前地图(如果未设置或刚启动)
-    // 如果是从 auto <MapName> 命令启动，则在这里之前已经设置过 goalMap
-    // 这里我们假设 startBot 时如果没有 goalMap，就默认为当前地图
-    if (!gameState.goalMap) gameState.goalMap = player.currentMap
+    if (!gameState.goalMap) gameState.goalMap = (player.currentMap || '').toLowerCase()
+    else gameState.goalMap = gameState.goalMap.toLowerCase()
 
     log(`AI Initiated (Session ${currentSession}). Target: ${gameState.goalMap}.`, 'system')
 
@@ -156,10 +155,13 @@ async function aiTick(sessionId) {
         checkAutoPotion()
 
         // 0. 检查是否在目标地图
-        if (gameState.goalMap && player.currentMap !== gameState.goalMap) {
+        const curMapId = (player.currentMap || '').toLowerCase()
+        const goalMapId = (gameState.goalMap || '').toLowerCase()
+
+        if (goalMapId && curMapId !== goalMapId) {
             gameState.status = 'RETURNING'
             // 寻路返回
-            const path = findPath(player.currentMap, gameState.goalMap)
+            const path = findPath(curMapId, goalMapId)
 
             if (!path || path.length < 2) {
                 log(`无法找到返回 ${gameState.goalMap} 的路径!`, 'error')

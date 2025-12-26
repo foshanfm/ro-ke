@@ -67,6 +67,7 @@ We prioritize "Feel" over "Academic Accuracy".
     - **Compiler Pattern**: A Node.js compiler (`scripts/db_compiler.cjs`) pre-processes the raw TXT DB into logic-ready JSON.
     - **Automated logic**: Scripts (e.g., `{itemheal rand(45,65)}`) are parsed into machine-readable data (`{"hp": [45, 65]}`) during compilation.
     - **Efficiency**: Eliminates expensive string splitting and regex parsing in the browser.
+    - **Persistence Constraint**: Functions (closures) cannot be stored in IndexedDB. Data is stored as pure JSON, and logic (e.g., item healing effects) is **hydrated** post-load via `injectRuntimeEffects` in `items.js`.
 
 ### 3.3. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).

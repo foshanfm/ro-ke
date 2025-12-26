@@ -117,7 +117,8 @@ export function getMonsterByName(name) {
  */
 export function spawnMonster(mapId) {
   // 1. 获取地图配置
-  const map = Maps[mapId] || Maps['prt_fild08']
+  const id = (mapId || '').toLowerCase()
+  const map = Maps[id] || Maps['prt_fild08']
 
   // 2. 根据权重随机选择怪物
   let totalRate = 0

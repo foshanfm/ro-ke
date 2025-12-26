@@ -41,158 +41,81 @@ A web-based idle game recreating the experience of using automated botting softw
     - [x] Implemented `drops.js` (Weighted Tables + Pity).
     - [x] Refactored `App.vue` command parser to Registry Pattern (`commands.js`).
 
-### Phase 4: Job Change & Advancement [In Progress]
-- [x] **Job Change System:**
-    - [x] `job change` command.
-    - [x] Requirements check (Job Lv 10).
-    - [x] Stat/Skill reset and bonus application.
-- [x] **Advanced Mechanics:**
-    - [x] **Skill Engine:** `castSkill` (Active) & `PassiveHooks` (Double Attack).
-    - [x] **Spatial System:** `mapManager` handling X, Y coordinates and `moveSpeed`.
-    - [x] **Card System:** Weapon/Armor slots, `card` command, and attribute bonuses.
-- [x] **Equipment:** Added `SHIELD` slot.
-- [x] **ASPD Overhaul:** Comprehensive Renewal-based calculation engine with `job_base_aspd.json` backing.
-
-- [ ] **1st Jobs Implementation:**
-    - [ ] **Swordman:** Bash, Magnum Break, Provoke.
-    - [ ] **Mage:** Cast Time system, Elemental Bolts.
-    - [ ] **Archer:** Arrow consumption, Double Strafe.
-    - [ ] **Thief:** Envenom, Hiding.
-    - [ ] **Acolyte:** Heal, Blessing, Agi Up.
-- [ ] **World Interaction:**
-    - [ ] `sit` command (2x Regen).
+### Phase 4: Job Change & Advancement [Completed]
+- [x] **Job Change System**: `job change` command, Job Lv 10 requirement, Stat/Skill reset.
+- [x] **Advanced Mechanics**: Skill Engine (`castSkill`), Spatial System (`mapManager`), Card System.
+- [x] **ASPD Overhaul**: Comprehensive engine with `job_base_aspd.json`.
 
 ### Phase 5: Data-Driven Infrastructure [Completed]
-- [x] **Universal Database:** Transitioned from hardcoded JS objects to `.txt` (rAthena format) parsing.
-- [x] **ETL Engine:** Implemented `dataLoader.js` for asynchronous asset loading on startup.
-- [x] **Massive Content Enrichment:**
-    - [x] Items: 12k+ entries loaded.
-    - [x] Monsters: 200+ (Lv 1-20) entries loaded.
-- [x] **Script-Based Spawning:** Map spawns now use standard RO spawn scripts (`mobs/fields/*.txt`).
-- [x] **Content Gating:** Implemented Level 20 restriction for initial open content.
+- [x] **Universal Database**: Transitioned to `.txt` (rAthena format) parsing.
+- [x] **ETL Engine**: `dataLoader.js` for async startup asset loading.
+- [x] **Massive Content**: 12k+ Items, 200+ Monsters.
+- [x] **Script-Based Spawning**: Using standard RO spawn scripts.
 
 ### Phase 7: Authentic Experience System [Completed]
-- [x] **Renewal Exp Curve:** Implemented `base_exp.json` and `job_exp.json` for levels 1-99.
-- [x] **Level Difference Penalty:** Implemented `calcLevelDiffRate` for experience and drop scaling based on player-monster level gap.
-- [x] **Job Type Recognition:** Differentiated between Novice and 1st Class job experience requirements.
+- [x] **Renewal Exp Curve**: `base_exp.json` and `job_exp.json`.
+- [x] **Level Difference Penalty**: Reward scaling based on player-monster gap.
 
 ### Phase 8: Real Route System [Completed]
-- [x] **Warp Database:** Parsed `src/game/data/airports/**/*.txt` (rAthena format).
-- [x] **Collision Detection:** Implemented `checkWarpCollision` in `mapManager.js`.
-- [x] **Automatic Logic:** Seamless map transitions when walking into portals during AI movement.
-- [x] **Data Completion:** Added missing warp data for `prt_fild08`.
+- [x] **Warp Database**: Parsed `airports/**/*.txt`.
+- [x] **Collision Detection**: Real-time map transitions via `checkWarpCollision`.
 
 ### Phase 9: Advanced Navigation & UX [Completed]
-- [x] **Manual Movement:** Implemented `move` command with map boundary checks.
-- [x] **Navigation Panel:** Added top-right UI panel for "Map Info" (Monsters & Portals).
-- [x] **Auto-Pilot:** Clickable portal buttons that automatically move the player to the exit.
-- [x] **Context Awareness:** Enhanced `map` command with level range hints and nearby portal lists.
+- [x] **Navigation Panel**: UI for Map Info (Monsters & Portals).
+- [x] **Auto-Pilot**: Clickable portals for automated navigation.
 
 ### Phase 10: Data Architecture Optimization [Completed]
-- [x] **Monster Instance Refactoring:**
-  - [x] Separated monster templates from instances (Template-Instance Pattern).
-  - [x] Instances now store only `guid`, `templateId`, `x`, `y`, `hp`, and runtime state.
-  - [x] Combat system uses `getMobTemplate()` to access template attributes.
-- [x] **Attack Speed System:**
-  - [x] Parsed `aDelay` field from `mob_db.txt` (column 26).
-  - [x] Applied monster-specific attack delays in combat loop.
-  - [x] Each monster now has unique attack intervals instead of hardcoded 2000ms.
-- [x] **Map Metadata Cleanup:**
-  - [x] Removed `spawnRate` and `monsters` fields from `maps.js`.
-  - [x] Deleted legacy `fillMonstersLegacy` and `spawnSingleMonsterWeighted` functions.
-  - [x] Map metadata now only contains: `id`, `name`, `width`, `height`, `minLv`, `maxLv`.
-- [x] **UI Synchronization:**
-  - [x] Fixed `mapMonsters` computed property to read `mapState.monsters` (real-time instances).
-  - [x] Monster list now displays live data with counts (e.g., "波利 (Lv.1) x5").
+- [x] **Monster Instance Refactoring**: Template-Instance Pattern.
+- [x] **Attack Speed System**: Unique monster delays from `mob_db`.
+- [x] **Live UI Synchronization**: Real-time monster list with counts.
 
 ### Phase 11: World Connectivity & Navigation Refinement [Completed]
-- [x] **Massive Warp Restoration**:
-  - [x] Restored 100+ core world warps (Prontera, Payon, Morroc, Geffen fields) from reference data.
-  - [x] Connectivity rate from Prontera increased from **4.27%** to **43.07%** (202 reachable maps).
-- [x] **Warp Logic Refinement**:
-  - [x] **Sticky Portal Fix**: Added landing offset ($\pm 2-4$ units) to prevent immediate re-warp loops.
-  - [x] **Deduplication**: Implemented proximity-based de-dupe logic in `dataLoader.js` to merge redundant portals (< 5 units apart).
-- [x] **Recursive Data Discovery**: Enabled recursive globbing for all monster and warp data files.
+- [x] **Massive Warp Restoration**: Connectivity rate increased to >40%.
+- [x] **Sticky Portal Fix**: Landing offsets for seamless loops.
+- [x] **Warp Deduplication**: Proximity-aware merge.
 
 ### Phase 12: Account Experience & Data Integrity [Completed]
-- [x] **Multi-Character UX Optimization**:
-  - [x] Implemented scrollable character list to handle 4+ accounts.
-  - [x] Added character deletion functionality with absolute confirmation.
-- [x] **Data Stability Fixes**:
-  - [x] Resolved "NaN Coordinate" bug for new characters via default initialization and load-time validation.
-- [x] **Aggressive Warp Deduplication**:
-  - [x] Refined `loadWarpData` to strictly enforce one portal per destination per map, drastically cleaning up the navigation UI.
+- [x] **Account Management**: Scrollable list, Character deletion.
+- [x] **Data Integrity**: NaN protection and load-time validation.
 
 ### Phase 14: Kiting & Range Mechanics [Completed]
-- [x] **Data Parsing**:
-  - [x] Parsed `Range1` (Attack), `Range2` (Skill), `Range3` (Chase) from `mob_db.txt`.
-- [x] **Spatial Logic (Cells)**:
-  - [x] Implemented `CELL_SIZE = 20` constant (1 Cell = 20px).
-  - [x] Added `WeaponRangeTable` mapping weapons to cell ranges (e.g., Bow=8, Spear=2).
-  - [x] `player.attackRange` now dynamically calculates based on finding Weapon Type.
-- [x] **Combat State Machine**:
-  - [x] **Chase State**: Monsters now chase players if out of attack range (Kiting support).
-  - [x] **Attack State**: Monsters only attack when within range (Melee vs Ranged behaviors).
-- [x] **Spatial Movement & Patrol**:
-  - [x] Implemented destination-based **Patrol System** replacing instant movement.
-  - [x] Added real-time movement logs showing coordinates (X, Y).
-- [x] **Area Spawning**:
-  - [x] Parsed `X1, Y1, X2, Y2` area boundaries from `mobs/*.txt`.
-  - [x] Map Manager now respects localized spawn zones.
-- [x] **RO Data Alignment**:
-  - [x] Refactored `moveSpeed` to follow RO standard (150 = 100% speed, ms/cell).
-  - [x] Aligned `WeaponRangeTable` with official RO values (e.g., Spears=3).
-  - [x] Integrated `Vulture's Eye` passive skill for Archer range bonuses.
+- [x] **Combat State Machine**: Chase, Attack, and Kiting behaviors.
+- [x] **Spatial Movement & Patrol**: Destination-based movement system.
+- [x] **Area Spawning**: Respecting script-defined boundary zones.
 
 ### Phase 15: Save Points & Responsiveness [Completed]
-- [x] **Save Point System**:
-    - [x] `save` command to set a persistent respawn location.
-    - [x] Gated to cities (Prontera, etc.) for authentic RO feel.
-    - [x] Automated `respawn` on death with full HP/SP recovery.
-- [x] **Spatial Refactor (10px/Cell)**:
-    - [x] Reduced logic scale from 20px to **10px per Cell** for tighter feel.
-    - [x] Adjusted all spatial databases (Warps, Spawns, Ranges) to matching the 10x scale.
-    - [x] Multi-layer coordinate display logic (Internal Pixels vs External Cells).
-- [x] **Movement & Pace Optimization**:
-    - [x] Increased base movement speed (150 -> 100) to reduce travel friction.
-    - [x] Unified `attackRange` and `viewRange` (30 Cells) for better engagement.
-    - [x] Smooth Monster Chasing: Reaction-delay-aware movement scaling.
+- [x] **Save Point System**: City-based respawning via `save` command.
+- [x] **Spatial Refactor (10px/Cell)**: tighter feeling world scale.
+- [x] **Movement Pace**: Increased base speeds for better flow.
 
-### Phase 16: Hyper-Interactive UX & Content Gating Lifted [Completed]
-- [x] **Content Gating Lifted**: Monster level cap raised to 99; all spawn data processed.
-- [x] **Slot Expansion**: 
-    - [x] Implemented `HEAD_TOP`, `HEAD_MID`, `HEAD_LOW`, `GARMENT`, `FOOTGEAR`, `ACCESSORY1`, `ACCESSORY2`.
-    - [x] Updated `dataLoader.js` to parse `Location` bitmasks (item_db index 14).
-    - [x] Refactored `equipItem` to handle multi-slot targeting and accessory prioritization.
-- [x] **Interactive Console**:
-    - [x] Log segments: Entity names clickable via `[Name]` tags.
-    - [x] **Details Panel**: Persistent right-side overlay showing full entity/item attributes.
-    - [x] **Stats Modal**: UI-based attribute allocation (detailed stat display + point spending).
-- [x] **Smart Bot Navigation**:
-    - [x] **Navigation Graph**: Implemented BFS pathfinding over `warpDB` in `navigation.js`.
-    - [x] **Auto-Return**: Bot now automatically finds a path back to the target map if Stray/Dead.
-    - [x] **Interactive Navigation**: `auto <MapName>` command with map name suggestions.
-- [x] **Authentic Mechanics**:
-    - [x] **Data-Driven Drops**: Drops now pulled directly from `mob_db.txt` instead of proxy tables.
-    - [x] **Consumables**: Implemented HP/SP recovery logic for core potions (Red/Org/Yel/Whi/Blu).
-    - [x] **Responsive Movement**: `moveTo` now interrupts AI action wait for instant response.
+### Phase 16: Hyper-Interactive UX & Content Unlocked [Completed]
+- [x] **Slot Expansion**: All equipment slots implemented.
+- [x] **Interactive Console**: Clickable `[Name]` tags + Details Overlay.
+- [x] **Stats Modal**: UI-based point allocation.
+- [x] **Navigation Graph**: BFS multi-map pathfinding and Auto-Return logic.
 
 ### Phase 17: Structured Data & Automated Logic [Completed]
-- [x] **DB Compiler Utility**: Created `db_compiler.cjs` to transform rAthena TXT into high-performance JSON.
-- [x] **JSON Pipeline**: Refactored `dataLoader.js` and `DataManager.js` to consume structured JSON.
-- [x] **Automated Item Scripts**: Implemented a regex-based parser for `item_db` scripts (e.g., `itemheal`), enabling 10k+ items automatically.
-- [x] **UX Detail Polish**: 
-    - [x] Reformatted Details Panel to show item names and percentages for drops.
-    - [x] Enhanced entity lookup with fuzzy name searching across all databases.
-- [x] **Cache Invalidation**: Bumped `DATA_VERSION` to 2 to ensure data integrity across character loads.
-- [x] **Content Unlock**: Standardized `maxLevel` to 99 across all initialization routines.
+- [x] **DB Compiler**: rAthena TXT to JSON transformation.
+- [x] **Automated Item Scripts**: Regex-based parser for `itemheal` and other scripts.
+- [x] **UX Detail Polish**: Enhanced fuzzy search and drop rate displays.
+
+### Phase 18: Stability & Content Unification [Completed]
+- [x] **Case-Insensitive Map Engine**: Standardized all Map IDs to lowercase.
+- [x] **Universal Content Unlock**: Removed Level 20 gating; all 1k+ monsters and 400+ maps accessible.
+- [x] **Persistence Safety (Serialization Fix)**: Post-load hydration logic (`injectRuntimeEffects`) to fix IndexedDB crashes.
+- [x] **Initialization Polish**: Resolved login race-conditions and refined warp de-duplication.
+
+### Phase 19: SP Mechanics & Skills [Upcoming]
+- [ ] **SP Consumption**: Integrate cast costs into `castSkill`.
+- [ ] **1st Jobs Action Skills**: Bash, Double Strafe, Elemental Bolts.
+- [ ] **Cast Time System**: Variable cast times based on DEX and skill level.
 
 ## 4. Current State
-*   **Version:** 2.0.0 (Phase 17 - Structured Data Complete)
-*   **Stability:** High. No longer bottlenecked by TXT parsing.
-*   **Performance:** Elite. Fast startup and memory-efficient runtime.
+*   **Version:** 2.1.0 (Phase 18 - Stability & Content Unlocked)
+*   **Stability:** High. Content fully synchronized and ID case-sensitivity resolved.
+*   **Performance:** Elite. Safe persistence with post-load logic injection.
 *   **New Features:**
-    - **Automated Potion Effects**: All DB-defined healing items work out of the box.
-    - **Rich Details Overlay**: Visual breakdown of monster drops and item bonuses.
-    - **Optimized Data Flow**: Pre-compiled JSON reduces CPU load during game initialization.
+    - **Global Content**: All maps and monsters (Lv 1-99) now fully spawning.
+    - **Robust Saving**: Eliminated DataCloneErrors by isolating non-serializable logic.
+    - **Precise Warp Deduplication**: Preserve multi-entrance layouts while cleaning redundant data.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

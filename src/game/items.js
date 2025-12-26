@@ -89,11 +89,41 @@ const fallbackItemsDB = {
 }
 
 /**
- * 设置物品数据库 (由 dataLoader 调用)
+ * 注入运行时效果 (如药水恢复逻辑)
+ * 因为函数无法存储在 IndexedDB,所以必须在加载后动态注入
+ */
+function injectRuntimeEffects(db) {
+  Object.values(db).forEach(item => {
+    // 适配结构化数据 (来自 compiled/items.json)
+    if (item.type === 'Usable' && item.effects) {
+      item.effects.forEach(eff => {
+        if (eff.type === 'heal') {
+          item.effect = (player) => {
+            let hpHeal = 0
+            if (Array.isArray(eff.hp)) {
+              hpHeal = Math.floor(eff.hp[0] + Math.random() * (eff.hp[1] - eff.hp[0] + 1))
+            } else {
+              hpHeal = eff.hp
+            }
+
+            const oldHp = player.hp
+            player.hp = Math.min(player.maxHp, player.hp + hpHeal)
+            return { type: 'hp', value: player.hp - oldHp }
+          }
+        }
+      })
+    }
+  })
+}
+
+/**
+ * 设置物品数据库 (由 DataManager 调用)
  */
 export function setItemsDB(newItemsDB) {
-  itemsDB = newItemsDB
-  console.log('[Items] 物品数据库已更新')
+  // 克隆一份数据，避免修改缓存中的原始数据
+  itemsDB = JSON.parse(JSON.stringify(newItemsDB))
+  injectRuntimeEffects(itemsDB)
+  console.log('[Items] 物品数据库已更新并注入运行时效果')
 }
 
 /**

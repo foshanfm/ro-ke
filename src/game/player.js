@@ -268,7 +268,9 @@ export async function loadGame(saveId) {
         const jobMapping = {
             'Novice': 'NOVICE',
             'Swordman': 'SWORDMAN',
+            'Swardman': 'SWORDMAN',
             'Mage': 'MAGICIAN',
+            'Magician': 'MAGICIAN',
             'Archer': 'ARCHER',
             'Thief': 'THIEF',
             'Acolyte': 'ACOLYTE'
@@ -287,6 +289,7 @@ export async function loadGame(saveId) {
         if (!player.config) player.config = {}
 
         if (!player.currentMap) player.currentMap = 'prt_fild08'
+        player.currentMap = player.currentMap.toLowerCase()
         if (player.zeny === undefined) player.zeny = 0
 
         if (!player.equipment) {
@@ -312,13 +315,20 @@ export async function loadGame(saveId) {
         })
 
         // 坐标校验与修复
-        if (player.x === undefined || player.x === null || isNaN(player.x)) player.x = 200
-        if (player.y === undefined || player.y === null || isNaN(player.y)) player.y = 200
+        if (player.x === undefined || player.x === null || isNaN(player.x)) player.x = 400 * 10 / 2
+        if (player.y === undefined || player.y === null || isNaN(player.y)) player.y = 400 * 10 / 2
 
-        // 存档点兼容 (旧存档可能没有 savePoint)
+        // 存档点兼容 (旧存档可能没有 savePoint 或 map)
         if (!player.savePoint) {
             player.savePoint = { map: 'prontera', x: 156 * 10, y: 178 * 10 }
         }
+        if (!player.savePoint.map) {
+            player.savePoint.map = 'prontera'
+        }
+        player.savePoint.map = player.savePoint.map.toLowerCase()
+
+        if (!player.currentMap) player.currentMap = 'prt_fild08'
+        player.currentMap = player.currentMap.toLowerCase()
 
         player.nextExp = getNextBaseExp(player.lv)
         player.nextJobExp = getNextJobExp(player.jobLv)
@@ -740,14 +750,15 @@ export function setConfig(key, value) {
 }
 
 export function warp(mapId) {
-    const map = Maps[mapId]
-    if (!map) return { success: false, msg: `未知地图 ID: ${mapId}` }
+    const id = (mapId || '').toLowerCase()
+    const map = Maps[id]
+    if (!map) return { success: false, msg: `未知地图 ID: ${id}` }
 
-    if (player.currentMap === mapId) {
+    if (player.currentMap === id) {
         return { success: false, msg: `你已经在 ${map.name} 了。` }
     }
 
-    player.currentMap = mapId
+    player.currentMap = id
     saveGame()
     return { success: true, msg: `Warped to ${map.name}` }
 }

@@ -6,7 +6,7 @@ import { loadItemDB, loadMobDB, loadSpawnData, loadWarpData } from './dataLoader
 import { analyzeConnectivity } from './utils/mapGraph.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
-const DATA_VERSION = 2;
+const DATA_VERSION = 4;
 
 // 内存缓存
 let itemsCache = null;

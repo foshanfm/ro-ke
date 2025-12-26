@@ -1,9 +1,8 @@
-// src/game/maps.js
-// 地图元数据 - 仅包含地图基础信息，刷怪数据现在从 spawnData 加载
+import { reactive } from 'vue'
 
 const CELL_SIZE = 10
 
-export const Maps = {
+export const Maps = reactive({
     'prt_fild08': {
         id: 'prt_fild08',
         name: '普隆德拉南门',
@@ -44,10 +43,11 @@ export const Maps = {
         minLv: 9,
         maxLv: 15
     }
-}
+})
 
 export function getMapInfo(mapId) {
-    return Maps[mapId] || Maps['prt_fild08']
+    const id = (mapId || '').toLowerCase()
+    return Maps[id] || Maps['prt_fild08']
 }
 
 /**
@@ -55,14 +55,18 @@ export function getMapInfo(mapId) {
  * 仅保存地图元数据，不再包含刷怪配置
  */
 export function registerMap(mapId, mapInfo) {
-    if (!Maps[mapId]) {
-        Maps[mapId] = {
-            id: mapId,
-            name: mapInfo.name || mapId,
+    const id = mapId.toLowerCase()
+    if (!Maps[id]) {
+        Maps[id] = {
+            id: id,
+            name: mapInfo.name || id,
             width: (mapInfo.width || 400) * CELL_SIZE,
             height: (mapInfo.height || 400) * CELL_SIZE,
             minLv: mapInfo.minLv || 1,
             maxLv: mapInfo.maxLv || 99
         }
+    } else if (Maps[id].name === id && mapInfo.name && mapInfo.name !== id) {
+        // 如果已存在的地图只有 ID 没有名字，则尝试更新名字
+        Maps[id].name = mapInfo.name
     }
 }

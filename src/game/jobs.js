@@ -24,8 +24,8 @@ export const JobConfig = {
         spMod: 0.8,
         aspdBonus: 2
     },
-    [JobType.MAGE]: {
-        name: '法师', // Mage
+    [JobType.MAGICIAN]: {
+        name: '法师', // Magician
         maxJobLv: 50,
         hpMod: 0.8,
         spMod: 1.8,

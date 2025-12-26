@@ -10,28 +10,6 @@ export async function loadItemDB() {
     const response = await fetch('/src/game/data/compiled/items.json')
     const itemsDB = await response.json()
 
-    // 注入运行时效果 (如药水恢复逻辑)
-    Object.values(itemsDB).forEach(item => {
-      if (item.type === 'Usable' && item.effects) {
-        item.effects.forEach(eff => {
-          if (eff.type === 'heal') {
-            item.effect = (player) => {
-              let hpHeal = 0
-              if (Array.isArray(eff.hp)) {
-                hpHeal = Math.floor(eff.hp[0] + Math.random() * (eff.hp[1] - eff.hp[0] + 1))
-              } else {
-                hpHeal = eff.hp
-              }
-
-              const oldHp = player.hp
-              player.hp = Math.min(player.maxHp, player.hp + hpHeal)
-              return { type: 'hp', value: player.hp - oldHp }
-            }
-          }
-        })
-      }
-    })
-
     console.log(`[DataLoader] 已加载 ${Object.keys(itemsDB).length} 个组件化物品`)
     return itemsDB
   } catch (error) {
@@ -89,7 +67,7 @@ export async function loadMobDB(maxLevel = 99) {
  */
 import { registerMap } from './maps.js'
 
-export async function loadSpawnData(mobsDB, maxLevel = 20) {
+export async function loadSpawnData(mobsDB, maxLevel = 99) {
   const spawnData = {}
 
   try {
@@ -103,24 +81,18 @@ export async function loadSpawnData(mobsDB, maxLevel = 20) {
         // 跳过注释和空行
         if (line.trim().startsWith('//') || line.trim() === '') continue
 
-        // 解析格式: prt_fild00,0,0,0,0      monster Creamy  1018,10,0,0,0
-        const parts = line.split(/\s+/)
-        if (parts.length < 3) continue
+        // 解析格式: MapName,X,Y,X2,Y2    monster|boss_monster    Name    MobID,Count...
+        // 使用正则处理多词名称 (如 Roda Frog) 和 boss_monster 关键字
+        const spawnRegex = /^([^, \t\s]+),(\d+),(\d+),(\d+),(\d+)\s+(monster|boss_monster)\s+(.+?)\s+([\d,]+)/
+        const match = line.match(spawnRegex)
+        if (!match) continue
 
-        const areaParts = parts[0].split(',')
-        const mapName = areaParts[0]
-        const x1 = parseInt(areaParts[1]) || 0
-        const y1 = parseInt(areaParts[2]) || 0
-        const x2 = parseInt(areaParts[3]) || 0
-        const y2 = parseInt(areaParts[4]) || 0
-        const monsterKeyword = parts.find(p => p === 'monster')
-        if (!monsterKeyword) continue
-
-        const monsterIndex = parts.indexOf(monsterKeyword)
-        const mobName = parts[monsterIndex + 1]
-        const mobDataStr = parts[monsterIndex + 2]
-
-        if (!mobDataStr) continue
+        const [_, mapNameRaw, x1Str, y1Str, x2Str, y2Str, keyword, mobName, mobDataStr] = match
+        const mapName = mapNameRaw.toLowerCase()
+        const x1 = parseInt(x1Str) || 0
+        const y1 = parseInt(y1Str) || 0
+        const x2 = parseInt(x2Str) || 0
+        const y2 = parseInt(y2Str) || 0
 
         const mobDataParts = mobDataStr.split(',')
         const mobId = parseInt(mobDataParts[0])
@@ -215,8 +187,12 @@ export async function loadWarpData() {
           // 获取当前地图已有的传送点，进行精细去重
           const existingWarps = warpDB[sourceMap]
 
-          // 强力去重：同一个地图对同一个目的地仅保留一个传送点
-          const isDuplicate = existingWarps.some(w => w.targetMap === targetMap)
+          // 更加精细的去重：同一出口地图且坐标非常接近（< 5 unit）时才视为重复
+          const isDuplicate = existingWarps.some(w =>
+            w.targetMap === targetMap &&
+            Math.abs(w.x - parseInt(x) * 10) < 50 &&
+            Math.abs(w.y - parseInt(y) * 10) < 50
+          )
 
           if (!isDuplicate) {
             warpDB[sourceMap].push({
@@ -246,7 +222,7 @@ export async function loadWarpData() {
 /**
  * 初始化所有数据
  */
-export async function initializeGameData(maxLevel = 20) {
+export async function initializeGameData(maxLevel = 99) {
   console.log('[DataLoader] 开始加载游戏数据...')
 
   const itemsDB = await loadItemDB()

@@ -36,17 +36,19 @@ export function buildNavigationGraph(warpDB) {
  * @returns {Array<string>|null} 路径数组 (包括起点和终点)，例如 ['prontera', 'prt_fild08']
  */
 export function findPath(startMap, targetMap) {
-    if (startMap === targetMap) return [startMap]
-    if (!globalWarpGraph[startMap]) return null
+    const s = (startMap || '').toLowerCase()
+    const t = (targetMap || '').toLowerCase()
+    if (s === t) return [s]
+    if (!globalWarpGraph[s]) return null
 
-    const queue = [[startMap]]
-    const visited = new Set([startMap])
+    const queue = [[s]]
+    const visited = new Set([s])
 
     while (queue.length > 0) {
         const path = queue.shift()
         const currentMap = path[path.length - 1]
 
-        if (currentMap === targetMap) {
+        if (currentMap === t) {
             return path
         }
 

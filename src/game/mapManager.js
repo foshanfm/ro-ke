@@ -38,19 +38,23 @@ export function setWarpData(newWarpData) {
  * 初始化地图
  */
 export function initMap(mapId) {
-    const mapInfo = Maps[mapId]
-    if (!mapInfo) return
+    const id = (mapId || '').toLowerCase()
+    const mapInfo = Maps[id]
+    if (!mapInfo) {
+        console.error(`[MapManager] 地图数据缺失: ${id}`)
+        return
+    }
 
-    mapState.currentMapId = mapId
+    mapState.currentMapId = id
     mapState.width = mapInfo.width
     mapState.height = mapInfo.height
     mapState.monsters = []
     mapState.patrolTarget = null
 
     // 加载当前地图的传送点
-    mapState.activeWarps = warpData[mapId] || []
+    mapState.activeWarps = warpData[id] || []
     if (mapState.activeWarps.length > 0) {
-        console.log(`[MapManager] 地图 ${mapId} 加载了 ${mapState.activeWarps.length} 个传送点`)
+        console.log(`[MapManager] 地图 ${id} 加载了 ${mapState.activeWarps.length} 个传送点`)
     }
 
     // 初始化时刷出第一批怪
@@ -61,11 +65,12 @@ export function initMap(mapId) {
  * 填充怪物到地图
  */
 export function fillMonsters() {
-    const mapInfo = Maps[mapState.currentMapId]
+    const id = (mapState.currentMapId || '').toLowerCase()
+    const mapInfo = Maps[id]
     if (!mapInfo) return
 
     // 检查是否有加载的刷怪数据
-    const spawnInfo = spawnData[mapState.currentMapId]
+    const spawnInfo = spawnData[id]
 
     if (spawnInfo && spawnInfo.spawns && spawnInfo.spawns.length > 0) {
         // 使用刷怪数据系统

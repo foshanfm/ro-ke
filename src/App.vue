@@ -251,7 +251,8 @@
     await initializeGameDataAsync()
 
     const jobName = JobConfig[player.job] ? JobConfig[player.job].name : '初学者'
-    const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : '未知区域'
+    const curMapId = (player.currentMap || '').toLowerCase()
+    const mapName = Maps[curMapId] ? Maps[curMapId].name : '未知区域'
     
     addLog(`欢迎回来,${player.name} (Lv.${player.lv} ${jobName})`, 'system')
     addLog(`当前位置: ${mapName}`, 'system')
@@ -265,7 +266,7 @@
   const initializeGameDataAsync = async () => {
     addLog('正在加载游戏数据...', 'system')
     try {
-      const { itemsDB, mobsDB, spawnData, warpDB } = await initializeGameData(20)
+      const { itemsDB, mobsDB, spawnData, warpDB } = await initializeGameData(99)
       
       setItemsDB(itemsDB)
       setMonstersDB(mobsDB)
@@ -297,12 +298,12 @@
 
   // 监听地图变更，自动更新地图数据
   watch(() => player.currentMap, (newMapId, oldMapId) => {
-    if (newMapId && newMapId !== oldMapId) {
-        initMap(newMapId)
+    if (isDataLoaded.value && newMapId && newMapId !== oldMapId) {
+        initMap(newMapId.toLowerCase())
         // 可选：添加一条系统日志
-        // addLog(`进入地图: ${Maps[newMapId]?.name || newMapId}`, 'system')
+        // addLog(`进入地图: ${Maps[newMapId.toLowerCase()]?.name || newMapId}`, 'system')
     }
-  })
+})
 
   onUnmounted(() => {
       if (autoSaveTimer) clearInterval(autoSaveTimer)
@@ -363,7 +364,7 @@
       x: w.x,
       y: w.y,
       targetMap: w.targetMap,
-      targetName: Maps[w.targetMap]?.name || w.targetMap,
+      targetName: Maps[w.targetMap.toLowerCase()]?.name || w.targetMap,
       name: w.name
     }))
   })
@@ -397,7 +398,7 @@
               <h2 class="text-lg font-bold text-white">{{ player.name }}</h2>
               <div class="text-xs text-cyan-400">{{ jobName }}</div>
               <div class="text-xs text-gray-500 mt-1 flex justify-between px-2">
-                 <span>{{ Maps[player.currentMap]?.name }}</span>
+                 <span>{{ Maps[(player.currentMap || '').toLowerCase()]?.name }}</span>
                  <!-- Coordinate Display -->
                   <span>({{ Math.floor(player.x / 10) }}, {{ Math.floor(player.y / 10) }})</span>
               </div>

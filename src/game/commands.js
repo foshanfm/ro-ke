@@ -129,7 +129,7 @@ registerCommand({
     },
     execute: (args, { log }) => {
         if (args.length > 0) {
-            const mapId = args[0]
+            const mapId = args[0].toLowerCase()
             if (Maps[mapId]) {
                 gameState.goalMap = mapId
                 log(`目标地图设定为: ${Maps[mapId].name} (${mapId})`, 'system')
@@ -212,7 +212,8 @@ registerCommand({
     description: '查看角色状态',
     execute: (args, { log }) => {
         const jobName = JobConfig[player.job] ? JobConfig[player.job].name : player.job
-        const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : player.currentMap
+        const mapId = (player.currentMap || '').toLowerCase()
+        const mapName = Maps[mapId] ? Maps[mapId].name : mapId
 
         log(`----------------[ 角色状态 ]----------------`, 'system')
         log(`名字: ${player.name} | 职业: ${jobName}`, 'system')
@@ -535,7 +536,7 @@ registerCommand({
             }
             log(`输入 'map <id>' 进行跳转,或 'move <x> <y>' 走向传送点。`, 'system')
         } else {
-            const mapId = args[0]
+            const mapId = (args[0] || '').toLowerCase()
             // 如果正在挂机，先停止
             if (gameState.isAuto) {
                 stopBot()
