@@ -34,13 +34,12 @@ All math logic resides in `src/game/formulas.js`.
 
 ## 3. Core Algorithms (Standard)
 
-### 3.1. Combat Formula (Behavioral)
+### 3.1. Combat Formula (Renewal Standard)
 We prioritize "Feel" over "Academic Accuracy".
-*   **Damage:** `floor((Atk - Def) * random(0.9, 1.1))`. Min 1.
+*   **Hit Rate:** `min(100, max(5, Hit + 80 - Flee))`.
+*   **Damage:** `Atk * (600 / (600 + Def))`.
+*   **Crit:** `Atk * 1.4` (Subject to Def reduction), ignore Flee.
 *   **ASPD (Standard):** Based on RO Renewal mechanics.
-    *   `StatBonus = sqrt(Agi^2 + Dex^2/4) * 0.1`
-    *   `BaseASPD` is job/weapon specific (from `job_base_aspd.json`).
-    *   `Final = (Base + StatBonus) + CatchUpCorrections + FlatBonus`. Max 193.
 
 
 ### 3.2. Spatial & AI Logic

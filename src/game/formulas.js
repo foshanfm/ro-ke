@@ -111,38 +111,33 @@ export function calculateDamageFlow({
     defenderDef, defenderFlee, defenderLuk = 1,
     isPlayerAttacking = true
 }) {
-    // 1. 暴击判定 (Crit - TargetLuk)
-    // 暴击率限制: 1% ~ 50% (玩家)
-    // 怪物暂无暴击，或者给予固定低暴击
-    let critChance = attackerCrit - defenderLuk
-    critChance = Math.max(1, Math.min(50, critChance))
+    // 1. 命中判定 (RO 经典公式: 80 + AttackerHit - DefenderFlee)
+    const chance = 80 + attackerHit - defenderFlee
+    const hitRate = Math.max(5, Math.min(100, chance)) // 至少 5% 命中，至多 100%
 
-    // 怪物攻击时不暴击 (或者以后加)
-    const isCrit = isPlayerAttacking ? (Math.random() * 100 < critChance) : false
-
-    if (isCrit) {
-        // 暴击：1.4倍伤害，无视防御
-        // 浮动: 0.9 ~ 1.1
-        const variance = (Math.random() * 0.2) + 0.9
-        const rawDamage = Math.floor(attackerAtk * variance)
-        const finalDamage = Math.floor(rawDamage * 1.4)
-        return { damage: Math.max(1, finalDamage), type: 'crit' }
-    }
-
-    // 2. 命中判定 (Hit - Flee + 80)
-    // 命中率限制: 5% ~ 95%
-    let hitChance = attackerHit - defenderFlee + 80
-    hitChance = Math.max(5, Math.min(95, hitChance))
-
-    const isHit = Math.random() * 100 < hitChance
+    const isHit = Math.random() * 100 <= hitRate
 
     if (!isHit) {
         return { damage: 0, type: 'miss' }
     }
 
-    // 3. 普通伤害计算 ( (Atk - Def) * Variance )
-    const variance = (Math.random() * 0.2) + 0.9
-    let damage = Math.floor((attackerAtk - defenderDef) * variance)
+    // 2. 暴击判定 (暴击无视回避，这里假设暴击受防御减免，倍率为 1.4)
+    // 注意：根据用户需求，这里不再扣除 DefenderLuk
+    const isCrit = Math.random() * 100 <= attackerCrit
 
-    return { damage: Math.max(1, damage), type: 'hit' }
+    // 3. 基础伤害计算
+    let baseDmg = attackerAtk
+    if (isCrit) {
+        baseDmg = Math.floor(baseDmg * 1.4)
+    }
+
+    // 4. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
+    const defReduction = 600 / (600 + defenderDef)
+    const finalDamage = Math.max(1, Math.floor(baseDmg * defReduction))
+
+    return {
+        damage: finalDamage,
+        type: isCrit ? 'crit' : 'hit',
+        hitRate: hitRate
+    }
 }
