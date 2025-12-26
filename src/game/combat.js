@@ -3,7 +3,8 @@ import { player, addExp, addItem, useItem, saveGame } from './player'
 import { spawnMonster } from './monsters'
 import { getItemInfo } from './items'
 import { calcAspdDelay, calculateDamageFlow } from './formulas' 
-import { calculateDrops } from './drops' // 引入新掉落系统
+import { calculateDrops } from './drops' 
+import { PassiveHooks } from './skillEngine' // 引入技能引擎钩子
 
 // 游戏循环状态
 export const gameState = reactive({
@@ -127,7 +128,11 @@ async function playerActionLoop(sessionId) {
         const target = gameState.currentMonster
         
         if (target && target.hp > 0) {
-             // 1. 调用新的伤害公式
+             // 1. 获取被动技能修正
+             // 这一步在计算伤害之前调用，检查是否有被动（如二刀连击）改变了这次攻击
+             const passiveRes = PassiveHooks.onNormalAttack(target)
+             
+             // 2. 调用伤害公式
              const res = calculateDamageFlow({
                  attackerAtk: player.atk,
                  attackerHit: player.hit,
@@ -141,22 +146,26 @@ async function playerActionLoop(sessionId) {
                  log(`You miss ${target.name}!`, 'dim')
              } else {
                  let damage = res.damage
+                 
+                 // 应用被动伤害倍率 (例如 Double Attack 的 2.0x)
+                 if (passiveRes.damageMod !== 1.0) {
+                     damage = Math.floor(damage * passiveRes.damageMod)
+                 }
+
                  if (res.type === 'crit') {
                      log(`CRITICAL! You deal ${damage} damage to ${target.name}.`, 'warning')
                  } else {
                      log(`You attack ${target.name} for ${damage} damage.`, 'default')
                  }
                  
-                 // Double Attack (独立判定，还是作为 Bonus 伤害？RO里是两次黄字，这里简单做成一次大伤害)
-                 // 修正：Double Attack 其实是技能，应该在 formula 外面判断，或者传入 formula
-                 // 这里保持现状
-                 const doubleAttackLv = player.skills['double_attack'] || 0
-                 if (doubleAttackLv > 0 && Math.random() * 100 < (doubleAttackLv * 5)) {
-                     log(`Double Attack! You deal ${damage} damage.`, 'warning')
-                     target.hp -= damage
-                 }
+                 // 显示被动触发的日志 (例如 "Double Attack!!")
+                 passiveRes.logs.forEach(l => log(l.msg, l.type))
 
+                 // 扣除 HP
                  target.hp -= damage
+
+                 // 处理被动技能的额外 Hit (为了视觉效果，RO 里二刀是两个黄字，这里我们已经合并伤害，但为了逻辑严谨性，可以认为这是多段)
+                 // 如果以后需要处理如 "每次攻击触发" 的效果，这里需要循环 passiveRes.extraHitCount
 
                  if (target.hp <= 0) {
                      monsterDead(target)

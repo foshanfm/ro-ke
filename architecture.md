@@ -27,6 +27,7 @@ All math logic resides in `src/game/formulas.js`.
 *   **`formulas.js`**: Pure Math. Stat calculation, Damage formulas.
 *   **`drops.js`**: RNG Engine. Handles Drop Tables and Pity Counters.
 *   **`simulator.js`**: Analytics. Runs Monte Carlo simulations for efficiency analysis.
+*   **`commands.js`**: Registry Pattern. Handles all console commands and their executions.
 
 ## 3. Core Algorithms (Standard)
 
@@ -55,6 +56,8 @@ Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
     *   Add to `defaultStats` in `player.js`.
     *   Add setter in `setConfig`.
     *   Add logic in `combat.js` (e.g., `checkAutoPotion`).
+4.  **New Command:**
+    *   Use `registerCommand()` in `commands.js`.
 
 ## 5. Known Risks
 

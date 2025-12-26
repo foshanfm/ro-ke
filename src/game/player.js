@@ -5,8 +5,6 @@ import { EquipDB, EquipType, WeaponType } from './equipment'
 import { getItemInfo, ItemType } from './items' 
 import { Maps } from './maps' 
 import * as Formulas from './formulas' 
-// 移除未使用的 isNormalDrop 引用，保持代码整洁
-// import { isNormalDrop } from './drops' 
 
 const defaultStats = {
   name: 'Novice',
@@ -17,6 +15,7 @@ const defaultStats = {
   skills: {}, 
   equipment: {
       [EquipType.WEAPON]: null,
+      [EquipType.SHIELD]: null, // 新增槽位
       [EquipType.ARMOR]: null,
       [EquipType.HEAD]: null,
       [EquipType.ACCESSORY]: null
@@ -37,7 +36,7 @@ export const player = reactive({ ...defaultStats })
 
 export const getStatPointCost = Formulas.getStatPointCost
 
-function recalculateMaxStats() {
+export function recalculateMaxStats() {
     const jobCfg = JobConfig[player.job] || JobConfig.Novice
     
     const str = player.str || 1
@@ -126,10 +125,13 @@ export function loadGame() {
         if (!player.equipment) {
             player.equipment = {
                 [EquipType.WEAPON]: null,
+                [EquipType.SHIELD]: null,
                 [EquipType.ARMOR]: null,
                 [EquipType.HEAD]: null,
                 [EquipType.ACCESSORY]: null
             }
+        } else if (player.equipment[EquipType.SHIELD] === undefined) {
+            player.equipment[EquipType.SHIELD] = null
         }
 
         const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
@@ -208,6 +210,31 @@ export function addExp(baseAmount, jobAmount) {
     return { leveledUp, jobLeveledUp }
 }
 
+export function changeJob(newJob) {
+    if (player.job !== JobType.NOVICE) {
+        return { success: false, msg: '只有初学者可以转职。' }
+    }
+    if (player.jobLv < 10) {
+        return { success: false, msg: 'Job 等级不足 (需要 Lv.10)。' }
+    }
+    if (!JobConfig[newJob]) {
+        return { success: false, msg: `未知职业: ${newJob}` }
+    }
+
+    player.job = newJob
+    player.jobLv = 1
+    player.jobExp = 0
+    player.nextJobExp = getNextJobExp(1)
+    
+    // 转职奖励：补满状态
+    recalculateMaxStats()
+    player.hp = player.maxHp
+    player.sp = player.maxSp
+    
+    saveGame()
+    return { success: true, msg: `恭喜！你已成功转职为 ${JobConfig[newJob].name}！` }
+}
+
 export function increaseStat(stat, amount = 1) {
   const s = stat.toLowerCase()
   const validStats = ['str', 'agi', 'vit', 'int', 'dex', 'luk']
@@ -224,7 +251,6 @@ export function increaseStat(stat, amount = 1) {
   }
 
   if (player.statPoints < cost) {
-    const nextCost = Formulas.getStatPointCost(player[s])
     return { success: false, msg: `素质点不足 (需要: ${cost}, 剩余: ${player.statPoints})。` }
   }
   
@@ -341,7 +367,6 @@ export function useItem(itemNameOrId) {
         })
     }
 
-    // --- 自动补给逻辑 ---
     if (slotIndex === -1 && player.config.auto_buy_potion > 0 && itemNameOrId === '红色药水') {
         const buyRes = buyItem('红色药水', 50)
         if (buyRes.success) {
@@ -428,10 +453,7 @@ export function sellItem(itemNameOrId, count = 1) {
         for (let i = player.inventory.length - 1; i >= 0; i--) {
             const slot = player.inventory[i]
             const info = getItemInfo(slot.id)
-            
-            // 安全判定：只卖 ETC 类型
             if (info.type === ItemType.ETC) {
-                // 安全判定：确保价格不是 NaN
                 const price = info.price || 0
                 const earning = price * slot.count
                 totalZeny += earning

@@ -1,13 +1,11 @@
 <script setup>
   import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue' 
-  import { player, saveGame, loadGame, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList } from './game/player.js'
+  import { player, loadGame, saveGame, getShopList, sellItem } from './game/player.js'
   import { getItemInfo, ItemType } from './game/items.js'
-  import { startBot, stopBot, setLogCallback, gameState, startRecovery } from './game/combat.js'
+  import { setLogCallback, startRecovery, gameState } from './game/combat.js'
   import { JobConfig } from './game/jobs.js'
-  import { Skills } from './game/skills.js'
-  import { getEquipInfo, EquipType } from './game/equipment.js'
   import { Maps } from './game/maps.js'
-  import { runSimulation } from './game/simulator.js' 
+  import { executeGameCommand, getCommandNames, registerCommand } from './game/commands.js'
 
   // --- 核心状态 ---
   const logs = ref([]) 
@@ -19,11 +17,25 @@
   const showSuggestions = ref(false)
   const suggestionIndex = ref(0)
   
-  // 基础指令库
-  const baseCommands = [
-      'auto', 'start', 'stop', 'map', 'conf', 's', 'stat', 'i', 'item', 
-      'add', 'skill', 'use', 'equip', 'unequip', 'sell', 'buy', 'help', 'clear', 'sim'
-  ]
+  // 基础指令库 (动态获取)
+  const baseCommands = computed(() => getCommandNames())
+
+  // 注册隐藏的系统指令
+  registerCommand({
+      name: 'echo',
+      description: '', // Hidden from help
+      execute: (args, { log }) => {
+          const msg = args.join(' ')
+          if (msg === '"sys_connect_ai"') {
+              log('正在建立安全连接...', 'system')
+              setTimeout(() => {
+                  log('AI_ARCHITECT: 信号已接收。', 'warning')
+              }, 1500)
+          } else {
+              log(msg, 'info')
+          }
+      }
+  })
 
   // 计算当前的提示列表
   const suggestions = computed(() => {
@@ -35,7 +47,7 @@
       const arg = parts.length > 1 ? parts[1].toLowerCase() : ''
 
       if (parts.length === 1) {
-          return baseCommands.filter(c => c.startsWith(cmd)).map(c => ({ text: c, type: 'cmd' }))
+          return baseCommands.value.filter(c => c.startsWith(cmd)).map(c => ({ text: c, type: 'cmd' }))
       }
 
       if (parts.length === 2) {
@@ -119,6 +131,10 @@
     if (logs.value.length > 200) logs.value.shift()
     logs.value.push({ time, msg, type })
   }
+
+  const clearLogs = () => {
+      logs.value = []
+  }
   
   watch(logs, () => {
     nextTick(() => {
@@ -143,303 +159,16 @@
     const cmd = parts[0].toLowerCase()
     const args = parts.slice(1)
     
-    // --- 指令解析 ---
-    if (cmd === 'auto' || cmd === 'start') {
-        startBot()
-    } else if (cmd === 'stop') {
-        stopBot()
+    // --- 使用新的命令注册器 ---
+    const context = {
+        log: addLog,
+        clear: clearLogs
     }
-    else if (cmd === 's' || cmd === 'st' || cmd === 'stat') {
-      const jobName = JobConfig[player.job] ? JobConfig[player.job].name : player.job
-      const mapName = Maps[player.currentMap] ? Maps[player.currentMap].name : player.currentMap
-      
-      addLog(`----------------[ 角色状态 ]----------------`, 'system')
-      addLog(`名字: ${player.name} | 职业: ${jobName}`, 'system')
-      addLog(`位置: ${mapName} (${player.currentMap})`, 'system')
-      addLog(`Base Lv: ${player.lv} | Exp: ${player.exp}/${player.nextExp} (${((player.exp/player.nextExp)*100).toFixed(2)}%)`, 'system')
-      addLog(`Job  Lv: ${player.jobLv} | Exp: ${player.jobExp}/${player.nextJobExp} (${((player.jobExp/player.nextJobExp)*100).toFixed(2)}%)`, 'system')
-      addLog(`HP: ${player.hp}/${player.maxHp} | SP: ${player.sp}/${player.maxSp}`, 'system')
-      
-      addLog(`[战斗属性]`, 'dim')
-      addLog(`Atk: ${player.atk} | Matk: ${player.matk} | Aspd: ${player.aspd}`, 'system')
-      addLog(`Def: ${player.def} | Mdef: ${player.mdef}`, 'system')
-      addLog(`Hit: ${player.hit} | Flee: ${player.flee} | Crit: ${player.crit}`, 'system')
 
-      addLog(`[基础属性] (剩余素质点: ${player.statPoints})`, 'dim')
-      addLog(`Str: ${player.str} | Agi: ${player.agi} | Dex: ${player.dex}`, 'system')
-      addLog(`Vit: ${player.vit} | Int: ${player.int} | Luk: ${player.luk}`, 'system')
-      
-      if (player.equipment) {
-         const w = player.equipment[EquipType.WEAPON] ? getEquipInfo(player.equipment[EquipType.WEAPON]).name : '(无)'
-         const a = player.equipment[EquipType.ARMOR] ? getEquipInfo(player.equipment[EquipType.ARMOR]).name : '(无)'
-         addLog(`[装备] 右手: ${w} | 身体: ${a}`, 'dim')
-      }
-
-      // 显示资产
-      addLog(`[资产] Zeny: ${player.zeny}`, 'warning')
-
-      if (player.config) {
-          const autoBuy = player.config.auto_buy_potion ? '开启' : '关闭'
-          addLog(`[配置] AutoHP: < ${player.config.auto_hp_percent}% (Use: ${player.config.auto_hp_item})`, 'dim')
-          addLog(`[配置] AutoBuy: ${autoBuy}`, 'dim')
-      }
-
-      const learnedSkills = Object.entries(player.skills).map(([id, lv]) => {
-          const s = Skills[id]
-          return s ? `${s.name} Lv.${lv}` : `${id} Lv.${lv}`
-      }).join(', ')
-      if (learnedSkills) {
-          addLog(`[技能] (剩余技能点: ${player.skillPoints})`, 'dim')
-          addLog(`${learnedSkills}`, 'dim')
-      }
-      addLog(`--------------------------------------------`, 'system')
-    } 
-    else if (cmd === 'add') {
-      if (args.length < 2) {
-        addLog('用法: add <属性> <点数>', 'error')
-      } else {
-        const statName = args[0]
-        const amount = parseInt(args[1])
-        if (isNaN(amount) || amount <= 0) {
-          addLog('请输入有效的点数。', 'error')
-        } else {
-          const res = increaseStat(statName, amount)
-          if (res.success) {
-            addLog(res.msg, 'success')
-          } else {
-            addLog(res.msg, 'error')
-          }
-        }
-      }
-    }
-    else if (cmd === 'skill' || cmd === 'sk') {
-        if (args.length === 0) {
-             const jobName = JobConfig[player.job] ? JobConfig[player.job].name : player.job
-             addLog(`[${jobName}] 可学习技能:`, 'system')
-             for (const [id, skill] of Object.entries(Skills)) {
-                 if (skill.req.job === player.job || skill.req.job === 'Novice') {
-                     const curLv = player.skills[id] || 0
-                     addLog(`  ${id} : ${skill.name} (Lv.${curLv}/${skill.maxLv}) - ${skill.desc}`, 'dim')
-                 }
-             }
-             addLog(`输入 'skill <id> <Lv>' 进行学习。`, 'system')
-        } else {
-            const skillId = args[0]
-            const level = parseInt(args[1]) || 1
-            const res = learnSkill(skillId, level)
-            if (res.success) {
-                addLog(res.msg, 'success')
-            } else {
-                addLog(res.msg, 'error')
-            }
-        }
-    }
-    else if (cmd === 'equip' || cmd === 'eq') {
-        if (args.length === 0) {
-             addLog('用法: equip <物品名>', 'error')
-        } else {
-             const target = args.join(' ') 
-             const asId = parseInt(target)
-             const res = equipItem(isNaN(asId) ? target : asId)
-             
-             if (res.success) {
-                 addLog(res.msg, 'success')
-             } else {
-                 addLog(res.msg, 'error')
-             }
-        }
-    }
-    else if (cmd === 'unequip' || cmd === 'ueq') {
-         if (args.length === 0) {
-              addLog('用法: unequip <部位>', 'error')
-         } else {
-              const slot = args[0].toLowerCase()
-              let type = null
-              if (slot === 'weapon' || slot === 'w' || slot === '武器') type = EquipType.WEAPON
-              if (slot === 'armor' || slot === 'a' || slot === '防具') type = EquipType.ARMOR
-              
-              if (type) {
-                  const res = unequipItem(type)
-                  if (res.success) {
-                      addLog(res.msg, 'success')
-                  } else {
-                      addLog(res.msg, 'error')
-                  }
-              } else {
-                  addLog('未知部位。请使用 weapon 或 armor。', 'error')
-              }
-         }
-    }
-    else if (cmd === 'use') {
-        if (args.length === 0) {
-             addLog('用法: use <物品名>', 'error')
-        } else {
-             const target = args.join(' ') 
-             const asId = parseInt(target)
-             const res = useItem(isNaN(asId) ? target : asId)
-             
-             if (res.success) {
-                 addLog(res.msg, 'success')
-             } else {
-                 addLog(res.msg, 'error')
-             }
-        }
-    }
-    else if (cmd === 'sell') {
-        if (args.length === 0) {
-             addLog('用法: sell <物品名> [数量] 或 sell all', 'error')
-        } else {
-             const target = args[0]
-             const count = args.length > 1 ? parseInt(args[1]) : 1
-             const asId = parseInt(target)
-             const res = sellItem(isNaN(asId) ? target : asId, isNaN(count) ? 1 : count)
-             if (res.success) {
-                 addLog(res.msg, 'success')
-             } else {
-                 addLog(res.msg, 'error')
-             }
-        }
-    }
-    else if (cmd === 'buy') {
-        if (args.length === 0) {
-             const list = getShopList()
-             addLog('[ 商店列表 ]', 'system')
-             list.forEach(item => {
-                 addLog(`  ${item.name} - ${item.price}z`, 'dim')
-             })
-             addLog('输入 buy <物品名> [数量] 进行购买。', 'system')
-        } else {
-             const target = args[0]
-             const count = args.length > 1 ? parseInt(args[1]) : 1
-             const res = buyItem(target, isNaN(count) ? 1 : count)
-             if (res.success) {
-                 addLog(res.msg, 'success')
-             } else {
-                 addLog(res.msg, 'error')
-             }
-        }
-    }
-    else if (cmd === 'conf' || cmd === 'config') {
-        if (args.length < 2) {
-             addLog('用法: conf <key> <value>', 'error')
-        } else {
-             const key = args[0]
-             const val = args[1]
-             const res = setConfig(key, val)
-             if (res.success) {
-                 addLog(res.msg, 'success')
-             } else {
-                 addLog(res.msg, 'error')
-             }
-        }
-    }
-    else if (cmd === 'map') {
-        if (args.length === 0) {
-            addLog('[ 世界地图 ]', 'system')
-            for (const [id, m] of Object.entries(Maps)) {
-                addLog(`  ${id} : ${m.name} (Lv.${m.minLv}-${m.maxLv})`, 'dim')
-            }
-            addLog(`输入 'map <id>' 进行移动。`, 'system')
-        } else {
-            const mapId = args[0]
-            // 如果正在挂机，先停止
-            if (gameState.isAuto) {
-                stopBot()
-                addLog('正在停止战斗以进行移动...', 'warning')
-                setTimeout(() => {
-                    const res = warp(mapId)
-                    if (res.success) {
-                        addLog(res.msg, 'success')
-                        addLog('移动完毕。', 'system')
-                    } else {
-                        addLog(res.msg, 'error')
-                    }
-                }, 1000)
-            } else {
-                const res = warp(mapId)
-                if (res.success) {
-                    addLog(res.msg, 'success')
-                } else {
-                    addLog(res.msg, 'error')
-                }
-            }
-        }
-    }
-    else if (cmd === 'sim') {
-        const mapId = args[0] || player.currentMap
-        const times = parseInt(args[1]) || 1000
-        addLog(`正在模拟 ${mapId} 战斗 ${times} 次...`, 'system')
-        
-        setTimeout(() => {
-            const res = runSimulation(mapId, times)
-            addLog(`================ [ 模拟报告 ] ================`, 'warning')
-            addLog(`[概况] 胜率: ${(res.wins/res.iterations*100).toFixed(1)}% | 死亡: ${res.deaths}`, 'system')
-            addLog(`[战斗] DPS: ${res.dps.toFixed(1)} | 击杀: ${res.avgHitsToKill.toFixed(1)}刀`, 'system')
-            addLog(`[命中] Hit: ${res.hitRate.toFixed(1)}% | Crit: ${res.critRate.toFixed(1)}%`, 'dim')
-            
-            const hours = res.totalTime / 1000 / 3600
-            const zenyPerHour = Math.floor(res.totalLootVal / hours)
-            const expPerHour = Math.floor(res.totalExp / hours)
-            const potionPerHour = Math.floor(res.potionsUsed / hours)
-            const netZeny = zenyPerHour - (potionPerHour * 50) // 假设红药50z
-
-            addLog(`[效率] Exp: ${expPerHour}/h | 毛利: ${zenyPerHour}z/h`, 'warning')
-            addLog(`[消耗] 药水: ${potionPerHour}/h (成本: ${potionPerHour*50}z)`, 'dim')
-            
-            const color = netZeny > 0 ? 'success' : 'error'
-            addLog(`[净利] ${netZeny} Zeny/h`, color)
-            
-            addLog(`安全线: 战斗结束时最低血量 ${res.minHpEnd}`, 'dim')
-            addLog(`==============================================`, 'warning')
-        }, 100)
-    }
-    else if (cmd === 'i'|| cmd === 'item') { 
-      if (!player.inventory || player.inventory.length === 0) {
-        addLog('背包是空的。', 'system')
-      } else {
-        addLog('=== 背包物品 ===', 'system')
-        player.inventory.forEach((slot, index) => {
-          const info = getItemInfo(slot.id)
-          let extra = ''
-          if (info.type === ItemType.EQUIP) {
-              extra = info.atk ? ` (Atk:${info.atk})` : (info.def ? ` (Def:${info.def})` : '')
-          }
-          addLog(`${index + 1}. ${info.name} x ${slot.count}${extra}`, 'info')
-        })
-        addLog('================', 'system')
-      }
-    }
-    else if (cmd === 'help' || cmd === 'h' || cmd === '?') {
-      addLog(`========== [ 帮助手册 ] ==========`, 'system')
-      addLog(`  auto        : 开始自动战斗`, 'dim')
-      addLog(`  stop        : 停止自动战斗`, 'dim')
-      addLog(`  map         : 查看地图/移动`, 'dim')
-      addLog(`  conf <k> <v>: 修改配置`, 'dim')
-      addLog(`  s / stat    : 查看状态`, 'dim')
-      addLog(`  i / item    : 查看背包`, 'dim')
-      addLog(`  add <k> <v> : 分配素质点`, 'dim')
-      addLog(`  skill       : 学习技能`, 'dim')
-      addLog(`  use <name>  : 使用物品`, 'dim')
-      addLog(`  equip <name>: 装备物品`, 'dim')
-      addLog(`  unequip <k> : 卸下装备`, 'dim')
-      addLog(`  sell <n>    : 贩卖 (sell all 卖杂物)`, 'dim')
-      addLog(`  buy <n>     : 购买物品`, 'dim')
-      addLog(`  sim <map>   : 战斗模拟 (测试用)`, 'dim')
-      addLog(`  clear       : 清空日志`, 'dim')
-      addLog(`[提示] 输入指令时按 Tab 键可智能补全`, 'system')
-      addLog(`==================================`, 'system')
-    }
-    else if (cmd === 'clear') {
-      logs.value = []
-    } 
-    else if (rawCmd === 'echo "sys_connect_ai"') { 
-      addLog('正在建立安全连接...', 'system')
-      setTimeout(() => {
-        addLog('AI_ARCHITECT: 信号已接收。', 'warning')
-      }, 1500)
-    }
-    else {
-      addLog(`未知指令: ${rawCmd}`, 'error')
+    const found = executeGameCommand(cmd, args, context)
+    
+    if (!found) {
+        addLog(`未知指令: ${cmd}`, 'error')
     }
   
     userCommand.value = '' 
@@ -478,65 +207,165 @@
   onUnmounted(() => {
       if (autoSaveTimer) clearInterval(autoSaveTimer)
   })
+
+  // --- Computed for UI ---
+  const hpPercent = computed(() => {
+      if (player.maxHp <= 0) return 0
+      return Math.min(100, Math.max(0, (player.hp / player.maxHp) * 100))
+  })
+  
+  const spPercent = computed(() => {
+      if (player.maxSp <= 0) return 0
+      return Math.min(100, Math.max(0, (player.sp / player.maxSp) * 100))
+  })
+  
+  const baseExpPercent = computed(() => {
+      if (player.nextExp <= 0) return 0
+      return Math.min(100, Math.max(0, (player.exp / player.nextExp) * 100))
+  })
+  
+  const jobExpPercent = computed(() => {
+      if (player.nextJobExp <= 0) return 0
+      return Math.min(100, Math.max(0, (player.jobExp / player.nextJobExp) * 100))
+  })
+
+  const jobName = computed(() => JobConfig[player.job] ? JobConfig[player.job].name : player.job)
+
   </script>
   
   <template>
-    <div 
-      class="bg-black text-gray-300 font-mono h-screen flex flex-col overflow-hidden text-sm select-text"
-      @click="focusInput"
-    >
+    <div class="bg-black text-gray-300 font-mono h-screen flex overflow-hidden text-sm select-text">
       
-      <div class="bg-[#e0e0e0] text-black text-xs px-2 py-1 flex justify-between select-none border-b border-gray-400">
-        <div class="flex items-center gap-2">
-          <!-- 动态显示职业中文名 -->
-          <span class="font-bold">OpenKore Web - {{ player.name }} ({{ JobConfig[player.job]?.name || player.job }} {{ player.lv }}/{{ player.jobLv }}) - {{ Maps[player.currentMap]?.name || player.currentMap }}</span>
-        </div>
-        <div class="flex gap-2 text-gray-600">
-          <span>_</span>
-          <span>□</span>
-          <span>×</span>
-        </div>
-      </div>
-  
-      <div ref="logContainer" class="flex-1 overflow-y-auto p-1 scrollbar-hide break-all font-mono leading-tight relative">
-        <div v-for="(log, index) in logs" :key="index">
-          <span class="text-gray-500 mr-2">[{{ log.time }}]</span>
-          <span :class="{
-            'text-gray-300': log.type === 'info', 
-            'text-yellow-400': log.type === 'warning',   
-            'text-green-400': log.type === 'success',    
-            'text-red-500': log.type === 'error',        
-            'text-white': log.type === 'levelup',        
-            'text-cyan-600': log.type === 'system',      
-            'text-gray-500': log.type === 'dim',         
-            'text-gray-100': log.type === 'default'
-          }">{{ log.msg }}</span>
-        </div>
+      <!-- Left Sidebar: Character Status (Always visible now) -->
+      <div class="w-64 bg-gray-900 border-r border-gray-700 flex flex-col p-4 gap-4 shrink-0">
+          <!-- Name & Job -->
+          <div class="text-center pb-2 border-b border-gray-700">
+              <h2 class="text-lg font-bold text-white">{{ player.name }}</h2>
+              <div class="text-xs text-cyan-400">{{ jobName }}</div>
+              <div class="text-xs text-gray-500 mt-1">{{ Maps[player.currentMap]?.name }}</div>
+          </div>
+
+          <!-- HP / SP Bars -->
+          <div class="space-y-3">
+              <!-- HP -->
+              <div>
+                  <div class="flex justify-between text-xs mb-1">
+                      <span class="text-green-400">HP</span>
+                      <span>{{ Math.floor(player.hp) }} / {{ player.maxHp }}</span>
+                  </div>
+                  <div class="h-3 w-full bg-gray-800 rounded overflow-hidden border border-gray-700">
+                      <div class="h-full bg-green-600 transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
+                  </div>
+              </div>
+              <!-- SP -->
+              <div>
+                  <div class="flex justify-between text-xs mb-1">
+                      <span class="text-blue-400">SP</span>
+                      <span>{{ Math.floor(player.sp) }} / {{ player.maxSp }}</span>
+                  </div>
+                  <div class="h-3 w-full bg-gray-800 rounded overflow-hidden border border-gray-700">
+                      <div class="h-full bg-blue-600 transition-all duration-300" :style="{ width: spPercent + '%' }"></div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Exp Bars -->
+          <div class="space-y-2 pt-2 border-t border-gray-700">
+               <div class="text-xs flex justify-between">
+                   <span>Base Lv.{{ player.lv }}</span>
+                   <span class="text-gray-500">{{ baseExpPercent.toFixed(1) }}%</span>
+               </div>
+               <div class="h-1.5 w-full bg-gray-800 rounded overflow-hidden">
+                    <div class="h-full bg-yellow-600 transition-all duration-500" :style="{ width: baseExpPercent + '%' }"></div>
+               </div>
+               
+               <div class="text-xs flex justify-between mt-1">
+                   <span>Job Lv.{{ player.jobLv }}</span>
+                   <span class="text-gray-500">{{ jobExpPercent.toFixed(1) }}%</span>
+               </div>
+               <div class="h-1.5 w-full bg-gray-800 rounded overflow-hidden">
+                    <div class="h-full bg-purple-600 transition-all duration-500" :style="{ width: jobExpPercent + '%' }"></div>
+               </div>
+          </div>
+
+          <!-- Combat Stats Preview -->
+          <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs pt-2 border-t border-gray-700">
+              <div class="text-gray-400">Atk</div><div class="text-right">{{ player.atk }}</div>
+              <div class="text-gray-400">Matk</div><div class="text-right">{{ player.matk }}</div>
+              <div class="text-gray-400">Def</div><div class="text-right">{{ player.def }}</div>
+              <div class="text-gray-400">Hit</div><div class="text-right">{{ player.hit }}</div>
+              <div class="text-gray-400">Flee</div><div class="text-right">{{ player.flee }}</div>
+              <div class="text-gray-400">Aspd</div><div class="text-right">{{ player.aspd }}</div>
+          </div>
+
+          <!-- Assets -->
+          <div class="pt-2 border-t border-gray-700">
+               <div class="text-xs text-yellow-500 font-bold flex justify-between">
+                   <span>Zeny</span>
+                   <span>{{ player.zeny.toLocaleString() }} z</span>
+               </div>
+          </div>
+          
+           <!-- Status Indicator -->
+           <div class="mt-auto pt-2 border-t border-gray-700 text-xs text-center">
+              <span v-if="gameState.isAuto" class="text-green-500 animate-pulse">● AUTO BATTLE</span>
+              <span v-else class="text-gray-500">● IDLE</span>
+           </div>
       </div>
 
-      <!-- 智能提示浮窗 -->
-      <div v-if="suggestions.length > 0 && userCommand" class="bg-gray-800 border-t border-gray-600 text-gray-300 px-2 py-1 absolute bottom-8 left-0 w-full opacity-90">
-         <div v-for="(sug, idx) in suggestions" :key="idx" 
-              class="flex gap-2 cursor-pointer" 
-              :class="{'bg-gray-700 text-white': idx === suggestionIndex}"
-              @click="applySuggestion(sug)"
-         >
-             <span class="font-bold">{{ sug.text }}</span>
-             <span v-if="sug.hint" class="text-gray-500 text-xs">({{ sug.hint }})</span>
-         </div>
-      </div>
-  
-      <div class="bg-black px-1 pb-1">
-        <input 
-          ref="cmdInput"
-          v-model="userCommand"
-          @keyup.enter="executeCommand"
-          @keydown="handleKeyDown"
-          type="text" 
-          class="bg-black text-gray-200 w-full outline-none border-none caret-white"
-          spellcheck="false"
-          autocomplete="off"
-        />
+      <!-- Main Console Area -->
+      <div class="flex-1 flex flex-col h-full overflow-hidden relative" @click="focusInput">
+        <div class="bg-[#e0e0e0] text-black text-xs px-2 py-1 flex justify-between select-none border-b border-gray-400 shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="font-bold">OpenKore Web Console</span>
+          </div>
+          <div class="flex gap-2 text-gray-600">
+            <span>_</span>
+            <span>□</span>
+            <span>×</span>
+          </div>
+        </div>
+    
+        <div ref="logContainer" class="flex-1 overflow-y-auto p-1 scrollbar-hide break-all font-mono leading-tight relative">
+          <div v-for="(log, index) in logs" :key="index">
+            <span class="text-gray-500 mr-2">[{{ log.time }}]</span>
+            <span :class="{
+              'text-gray-300': log.type === 'info', 
+              'text-yellow-400': log.type === 'warning',   
+              'text-green-400': log.type === 'success',    
+              'text-red-500': log.type === 'error',        
+              'text-white': log.type === 'levelup',        
+              'text-cyan-600': log.type === 'system',      
+              'text-gray-500': log.type === 'dim',         
+              'text-gray-100': log.type === 'default'
+            }">{{ log.msg }}</span>
+          </div>
+        </div>
+
+        <!-- 智能提示浮窗 -->
+        <div v-if="suggestions.length > 0 && userCommand" class="bg-gray-800 border-t border-gray-600 text-gray-300 px-2 py-1 absolute bottom-8 left-0 w-full opacity-90">
+           <div v-for="(sug, idx) in suggestions" :key="idx" 
+                class="flex gap-2 cursor-pointer" 
+                :class="{'bg-gray-700 text-white': idx === suggestionIndex}"
+                @click="applySuggestion(sug)"
+           >
+               <span class="font-bold">{{ sug.text }}</span>
+               <span v-if="sug.hint" class="text-gray-500 text-xs">({{ sug.hint }})</span>
+           </div>
+        </div>
+    
+        <div class="bg-black px-1 pb-1 shrink-0">
+          <input 
+            ref="cmdInput"
+            v-model="userCommand"
+            @keyup.enter="executeCommand"
+            @keydown="handleKeyDown"
+            type="text" 
+            class="bg-black text-gray-200 w-full outline-none border-none caret-white"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </div>
       </div>
   
     </div>

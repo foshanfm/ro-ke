@@ -10,6 +10,7 @@ A web-based idle game recreating the experience of using automated botting softw
     *   **Dual-Track Async Loop:** Player and Monster act independently based on ASPD/Delay.
     *   **Session Lock:** Prevents race conditions during state transitions.
     *   **Pure Formulas:** All math (Damage, Hit, Drop) is isolated in `formulas.js`.
+    *   **Command Registry:** All console commands are decoupled using the Registry Pattern (`commands.js`).
 *   **Drop System:** Layered RNG with "Normal" (Trash) vs "Rare" (Equip/Card) tables, featuring a **Soft Pity** mechanism.
 
 ## 3. Roadmap
@@ -35,6 +36,7 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Technical Refactor:** 
     - [x] Extracted `formulas.js` (Pure Math).
     - [x] Implemented `drops.js` (Weighted Tables + Pity).
+    - [x] Refactored `App.vue` command parser to Registry Pattern (`commands.js`).
 
 ### Phase 4: Job Change & Advancement [Next Step]
 - [ ] **Job Change System:**
@@ -51,10 +53,10 @@ A web-based idle game recreating the experience of using automated botting softw
     - [ ] `sit` command (2x Regen).
 
 ## 4. Current State
-*   **Version:** 0.9.5 (Refactor & Automation Update)
+*   **Version:** 0.9.6 (Architecture Update)
 *   **Stability:** Enterprise-grade. Protected against race conditions and save corruption.
 *   **Automation:** Fully autonomous loop (Fight -> Auto Potion -> Loot -> Auto Sell -> Auto Buy).
-*   **Data Integrity:** 
-    - Damage formulas behave correctly (High Agi = Dodge, High Luk = Crit).
-    - Drop system ensures "Bad Luck Protection" for rares.
+*   **Code Quality:**
+    - **Decoupled Commands:** New `commands.js` module allows easy addition of new commands without bloating UI code.
+    - **Pure Math:** Damage and stats isolated in `formulas.js`.
 *   **Next Objective:** Begin Phase 4 (Job Change) to break the Novice limit.

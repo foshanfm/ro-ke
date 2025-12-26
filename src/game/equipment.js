@@ -2,6 +2,7 @@
 
 export const EquipType = {
     WEAPON: 'Weapon',
+    SHIELD: 'Shield', // 新增副手/盾牌槽位
     ARMOR: 'Armor',
     HEAD: 'Head',
     ACCESSORY: 'Accessory'
@@ -37,6 +38,17 @@ export const EquipDB = {
         weight: 40,
         reqLv: 1,
         desc: '有插槽的短剑。' 
+    },
+    // --- Shields ---
+    2101: {
+        id: 2101,
+        name: '圆盾', // Guard
+        type: EquipType.SHIELD,
+        def: 2,
+        weight: 30,
+        reqLv: 1,
+        price: 500,
+        desc: '初学者也能使用的简易盾牌。'
     },
     // --- Armors ---
     2301: {
