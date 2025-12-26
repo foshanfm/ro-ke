@@ -7,62 +7,75 @@
 *   **前端:** Vue 3 + Vite + Tailwind CSS。
 *   **状态管理:** Vue `reactive`/`ref` 模拟游戏服务器数据。
 *   **持久化:** `localStorage` (通过 `watch` 监听玩家状态自动保存)。
-*   **游戏循环:** 
-    *   **Combat Loop:** 基于 ASPD (攻速) 的异步循环。
+*   **游戏循环 (Game Loop):** 
+    *   **异步双轨系统 (Dual Track Async System):** 
+        *   **Player Loop:** 由玩家 ASPD 驱动 (Delay = `(200-ASPD)*20` ms)，负责索敌和攻击。
+        *   **Monster Loop:** 由怪物 Attack Delay 驱动 (不同怪物攻速不同)，独立攻击玩家。
     *   **Recovery Loop:** 独立于战斗的自然回血/回蓝循环 (Tick rate: 5s)。
-*   **UI:** "控制台优先" 设计。核心交互是查看日志流和输入指令（提供快捷指令按钮）。
+*   **属性公式 (Renewal + Classic Hybrid):**
+    *   **ATK:** `StatusATK + WeaponATK`。StatusATK 包含 `(Str/10)^2` 的额外加成。
+    *   **MATK:** `(Int/10)^2` 额外加成。
+    *   **DEF:** `HardDEF` (装备) + `SoftDEF` (Vit/Agi/Lv)。
+    *   **ASPD:** 受 Agi 和 Dex 影响，直接决定攻击间隔。
+    *   **Hit/Flee/Crit:** 完全实装 RO 经典公式。
+*   **交互体验 (UX):**
+    *   **智能提示 (IntelliSense):** 命令行支持指令与参数的实时补全 (Tab/Enter)。
+    *   **全中文环境:** 物品、怪物、帮助文档全面汉化。
 
 ## 3. 路线图 (Roadmap)
 
 ### 第一阶段: 核心引擎与地基 (Phase 1: Core Engine & Foundation) - [已完成]
 - [x] **控制台 UI:** 基础日志显示、命令解析、自动滚动。
-- [x] **战斗循环 (Combat Loop):** 自动索敌、攻击、基于属性的伤害计算。
-- [x] **回复循环 (Recovery Loop):** 站立/战斗中自动回复 HP/SP，支持技能修正。
-- [x] **职业架构:** 
-    *   Base Lv / Job Lv 双等级分离。
-    *   职业配置 (Novice + 5大一转职业) 的 HP/SP 系数与 ASPD 修正。
-    *   指数级经验成长表。
+- [x] **战斗循环:** 
+    - [x] 自动索敌与攻击。
+    - [x] **异步双轨战斗:** 玩家和怪物拥有独立的攻击频率。
+    - [x] 命中(Hit)、回避(Flee)、暴击(Crit) 判定。
 - [x] **属性系统:**
-    *   六维基础属性 (STR, AGI, VIT, INT, DEX, LUK)。
-    *   素质点 (Stat Points) 分配功能 (`add str 1`)。
-    *   衍生属性计算 (MaxHP, MaxSP, Hit, Flee)。
-- [x] **持久化:** 自动存档/读档，支持数据迁移。
-- [x] **基础背包:** 物品掉落与 `i` (item) 查看命令。
-- [x] **容错机制:** 启动时自动复活 (Auto-Resurrection)、数值安全检查。
+    - [x] 六维基础属性 (STR, AGI, VIT, INT, DEX, LUK)。
+    - [x] 素质点消耗递增机制 (2~11点/级)。
+    - [x] 复杂的面板属性计算 (ATK, DEF, MATK 等)。
+- [x] **职业架构:** Base Lv / Job Lv 双等级，职业配置修正。
+- [x] **持久化:** 自动存档/读档。
 
-### 第二阶段: 技能与进阶 (Phase 2: Skills & Progression) - [进行中]
+### 第二阶段: 技能与进阶 (Phase 2: Skills & Progression) - [已完成]
 - [x] **技能系统核心:**
-    *   `skills.js` 数据库 (定义 Novice & 一转技能)。
-    *   前置条件检查 (职业、前置技能等级)。
-    *   `skill` 命令：查看与学习技能。
-- [ ] **装备系统 (Equipment System):**
-    *   [ ] 装备数据结构 (武器、防具)。
-    *   [ ] 装备栏位 (右手、身体等)。
-    *   [ ] `equip` 命令与属性加成 (Atk, Def)。
-- [ ] **消耗品与生存 (Consumables):**
-    *   [ ] `use <item>` 命令。
-    *   [ ] 自动吃药配置 (Auto-Potion Config)。
-- [ ] **战斗 2.0 (Active Skills):**
-    *   [ ] 主动技能释放逻辑 (消耗 SP 造成伤害/Buff)。
-    *   [ ] 被动技能实装 (如 HP Recovery, Sword Mastery)。
-- [ ] **转职系统 (Job Change):**
-    *   [ ] `job change` 命令 (需满足 Job Lv 10 & Basic Skill Lv 9)。
-    *   [ ] 转职属性重算与加成。
+    - [x] `skills.js` 数据库。
+    - [x] 技能学习逻辑 (Skill Points)。
+    - [x] 被动技能实装 (二刀连击, 回避率增加, HP回复增加)。
+- [x] **装备系统 (Equipment System):**
+    - [x] 装备部位 (Weapon, Armor)。
+    - [x] `equip`/`unequip` 命令。
+    - [x] 属性加成实装。
+- [x] **消耗品与生存 (Consumables):**
+    - [x] `use <item>` 命令 (红药水)。
+    - [x] **Config 系统:** `conf` 指令，支持 `auto_hp_percent` 自动喝药。
+- [x] **怪物图鉴完善:** 实装 Lv 1-10 所有怪物及其详细属性 (12种怪物)。
 
-### 第三阶段: 世界与经济 (Phase 3: World & Economy)
-- [ ] **地图系统:** 抽象地图移动 (prontera_fild01, pay_dun00)。
-- [ ] **商店:** NPC 买卖系统。
+### 第三阶段: 世界与经济 (Phase 3: World & Economy) - [进行中]
+- [x] **地图系统 (Map System):** 
+    - [x] `maps.js` 定义地图与怪物分布。
+    - [x] `map` 指令查看与移动。
+    - [x] 区域化刷怪逻辑。
+- [x] **智能交互 (Smart UI):**
+    - [x] 命令行输入智能提示与补全。
+- [x] **经济系统 (Economy):**
+    - [x] Zeny 货币实装。
+    - [x] 掉落物出售 (`sell`)。
+    - [x] 商店购买 (`buy`) 消耗品。
+- [ ] **代码重构 (Refactor):**
+    - [ ] 提取公式到 `formulas.js`。
 - [ ] **坐下 (Sitting):** `sit` 命令加速回复。
+- [ ] **转职系统 (Job Change):**
+    - [ ] `job change` 命令。
+    - [ ] 转职任务或条件检查。
 
 ### 第四阶段: 二转职业 (Phase 4: Second Jobs)
-- [ ] 2-1 和 2-2 职业 (骑士、巫师、猎人、刺客、牧师)。
+- [ ] 2-1 和 2-2 职业。
 
 ## 4. 当前状态 (Current State)
-*   **版本:** 0.3.0 (Skill & Recovery Update)
+*   **版本:** 0.8.0 (Economy & Map System)
 *   **可玩内容:** 
-    *   挂机打怪 (波利/疯兔/绿棉虫)。
-    *   升级 Base/Job 等级。
-    *   分配素质点。
-    *   学习技能 (Novice 技能)。
-    *   体验自然回血机制。
-*   **下一步:** 实装 **装备系统**，让角色拥有武器和防具，为转职后的物理/魔法伤害差异化做准备。
+    *   全功能挂机：自动打怪、自动喝药、自动存读档。
+    *   经济闭环：打怪赚钱 -> 商店买药。
+    *   探索世界：通过 `map` 指令在 5 张不同难度的地图间穿梭。
+*   **下一步:** 提取核心公式，为转职系统的属性大修做准备。

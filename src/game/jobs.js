@@ -11,42 +11,42 @@ export const JobType = {
   
 export const JobConfig = {
     [JobType.NOVICE]: {
-        name: 'Novice',
+        name: '初学者', // Novice
         maxJobLv: 10,
-        hpMod: 1.0, // HP 系数
-        spMod: 1.0, // SP 系数
+        hpMod: 1.0, 
+        spMod: 1.0, 
         aspdBonus: 0
     },
     [JobType.SWORDMAN]: {
-        name: 'Swordman',
+        name: '剑士', // Swordman
         maxJobLv: 50,
         hpMod: 1.5,
         spMod: 0.8,
         aspdBonus: 2
     },
     [JobType.MAGE]: {
-        name: 'Mage',
+        name: '法师', // Mage
         maxJobLv: 50,
         hpMod: 0.8,
         spMod: 1.8,
         aspdBonus: 0
     },
     [JobType.ARCHER]: {
-        name: 'Archer',
+        name: '弓箭手', // Archer
         maxJobLv: 50,
         hpMod: 0.9,
         spMod: 1.0,
         aspdBonus: 5
     },
     [JobType.THIEF]: {
-        name: 'Thief',
+        name: '盗贼', // Thief
         maxJobLv: 50,
         hpMod: 1.1,
         spMod: 0.9,
         aspdBonus: 10
     },
     [JobType.ACOLYTE]: {
-        name: 'Acolyte',
+        name: '服事', // Acolyte
         maxJobLv: 50,
         hpMod: 1.0,
         spMod: 1.5,
@@ -54,13 +54,10 @@ export const JobConfig = {
     }
 }
 
-// 简单的经验曲线公式
 export function getNextBaseExp(lv) {
-    // 简单的指数增长: 100 * (1.5 ^ (lv - 1))
     return Math.floor(100 * Math.pow(1.5, lv - 1))
 }
 
 export function getNextJobExp(lv) {
-    // Job 经验通常比 Base 少一点，但也指数增长
     return Math.floor(50 * Math.pow(1.4, lv - 1))
 }
