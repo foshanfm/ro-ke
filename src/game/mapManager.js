@@ -66,11 +66,11 @@ export function fillMonsters() {
     const spawnInfo = spawnData[mapState.currentMapId]
 
     if (spawnInfo && spawnInfo.spawns && spawnInfo.spawns.length > 0) {
-        // 使用新的刷怪数据系统
+        // 使用刷怪数据系统
         fillMonstersFromSpawnData(spawnInfo)
     } else {
-        // 使用旧的权重系统 (后备方案)
-        fillMonstersLegacy(mapInfo)
+        // 没有刷怪数据，打印警告
+        console.warn(`[MapManager] 地图 ${mapState.currentMapId} 没有刷怪数据`)
     }
 }
 
@@ -97,50 +97,23 @@ function fillMonstersFromSpawnData(spawnInfo) {
 }
 
 /**
- * 使用权重系统填充怪物 (旧系统 - 后备方案)
- */
-function fillMonstersLegacy(mapInfo) {
-    const targetCount = mapInfo.spawnRate
-    while (mapState.monsters.length < targetCount) {
-        spawnSingleMonsterWeighted(mapInfo)
-    }
-}
-
-/**
  * 生成单个怪物 (按 ID)
  */
 function spawnSingleMonsterById(mobId) {
-    const proto = getMonster(mobId)
-    const monster = {
-        ...proto,
+    const template = getMonster(mobId)
+    const instance = {
         guid: ++guidCounter,
+        templateId: mobId,           // 关联模板 ID
         x: Math.floor(Math.random() * mapState.width),
         y: Math.floor(Math.random() * mapState.height),
-        hp: proto.hp,
-        maxHp: proto.hp
+        hp: template.hp,             // 实例化的当前血量
+        maxHp: template.hp,
+        // 运行时状态
+        isAggressive: false,
+        lastAttackTime: 0
     }
 
-    mapState.monsters.push(monster)
-}
-
-/**
- * 生成单个怪物 (按权重)
- */
-function spawnSingleMonsterWeighted(mapInfo) {
-    // 1. 根据权重选择怪
-    const rand = Math.random()
-    let cumulative = 0
-    let selectedId = mapInfo.monsters[0].id
-    for (const m of mapInfo.monsters) {
-        cumulative += m.rate
-        if (rand < cumulative) {
-            selectedId = m.id
-            break
-        }
-    }
-
-    // 2. 生成实例
-    spawnSingleMonsterById(selectedId)
+    mapState.monsters.push(instance)
 }
 
 /**

@@ -88,12 +88,30 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Auto-Pilot:** Clickable portal buttons that automatically move the player to the exit.
 - [x] **Context Awareness:** Enhanced `map` command with level range hints and nearby portal lists.
 
+### Phase 10: Data Architecture Optimization [Completed]
+- [x] **Monster Instance Refactoring:**
+  - [x] Separated monster templates from instances (Template-Instance Pattern).
+  - [x] Instances now store only `guid`, `templateId`, `x`, `y`, `hp`, and runtime state.
+  - [x] Combat system uses `getMobTemplate()` to access template attributes.
+- [x] **Attack Speed System:**
+  - [x] Parsed `aDelay` field from `mob_db.txt` (column 26).
+  - [x] Applied monster-specific attack delays in combat loop.
+  - [x] Each monster now has unique attack intervals instead of hardcoded 2000ms.
+- [x] **Map Metadata Cleanup:**
+  - [x] Removed `spawnRate` and `monsters` fields from `maps.js`.
+  - [x] Deleted legacy `fillMonstersLegacy` and `spawnSingleMonsterWeighted` functions.
+  - [x] Map metadata now only contains: `id`, `name`, `width`, `height`, `minLv`, `maxLv`.
+- [x] **UI Synchronization:**
+  - [x] Fixed `mapMonsters` computed property to read `mapState.monsters` (real-time instances).
+  - [x] Monster list now displays live data with counts (e.g., "波利 (Lv.1) x5").
+
 ## 4. Current State
-*   **Version:** 1.0.2 (Phase 9 - Advanced Navigation & UX Complete)
-*   **Stability:** High. Verified navigation loops and experience penalties.
-*   **Automation:** Full cyclic navigation supported via both commands and UI.
+*   **Version:** 1.1.0 (Phase 10 - Data Architecture Optimization Complete)
+*   **Stability:** High. Verified combat system with template-instance separation.
+*   **Performance:** Optimized memory usage by eliminating redundant monster data storage.
 *   **New Features:**
-    - **UI Navigation Panel:** Real-time monster list and clickable "Goto" buttons for portals.
-    - **Standard Movement:** Precision `move <x> <y>` command with pathing integration.
-    - **Renewal Database:** Authentic Exp tables and level penalty formulas.
+    - **Template-Instance Pattern:** Monster instances reference templates via `templateId`.
+    - **Dynamic Attack Speed:** Monsters attack at their own `aDelay` intervals from database.
+    - **Clean Data Layer:** Maps, monsters, and spawn data are now properly decoupled.
+    - **Live Monster List:** UI displays real-time monster counts on current map.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

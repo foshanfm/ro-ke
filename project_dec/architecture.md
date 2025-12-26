@@ -28,6 +28,10 @@ All math logic resides in `src/game/formulas.js`.
 *   **`db/index.js`**: Dexie.js Database Wrapper. Manages `saves` and `static_data` object stores.
 *   **`DataManager.js`**: Logic Orchestrator. Manages the lifecycle of game data, including parsing, caching to IndexedDB, and memory retrieval.
 *   **`dataLoader.js`**: Parser. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts. Called by `DataManager` if cache is stale.
+*   **`monsters.js`**: Template Cache. Stores monster templates loaded from `mob_db.txt`. Provides `getMonster(id)` for attribute lookup.
+*   **`mapManager.js`**: Instance Manager. Manages live monster instances (`mapState.monsters`) and active warps. Uses Template-Instance Pattern:
+    - **Template** (from `monsters.js`): Static data like `name`, `hp`, `atk`, `attackDelay`.
+    - **Instance** (in `mapState.monsters`): Runtime data like `guid`, `templateId`, `x`, `y`, current `hp`.
 
 ## 3. Core Algorithms (Standard)
 
@@ -61,13 +65,15 @@ Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 
     *   Add raw data to `src/game/data/item_db.txt` or `mob_db.txt` following the rAthena/eAthena format.
     *   `dataLoader.js` will automatically parse and inject them into `items.js` / `monsters.js` on startup.
-    *   Monster objects include `attackDelay` (ms), `aspd` (display value), and `aps` (attacks per second).
+    *   Monster objects include `attackDelay` (ms, from `aDelay` field), `aspd` (display value), and `aps` (attacks per second).
+    *   **Important**: Monsters are stored as **templates**. Combat system creates **instances** with `templateId` references.
 2.  **ASPD Balancing:**
     *   Update `src/game/data/system/job_base_aspd.json` to adjust base attack speeds or shield penalties for specific jobs.
 
 2.  **New Map/Spawn:** 
-    *   Update `src/game/maps.js` for metadata (Width/Height/Name).
-    *   Add spawn script to `src/game/data/mobs/fields/*.txt`.
+    *   **Metadata**: Update `src/game/maps.js` with basic info: `id`, `name`, `width`, `height`, `minLv`, `maxLv`.
+    *   **Spawn Data**: Add spawn script to `src/game/data/mobs/fields/*.txt` (rAthena format).
+    *   **Auto-Registration**: Maps are automatically registered when spawn/warp data is loaded.
 3.  **New Skill:**
     *   Add definition to `skills.js`.
     *   If passive stat bonus: Update `formulas.js` or `PassiveHooks` in `skillEngine.js`.

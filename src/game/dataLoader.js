@@ -183,22 +183,16 @@ export async function loadMobDB(maxLevel = 20) {
  * 格式: MapName,X,Y,X2,Y2,Type,Name,MobID,Count,SpawnDelay,DeathDelay
  * 实际格式: MapName,0,0,0,0\tmonster\tName\tMobID,Count,SpawnDelay,DeathDelay
  */
+import { registerMap } from './maps.js'
+
 export async function loadSpawnData(mobsDB, maxLevel = 20) {
   const spawnData = {}
 
-  // 需要加载的地图文件列表
-  const fieldFiles = [
-    'prontera',
-    'payon',
-    'geffen',
-    'morocc',
-    'comodo'
-  ]
-
   try {
-    for (const fieldName of fieldFiles) {
-      const response = await fetch(`/src/game/data/mobs/fields/${fieldName}.txt`)
-      const text = await response.text()
+    // 使用 Vite 的 import.meta.glob 自动发现所有刷怪文件
+    const modules = import.meta.glob('/src/game/data/mobs/fields/*.txt', { as: 'raw', eager: true })
+
+    for (const [path, text] of Object.entries(modules)) {
       const lines = text.split('\n')
 
       for (const line of lines) {
@@ -233,6 +227,8 @@ export async function loadSpawnData(mobsDB, maxLevel = 20) {
             mapId: mapName,
             spawns: []
           }
+          // 自动注册未知地图
+          registerMap(mapName, { name: mapName })
         }
 
         // 添加刷怪点
@@ -277,66 +273,48 @@ export async function loadWarpData() {
   try {
     const warpDB = {}
 
-    // 需要加载的目录列表
-    const directories = [
-      'cities',
-      'fields',
-      'dungeons'
-    ]
+    // 使用 Vite 的 import.meta.glob 自动发现所有传送点文件 (递归扫描 cities, fields, dungeons)
+    const modules = import.meta.glob('/src/game/data/airports/**/*.txt', { as: 'raw', eager: true })
 
-    // 需要加载的文件列表 (示例 - 可以扩展)
-    const fileMap = {
-      cities: ['prontera', 'payon', 'geffen', 'morocc', 'alberta', 'comodo'],
-      fields: ['mtmjolnir', 'glastheim'],
-      dungeons: []
-    }
+    for (const [path, text] of Object.entries(modules)) {
+      const lines = text.split('\n')
 
-    for (const dir of directories) {
-      const files = fileMap[dir] || []
-      for (const fileName of files) {
-        try {
-          const response = await fetch(`/src/game/data/airports/${dir}/${fileName}.txt`)
-          if (!response.ok) continue
+      for (const line of lines) {
+        // 跳过注释和空行
+        if (line.trim().startsWith('//') || line.trim() === '') continue
 
-          const text = await response.text()
-          const lines = text.split('\n')
+        // 解析格式: mapname,x,y,facing  warp  name  spanX,spanY,targetMap,targetX,targetY
+        const warpRegex = /^([a-zA-Z0-9_]+),(\d+),(\d+),\d+\s+warp\s+(\S+)\s+(\d+),(\d+),([a-zA-Z0-9_]+),(\d+),(\d+)/
+        const match = line.match(warpRegex)
 
-          for (const line of lines) {
-            // 跳过注释和空行
-            if (line.trim().startsWith('//') || line.trim() === '') continue
+        if (match) {
+          const [_, sourceMap, x, y, npcName, spanX, spanY, targetMap, targetX, targetY] = match
 
-            // 解析格式: mapname,x,y,facing  warp  name  spanX,spanY,targetMap,targetX,targetY
-            const warpRegex = /^([a-zA-Z0-9_]+),(\d+),(\d+),\d+\s+warp\s+(\S+)\s+(\d+),(\d+),([a-zA-Z0-9_]+),(\d+),(\d+)/
-            const match = line.match(warpRegex)
-
-            if (match) {
-              const [_, sourceMap, x, y, npcName, spanX, spanY, targetMap, targetX, targetY] = match
-
-              // 初始化源地图的传送点数组
-              if (!warpDB[sourceMap]) {
-                warpDB[sourceMap] = []
-              }
-
-              warpDB[sourceMap].push({
-                x: parseInt(x),
-                y: parseInt(y),
-                spanX: parseInt(spanX),
-                spanY: parseInt(spanY),
-                targetMap,
-                targetX: parseInt(targetX),
-                targetY: parseInt(targetY),
-                name: npcName
-              })
-            }
+          // 初始化源地图的传送点数组
+          if (!warpDB[sourceMap]) {
+            warpDB[sourceMap] = []
+            registerMap(sourceMap, { name: sourceMap })
           }
-        } catch (err) {
-          console.warn(`[DataLoader] 无法加载传送点文件: ${dir}/${fileName}.txt`)
+
+          // 也可以注册目标地图 (防止跳转到黑洞)
+          registerMap(targetMap, { name: targetMap })
+
+          warpDB[sourceMap].push({
+            x: parseInt(x),
+            y: parseInt(y),
+            spanX: parseInt(spanX),
+            spanY: parseInt(spanY),
+            targetMap,
+            targetX: parseInt(targetX),
+            targetY: parseInt(targetY),
+            name: npcName
+          })
         }
       }
     }
 
     const totalWarps = Object.values(warpDB).reduce((sum, arr) => sum + arr.length, 0)
-    console.log(`[DataLoader] 已加载 ${totalWarps} 个传送点，覆盖 ${Object.keys(warpDB).length} 张地图`)
+    console.log(`[DataLoader] 已加载 ${totalWarps} 个传送点,覆盖 ${Object.keys(warpDB).length} 张地图`)
     return warpDB
   } catch (error) {
     console.error('[DataLoader] 加载传送点数据失败:', error)

@@ -8,7 +8,7 @@
   import { initializeGameData } from './game/DataManager.js'
   import { setItemsDB, getItemInfo } from './game/items.js'
   import { setMonstersDB, getMonster } from './game/monsters.js'
-  import { setSpawnData, setWarpData, mapState } from './game/mapManager.js'
+  import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
   import { moveTo } from './game/combat.js'
   import LoginScreen from './components/LoginScreen.vue'
 
@@ -170,6 +170,10 @@
       setWarpData(warpDB)
       
       isDataLoaded.value = true
+      
+      // 数据加载后，初始化当前地图
+      initMap(player.currentMap)
+
       addLog('游戏数据加载完成!', 'success')
     } catch (error) {
       addLog('游戏数据加载失败,将使用后备数据', 'warning')
@@ -186,6 +190,15 @@
         await saveGame()
         // addLog('Auto saved.', 'dim') // 可选提示
     }, 30000)
+  })
+
+  // 监听地图变更，自动更新地图数据
+  watch(() => player.currentMap, (newMapId, oldMapId) => {
+    if (newMapId && newMapId !== oldMapId) {
+        initMap(newMapId)
+        // 可选：添加一条系统日志
+        // addLog(`进入地图: ${Maps[newMapId]?.name || newMapId}`, 'system')
+    }
   })
 
   onUnmounted(() => {
@@ -215,20 +228,30 @@
 
   const jobName = computed(() => JobConfig[player.job] ? JobConfig[player.job].name : player.job)
 
-  // 地图怪物列表
+
+  // 地图怪物列表 - 显示当前地图上的实时怪物实例
   const mapMonsters = computed(() => {
-    const mapInfo = Maps[player.currentMap]
-    if (!mapInfo || !mapInfo.monsters) return []
+    if (!mapState.monsters || mapState.monsters.length === 0) return []
     
-    return mapInfo.monsters.map(m => {
-      const mobInfo = getMonster(m.id)
-      return {
-        id: m.id,
-        name: mobInfo?.name || `Monster ${m.id}`,
-        lv: mobInfo?.lv || '?'
+    // 统计每种怪物的数量
+    const monsterCounts = {}
+    mapState.monsters.forEach(instance => {
+      const id = instance.templateId
+      if (!monsterCounts[id]) {
+        const template = getMonster(id)
+        monsterCounts[id] = {
+          id,
+          name: template?.name || `Monster ${id}`,
+          lv: template?.lv || '?',
+          count: 0
+        }
       }
+      monsterCounts[id].count++
     })
+    
+    return Object.values(monsterCounts)
   })
+
 
   // 地图传送点列表
   const mapPortals = computed(() => {

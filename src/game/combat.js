@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { player, addExp, addItem, useItem, saveGame, warp } from './player'
-import { spawnMonster } from './monsters'
+import { spawnMonster, getMonster } from './monsters'
 import { getItemInfo } from './items'
 import { calcAspdDelay, calculateDamageFlow } from './formulas'
 import { calculateDrops } from './drops'
@@ -22,6 +22,13 @@ export function setLogCallback(fn) {
 
 function log(msg, type = 'info') {
     if (logCallback) logCallback(msg, type)
+}
+
+/**
+ * 获取怪物模板数据（工具函数）
+ */
+function getMobTemplate(monsterInstance) {
+    return getMonster(monsterInstance.templateId)
 }
 
 function getPlayerDelay() {
@@ -173,7 +180,8 @@ async function aiTick(sessionId) {
 
             if (monster) {
                 gameState.currentMonster = monster
-                log(`Monster ${monster.name} detected at distance ${Math.floor(distance)}!`, 'dim')
+                const mobTemplate = getMobTemplate(monster)
+                log(`Monster ${mobTemplate.name} detected at distance ${Math.floor(distance)}!`, 'dim')
             } else {
                 // 没怪，随机走动
                 randomWalk()
@@ -225,12 +233,13 @@ async function aiTick(sessionId) {
 
         // 攻击逻辑 (保持原有的 formulas)
         const passiveRes = PassiveHooks.onNormalAttack(target)
+        const targetTemplate = getMobTemplate(target)
         const res = calculateDamageFlow({
             attackerAtk: player.atk,
             attackerHit: player.hit,
             attackerCrit: player.crit,
-            defenderDef: target.def || 0,
-            defenderFlee: target.flee || 1,
+            defenderDef: targetTemplate.def || 0,
+            defenderFlee: targetTemplate.flee || 1,
             isPlayerAttacking: true
         })
 
@@ -241,7 +250,7 @@ async function aiTick(sessionId) {
             if (passiveRes.damageMod !== 1.0) damage = Math.floor(damage * passiveRes.damageMod)
 
             if (res.type === 'crit') log(`CRITICAL! You deal ${damage} damage.`, 'warning')
-            else log(`You attack ${target.name} for ${damage} damage.`, 'default')
+            else log(`You attack ${targetTemplate.name} for ${damage} damage.`, 'default')
 
             passiveRes.logs.forEach(l => log(l.msg, l.type))
 
@@ -283,9 +292,10 @@ async function monsterActionLoop(sessionId) {
     const target = gameState.currentMonster
 
     if (target.hp > 0 && player.hp > 0) {
+        const targetTemplate = getMobTemplate(target)
         const res = calculateDamageFlow({
-            attackerAtk: target.atk,
-            attackerHit: target.hit || 50,
+            attackerAtk: targetTemplate.atk,
+            attackerHit: targetTemplate.hit || 50,
             attackerCrit: 0,
             defenderDef: player.def,
             defenderFlee: player.flee,
@@ -293,10 +303,10 @@ async function monsterActionLoop(sessionId) {
         })
 
         if (res.type === 'miss') {
-            log(`${target.name} missed you!`, 'success')
+            log(`${targetTemplate.name} missed you!`, 'success')
         } else {
             player.hp -= res.damage
-            log(`${target.name} attacks you for ${res.damage} damage!`, 'error')
+            log(`${targetTemplate.name} attacks you for ${res.damage} damage!`, 'error')
             checkAutoPotion()
 
             if (player.hp <= 0) {
@@ -311,7 +321,8 @@ async function monsterActionLoop(sessionId) {
     }
 
     if (gameState.isAuto && gameState.currentMonster && gameState.currentMonster.hp > 0 && sessionId === combatSessionId) {
-        const delay = target.attackDelay || 2000
+        const targetTemplate = getMobTemplate(target)
+        const delay = targetTemplate.attackDelay || 2000
         monsterLoopId = setTimeout(() => monsterActionLoop(sessionId), delay)
     } else {
         monsterLoopId = null
@@ -319,17 +330,18 @@ async function monsterActionLoop(sessionId) {
 }
 
 function monsterDead(target) {
-    log(`${target.name} died.`, 'success')
+    const targetTemplate = getMobTemplate(target)
+    log(`${targetTemplate.name} died.`, 'success')
 
-    const jobExp = target.jobExp || Math.ceil(target.exp * 0.6)
-    const { leveledUp, jobLeveledUp, finalBase, finalJob } = addExp(target.exp, jobExp, target.lv)
+    const jobExp = targetTemplate.jobExp || Math.ceil(targetTemplate.exp * 0.6)
+    const { leveledUp, jobLeveledUp, finalBase, finalJob } = addExp(targetTemplate.exp, jobExp, targetTemplate.lv)
 
     log(`Base Exp + ${finalBase} | Job Exp + ${finalJob}`, 'info')
 
     if (leveledUp) log(`Level Up! Base Lv ${player.lv}`, 'levelup')
     if (jobLeveledUp) log(`Job Up! Job Lv ${player.jobLv}`, 'levelup')
 
-    const drops = calculateDrops(target.id)
+    const drops = calculateDrops(target.templateId)
     drops.forEach(drop => {
         addItem(drop.id, drop.count)
         const info = getItemInfo(drop.id)
