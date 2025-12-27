@@ -88,35 +88,60 @@ export function recalculateMaxStats() {
 
     const bonus = {
         str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0,
-        atk: 0, def: 0, hp: 0, sp: 0, crit: 0, flee: 0
+        atk: 0, def: 0, matk: 0, mdef: 0, hp: 0, sp: 0,
+        crit: 0, flee: 0, hit: 0
     }
 
     if (player.equipment) {
         Object.values(player.equipment).forEach(instance => {
             if (!instance) return
-            const e = EquipDB[instance.id]
+            const e = getItemInfo(instance.id)
             if (!e) return
 
-            if (e.type === EquipType.WEAPON) {
-                weaponAtk = e.atk || 0
-                weaponType = e.subType || WeaponType.NONE
-            }
-            if (e.type === EquipType.SHIELD) {
-                hasShield = true
-            }
-            if (e.def) equipDef += e.def
+            if (e.type === ItemType.EQUIP) {
+                // 1. 基础攻击与子类型
+                if (e.subType && Object.values(WeaponType).includes(e.subType)) {
+                    weaponAtk = e.atk || 0
+                    weaponType = e.subType
+                } else if (e.name.includes('弓') || e.subType === 'BOW') { // 后备兼容
+                    weaponAtk = e.atk || 0
+                    weaponType = WeaponType.BOW
+                }
 
-            // 收集装备的 ASPD 加成 (如果装备数据中定义了)
-            if (e.aspdRate) aspdModifiers.equipRate += e.aspdRate
-            if (e.aspdFlat) aspdModifiers.flatBonus += e.aspdFlat
+                if (e.subType === 'Shield' || e.subType === EquipType.SHIELD) {
+                    hasShield = true
+                }
 
-            if (instance.cards) {
-                instance.cards.forEach(cardId => {
-                    if (!cardId) return
-                    if (cardId === 4001) bonus.luk += 2
-                    if (cardId === 4002) { bonus.vit += 1; bonus.hp += 100 }
-                    if (cardId === 4005) { bonus.luk += 2; bonus.crit += 2 }
-                })
+                // 2. 基础加成 (ATK, DEF)
+                // 注意: rAthena DB 的 atk 字段对于武器是基础攻击，对于防具通常是 0
+                // 而 def 则是防御。这里我们需要区分开。
+                if (e.def) equipDef += e.def
+                // 如果是卡片或饰品带的攻击，应该在 bonuses 里处理
+
+                // 3. 通用脚本加成 (bStr, bAtk, etc.)
+                if (e.bonuses) {
+                    Object.entries(e.bonuses).forEach(([key, val]) => {
+                        if (bonus.hasOwnProperty(key)) bonus[key] += val
+                        else if (key === 'maxhp') bonus.hp += val
+                        else if (key === 'maxsp') bonus.sp += val
+                        else if (key === 'aspdrate') aspdModifiers.equipRate += val
+                    })
+                }
+
+                // 4. 插卡加成
+                if (instance.cards) {
+                    instance.cards.forEach(cardId => {
+                        if (!cardId) return
+                        const c = getItemInfo(cardId)
+                        if (c && c.bonuses) {
+                            Object.entries(c.bonuses).forEach(([key, val]) => {
+                                if (bonus.hasOwnProperty(key)) bonus[key] += val
+                                else if (key === 'maxhp') bonus.hp += val
+                                else if (key === 'maxsp') bonus.sp += val
+                            })
+                        }
+                    })
+                }
             }
         })
     }
@@ -132,10 +157,10 @@ export function recalculateMaxStats() {
     player.maxSp += bonus.sp
 
     player.atk = Formulas.calcAtk(baseLv, finalStr, finalDex, finalLuk, weaponAtk + bonus.atk)
-    player.matk = Formulas.calcMatk(baseLv, finalInt, finalDex, finalLuk)
+    player.matk = Formulas.calcMatk(baseLv, finalInt, finalDex, finalLuk, bonus.matk)
     player.def = Formulas.calcDef(baseLv, finalVit, finalAgi, equipDef + bonus.def)
-    player.mdef = Formulas.calcMdef(baseLv, finalInt, finalVit, finalDex)
-    player.hit = Formulas.calcHit(baseLv, finalDex, finalLuk)
+    player.mdef = Formulas.calcMdef(baseLv, finalInt, finalVit, finalDex, bonus.mdef)
+    player.hit = Formulas.calcHit(baseLv, finalDex, finalLuk) + bonus.hit
 
     let fleeBonus = bonus.flee
     if (player.skills['improve_dodge']) {
@@ -577,6 +602,37 @@ export function equipItem(itemNameOrId) {
     // Determine target slot
     let targetSlot = equipData.subType // e.g., Weapon, Shield, Armor, etc. from dataLoader mapping
 
+    // --- Conflict Logic: Two-handed Weapon vs Shield ---
+    const isTwoHanded = [
+        WeaponType.TWO_HAND_SWORD,
+        WeaponType.TWO_HAND_AXE,
+        WeaponType.TWO_HAND_SPEAR,
+        WeaponType.TWO_HAND_STAFF,
+        WeaponType.BOW,
+        WeaponType.KATAR
+    ].includes(targetSlot)
+
+    if (isTwoHanded && player.equipment[EquipType.SHIELD]) {
+        unequipItem(EquipType.SHIELD)
+    }
+    if ((targetSlot === 'Shield' || targetSlot === EquipType.SHIELD)) {
+        const currentWeapon = player.equipment[EquipType.WEAPON]
+        if (currentWeapon) {
+            const wInfo = getItemInfo(currentWeapon.id)
+            const currentIsTwoHanded = [
+                WeaponType.TWO_HAND_SWORD,
+                WeaponType.TWO_HAND_AXE,
+                WeaponType.TWO_HAND_SPEAR,
+                WeaponType.TWO_HAND_STAFF,
+                WeaponType.BOW,
+                WeaponType.KATAR
+            ].includes(wInfo.subType)
+            if (currentIsTwoHanded) {
+                unequipItem(EquipType.WEAPON)
+            }
+        }
+    }
+
     // Special handling for Accessories (1 or 2)
     if (targetSlot === 'Accessory') {
         if (!player.equipment[EquipType.ACCESSORY1]) targetSlot = EquipType.ACCESSORY1
@@ -585,6 +641,10 @@ export function equipItem(itemNameOrId) {
     } else if (targetSlot === 'Head') {
         // Default headgear to Top if not specified (should be mapped in dataLoader)
         targetSlot = EquipType.HEAD_TOP
+    } else if (targetSlot === 'Weapon') {
+        targetSlot = EquipType.WEAPON
+    } else if (targetSlot === 'Shield') {
+        targetSlot = EquipType.SHIELD
     }
 
     // Check if subType is a valid slot key

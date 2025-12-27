@@ -115,7 +115,10 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Automatic Price Generation**: Compiler now auto-calculates sell prices (50% of buy) if missing in DB.
 - [x] **Account Migration Safety**: Incremented `DATA_VERSION` to force DB refresh for legacy characters.
 - [x] **Zeny Safeguards**: Robust `NaN` protection and formatted number displays.
-- [x] **Equipment Data Merging**: Decoupled pricing from combat attributes in `EquipDB`.
+- [x] **Equipment Data Unification**: Data-driven stat engine fully integrated with `item_db.txt`.
+- [x] **Item Detail Enrichment**: Merged description tables and parsed job/location metadata in compiler.
+- [x] **Conflict Logic**: Implemented two-handed weapon vs shield constraints.
+- [x] **Dynamic Bonus Engine**: Support for script-based `bonus` commands (STR, ATK, HP, etc.).
 
 ### Phase 20: SP Mechanics & Skills [Upcoming]
 - [ ] **SP Consumption**: Integrate cast costs into `castSkill`.
@@ -123,11 +126,11 @@ A web-based idle game recreating the experience of using automated botting softw
 - [ ] **Cast Time System**: Variable cast times based on DEX and skill level.
 
 ## 4. Current State
-*   **Version:** 2.1.2 (Phase 19 - Economy & Data Stability)
-*   **Stability:** High. Full protection against NaN currency and fragmented item data.
-*   **Performance:** Elite. Optimized price lookup and automated DB maintenance.
+*   **Version:** 2.2.1 (Phase 21 - Metadata & Data Enrichment)
+*   **Stability:** High. Full integration with rAthena DB and description tables.
+*   **Performance:** Elite. Decoupled UI logic from raw data parsing.
 *   **New Features:**
-    - **Smart Pricing**: 12k+ items now have valid sell prices via automatic calculation.
-    - **Data Unification**: Hardcoded equipment now inherits prices from the global database.
-    - **Robust Economy**: Fixed legacy account Zeny corruption and improved currency display formatting.
+    - **Unified Stat Engine**: All 12k+ items provide correct stats via script parsing.
+    - **Enriched Metadata**: Items now contain full job names, locations, and flavor text.
+    - **Conflict Handling**: Intelligent two-handed weapon and shield management.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

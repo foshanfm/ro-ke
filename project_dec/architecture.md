@@ -63,13 +63,19 @@ We prioritize "Feel" over "Academic Accuracy".
     - **Save Point**: `savePoint` (map/x/y) in player state allows city-based respawning. Triggered upon death or initial AI startup if dead.
     - **Deduplication**: `dataLoader.js` performs aggressive deduplication, keeping only one portal per destination map to ensure a clean UI.
     - **Smart Navigation (BFS)**: `navigation.js` allows the robot to find the shortest map route between its current location and a target map. Used by `combat.js` (`gameState.goalMap`).
-*   **Data Strategy (Structured JSON)**:
-    - **Compiler Pattern**: A Node.js compiler (`scripts/db_compiler.cjs`) pre-processes the raw TXT DB into logic-ready JSON.
+### 3.3. Data Layer (Static)
+- **DB Compiler**: A Node.js script (`db_compiler.cjs`) which:
+    - Normalizes rAthena TXT DBs into structured JSON.
+    - Parses script strings into JSON objects (`bonuses`, `effects`).
+    - Merges flavor text from `idnum2itemdesctable.txt`.
+    - Maps complex bitmasks (Jobs, Locations) into readable strings.
+- **DataManager**: Handles asynchronous loading and IndexedDB caching for large assets.
+- **Data Strategy**:
     - **Automated logic**: Scripts (e.g., `{itemheal rand(45,65)}`) are parsed into machine-readable data (`{"hp": [45, 65]}`) during compilation.
     - **Efficiency**: Eliminates expensive string splitting and regex parsing in the browser.
     - **Persistence Constraint**: Functions (closures) cannot be stored in IndexedDB. Data is stored as pure JSON, and logic (e.g., item healing effects) is **hydrated** post-load via `injectRuntimeEffects` in `items.js`.
 
-### 3.3. Drop System (Layered)
+### 3.4. Drop System (Layered)
 Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 *   **Normal:** Independent rolls. Affected by Drop Rate modifiers.
 *   **Rare:** Independent rolls. Affected by **Soft Pity**.
