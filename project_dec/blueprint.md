@@ -175,10 +175,11 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Advanced Configuration**: `conf strategy` command for per-item supply/loot rules.
 - [x] **Autonomous Restocking**: FSM-based `RestockHandler` for recall, trading, and auto-return to field.
 - [x] **Smart Looting**: Protected items (Cards/Rares) vs automated junk (ETC) liquidation.
+- [x] **Stabilization**: Resolved `saveGame` import missing in `commands.js` and `curMapId` initialization order in `combat.js`.
 
 ## 4. Current State
-*   **Version:** 2.7.0 (Phase 28 - Merchant & Smart Bot)
-*   **Stability:** High. FSM transitions verified.
+*   **Version:** 2.7.1 (Phase 28 - Merchant & Smart Bot)
+*   **Stability:** High. FSM transitions and initialization sequence verified.
 *   **Performance:** Elite.
 *   **New Features:**
     - **Merchant NPCs**: Interactive city-based shops.

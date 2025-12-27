@@ -135,4 +135,5 @@ Structure: `Normal` (Trash/Consumables) vs `Rare` (Equip/Cards).
 
 *   **NaN Propagation:** Always check `isNaN()` when loading saves or calculating stats.
     - **Coordinate Protection**: `player.js` validates and corrects `x/y` coordinates during the load process to prevent startup failures.
+    - **AI Loop Sequence**: `aiTick` ensures all local variables (like `curMapId`) are initialized before they are passed into handlers to prevent ReferenceErrors.
 *   **Zombie Timers:** Always clear timers and increment Session ID in `stopBot()`.
