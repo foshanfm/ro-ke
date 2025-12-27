@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 import { player, addExp, addItem, useItem, saveGame, warp, respawn } from './player'
 import { spawnMonster, getMonster } from './monsters'
 import { getItemInfo } from './items'
-import { calcAspdDelay, calculateDamageFlow } from './formulas'
+import { calcAspdDelay, calculateDamageFlow, calcMoveSpeed } from './formulas'
 import { calculateDrops } from './drops'
 import { PassiveHooks } from './skillEngine'
 import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, removeMonster, checkWarpCollision } from './mapManager'
@@ -322,6 +322,41 @@ async function aiTick(sessionId) {
         }
 
         // 3. 开始攻击逻辑
+
+        // --- AMMO CHECK FOR BOWS ---
+        // If weapon is BOW (or based on WeaponType.BOW), verify ammo.
+        let weaponType = 'NONE'
+        if (player.equipment && player.equipment.Weapon) {
+            const wInfo = getItemInfo(player.equipment.Weapon.id)
+            if (wInfo) weaponType = wInfo.subType
+        }
+
+        // Compatibility: Check both Enum and String 'BOW'
+        if (weaponType === 'BOW') {
+            const ammo = player.equipment.Ammo
+            if (!ammo || ammo.count <= 0) {
+                if (gameState.lastActionLog !== 'no_ammo') {
+                    log('You need arrows to attack!', 'error')
+                    gameState.lastActionLog = 'no_ammo'
+                }
+                // Do not attack. Stop bot eventually? Or just stand there. 
+                // RO behavior: Stand there and fail to attack. 
+                // However, we should stop to prevent spam.
+                stopBot()
+                return
+            }
+
+            // Consume Ammo
+            ammo.count--
+            if (ammo.count <= 0) {
+                // Out of ammo
+                player.equipment.Ammo = null
+                log('Out of arrows!', 'warning')
+                stopBot()
+                return
+            }
+        }
+
         gameState.status = 'ATTACKING'
 
         // 攻击逻辑 (保持原有的 formulas)
@@ -394,52 +429,59 @@ async function monsterActionLoop(sessionId, monsterMapId) {
     // 逻辑像素转格子: CELL_SIZE = 10
     const attackRangePx = (targetTemplate.range1 || 1) * 10
 
-    // 2. 行为分支
-    if (dist > attackRangePx) {
-        // [追击模式]
-        // AI 决策延迟(模拟反应时间)
-        const reactDelay = Math.random() * 100 + 50 // 50-150ms 怪物反应快一点
+    try {
+        // 2. 行为分支
+        if (dist > attackRangePx) {
+            // [追击模式]
+            // AI 决策延迟(模拟反应时间)
+            const reactDelay = Math.random() * 100 + 50 // 50-150ms 怪物反应快一点
 
-        // 计算在此延迟内应该移动的距离
-        const moveSpeed = Formulas.calcMoveSpeed(targetTemplate.speed || 400, 10, reactDelay)
-        const angle = Math.atan2(player.y - target.y, player.x - target.x)
+            // 计算在此延迟内应该移动的距离
+            const moveSpeed = calcMoveSpeed(targetTemplate.speed || 400, 10, reactDelay)
+            const angle = Math.atan2(player.y - target.y, player.x - target.x)
 
-        target.x += Math.cos(angle) * moveSpeed
-        target.y += Math.sin(angle) * moveSpeed
+            target.x += Math.cos(angle) * moveSpeed
+            target.y += Math.sin(angle) * moveSpeed
 
-        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), reactDelay)
-    } else {
-        // [攻击模式]
-        const res = calculateDamageFlow({
-            attackerAtk: targetTemplate.atk,
-            attackerHit: targetTemplate.hit || 50,
-            attackerCrit: 0,
-            defenderDef: player.def,
-            defenderFlee: player.flee,
-            isPlayerAttacking: false
-        })
-
-        if (res.type === 'miss') {
-            log(`${targetTemplate.name} missed you!`, 'success')
+            monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), reactDelay)
         } else {
-            player.hp -= res.damage
-            log(`${targetTemplate.name} attacks you for ${res.damage} damage!`, 'error')
-            checkAutoPotion()
+            // [攻击模式]
+            const res = calculateDamageFlow({
+                attackerAtk: targetTemplate.atk,
+                attackerHit: targetTemplate.hit || 50,
+                attackerCrit: 0,
+                defenderDef: player.def,
+                defenderFlee: player.flee,
+                isPlayerAttacking: false
+            })
 
-            if (player.hp <= 0) {
-                log('你被杀死了！', 'error')
-                player.hp = 0
-                gameState.currentMonster = null
-                const respRes = respawn()
-                log(respRes.msg, 'system')
-                stopBot()
-                return
+            if (res.type === 'miss') {
+                log(`${targetTemplate.name} missed you!`, 'success')
+            } else {
+                player.hp -= res.damage
+                log(`${targetTemplate.name} attacks you for ${res.damage} damage!`, 'error')
+                checkAutoPotion()
+
+                if (player.hp <= 0) {
+                    log('你被杀死了！', 'error')
+                    player.hp = 0
+                    gameState.currentMonster = null
+                    const respRes = respawn()
+                    log(respRes.msg, 'system')
+                    stopBot()
+                    return
+                }
             }
-        }
 
-        // 攻击后摇 (Attack Delay)
-        const delay = targetTemplate.attackDelay || 2000
-        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), delay)
+            // 攻击后摇 (Attack Delay)
+            const delay = targetTemplate.attackDelay || 2000
+            monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), delay)
+        }
+    } catch (err) {
+        console.error('[MonsterAI] Error:', err)
+        // 只有严重错误才打印到 UI，避免刷屏
+        // 尝试恢复 loop
+        monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), 1000)
     }
 }
 

@@ -6,7 +6,8 @@ export const ItemType = {
   ETC: 'Etc',
   USABLE: 'Usable',
   EQUIP: 'Equip',
-  CARD: 'Card'
+  CARD: 'Card',
+  AMMO: 'Ammo'
 }
 
 // 全局物品数据库 - 将由 dataLoader 填充
@@ -85,7 +86,10 @@ const fallbackItemsDB = {
   // --- Cards ---
   4001: { name: '波利卡片', type: ItemType.CARD, desc: 'Luk +2' }, // Poring Card
   4002: { name: '绿棉虫卡片', type: ItemType.CARD, desc: 'Vit +1, HP +100' }, // Fabre Card
-  4005: { name: '疯兔卡片', type: ItemType.CARD, desc: 'Luk +2, Crit +2' } // Lunatic Card
+  4005: { name: '疯兔卡片', type: ItemType.CARD, desc: 'Luk +2, Crit +2' }, // Lunatic Card
+
+  // --- Ammo ---
+  1750: { name: '箭矢', type: ItemType.AMMO, subType: 'Ammo', atk: 25, price: 1, weight: 0.1, desc: '一般的箭矢。' }
 }
 
 /**
@@ -159,6 +163,8 @@ export function getItemInfo(id) {
   // 6. 确定最终类型
   let finalType = merged.type || ItemType.ETC
   if (EquipDB[id]) finalType = ItemType.EQUIP
+  // Special case: Ammo is technically equipment in some DBs but we handle it as Ammo type
+  if (merged.subType === 'Ammo' || merged.type === 'Ammo') finalType = ItemType.AMMO
 
   return {
     ...merged,

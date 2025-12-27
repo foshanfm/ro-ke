@@ -8,7 +8,8 @@ export const EquipType = {
     GARMENT: 'Garment',
     FOOTGEAR: 'Footgear',
     ACCESSORY1: 'Accessory1',
-    ACCESSORY2: 'Accessory2'
+    ACCESSORY2: 'Accessory2',
+    AMMO: 'Ammo'
 }
 
 

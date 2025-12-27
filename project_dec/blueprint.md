@@ -138,12 +138,17 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Suffix Support**: Integration of `cardpostfixnametable.txt` for `of XXX` naming convention.
 - [x] **Sub-Detail Inspection**: Clickable card slots in equipment details for rapid cross-referencing.
 
+### Phase 23: Ammo System & UI Refinement [Completed]
+- [x] **Ammo System**: Dedicated `Ammo` gear slot with stack-based equipping logic.
+- [x] **Combat Enforcement**: Bow attacks require and consume 1 arrow per hit.
+- [x] **UI Cleanup**: Transitioned to lean, text-only inventory (removed icons and redundant type tags).
+- [x] **Legacy Migration**: Automated equipment object patching for existing accounts.
+
 ## 4. Current State
-*   **Version:** 2.3.0 (Phase 22 - Advanced Inventory & Card System)
-*   **Stability:** High. Full integration with rAthena DB, description tables, and card naming standards.
-*   **Performance:** Elite. Optimized data compiler and instance-aware UI components.
+*   **Version:** 2.4.0 (Phase 23 - Ammo System & UI Refinement)
+*   **Stability:** High. robust error handling in monster loops and safe data migration.
+*   **Performance:** Elite. Faster inventory rendering and efficient combat checks.
 *   **New Features:**
-    - **Inventory Modal**: Integrated equipment and item management.
-    - **Advanced Card System**: Full support for prefixes, suffixes, and multipliers.
-    - **Validation**: Strict location-based card insertion to ensure data integrity.
+    - **Arrow Support**: Bow users now strictly require arrows to function.
+    - **Minimalist UI**: Cleaner and more industrial inventory aesthetic.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

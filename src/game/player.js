@@ -24,7 +24,8 @@ const defaultStats = {
         [EquipType.GARMENT]: null,
         [EquipType.FOOTGEAR]: null,
         [EquipType.ACCESSORY1]: null,
-        [EquipType.ACCESSORY2]: null
+        [EquipType.ACCESSORY2]: null,
+        [EquipType.AMMO]: null
     },
     config: {
         auto_hp_percent: 0,
@@ -144,6 +145,18 @@ export function recalculateMaxStats() {
                 }
             }
         })
+    }
+
+    // Ammo Bonus
+    // Ammo counts as equipment instance in the slot AMMO.
+    // It usually provides Atk.
+    if (player.equipment[EquipType.AMMO]) {
+        const ammoInstance = player.equipment[EquipType.AMMO]
+        const ammoInfo = getItemInfo(ammoInstance.id)
+        if (ammoInfo) {
+            bonus.atk += (ammoInfo.atk || 0)
+            // Arrows can have elements, etc., handled later in Combat damage calculation if needed
+        }
     }
 
     const finalStr = str + bonus.str
@@ -318,19 +331,21 @@ export async function loadGame(saveId) {
         if (player.zeny === undefined) player.zeny = 0
 
         if (!player.equipment) {
-            player.equipment = {
-                [EquipType.WEAPON]: null,
-                [EquipType.SHIELD]: null,
-                [EquipType.HEAD_TOP]: null,
-                [EquipType.HEAD_MID]: null,
-                [EquipType.HEAD_LOW]: null,
-                [EquipType.ARMOR]: null,
-                [EquipType.GARMENT]: null,
-                [EquipType.FOOTGEAR]: null,
-                [EquipType.ACCESSORY1]: null,
-                [EquipType.ACCESSORY2]: null
-            }
+            player.equipment = {}
         }
+
+        // 确保所有必需的槽位都存在 (旧账号迁移)
+        const requiredSlots = [
+            EquipType.WEAPON, EquipType.SHIELD, EquipType.HEAD_TOP,
+            EquipType.HEAD_MID, EquipType.HEAD_LOW, EquipType.ARMOR,
+            EquipType.GARMENT, EquipType.FOOTGEAR, EquipType.ACCESSORY1,
+            EquipType.ACCESSORY2, EquipType.AMMO
+        ]
+        requiredSlots.forEach(slot => {
+            if (player.equipment[slot] === undefined) {
+                player.equipment[slot] = null
+            }
+        })
 
         const keys = ['str', 'agi', 'dex', 'vit', 'int', 'luk']
         keys.forEach(k => {
@@ -590,7 +605,7 @@ export function equipItem(itemNameOrId) {
     // Use getItemInfo for richer data (including item_db.txt) instead of just EquipDB
     const equipData = getItemInfo(invSlot.id)
 
-    if (!equipData || equipData.type !== ItemType.EQUIP) {
+    if (!equipData || (equipData.type !== ItemType.EQUIP && equipData.type !== ItemType.AMMO)) {
         return { success: false, msg: '这不是一件可装备的物品。' }
     }
 
@@ -654,19 +669,35 @@ export function equipItem(itemNameOrId) {
     }
 
     if (player.equipment[targetSlot]) {
-        const oldInstance = player.equipment[targetSlot]
-        addItem(oldInstance.id, 1)
+        // If equipping ammo, try to merge if same ID, or swap
+        if (targetSlot === EquipType.AMMO) {
+            const oldInstance = player.equipment[targetSlot]
+            addItem(oldInstance.id, oldInstance.count || 1)
+        } else {
+            const oldInstance = player.equipment[targetSlot]
+            addItem(oldInstance.id, 1)
+        }
     }
 
-    player.equipment[targetSlot] = invSlot.instance || {
+    let equipInstance = invSlot.instance || {
         id: invSlot.id,
         cards: equipData.slots ? new Array(equipData.slots).fill(null) : []
     }
 
-    invSlot.count--
-    if (invSlot.count <= 0) {
+    // Special Handling for Ammo: Move ALL count
+    if (targetSlot === EquipType.AMMO) {
+        equipInstance.count = invSlot.count
         player.inventory.splice(slotIndex, 1)
+        // No decrement logic needed as we moved everything
+    } else {
+        // Normal Equip: Move 1
+        invSlot.count--
+        if (invSlot.count <= 0) {
+            player.inventory.splice(slotIndex, 1)
+        }
     }
+
+    player.equipment[targetSlot] = equipInstance
 
     recalculateMaxStats()
     saveGame()
@@ -683,7 +714,7 @@ export function unequipItem(type) {
     const info = getItemInfo(currentInstance.id)
     player.inventory.push({
         id: currentInstance.id,
-        count: 1,
+        count: type === EquipType.AMMO ? (currentInstance.count || 1) : 1,
         instance: currentInstance
     })
 

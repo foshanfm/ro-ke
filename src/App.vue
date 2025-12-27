@@ -443,8 +443,8 @@
      
      return player.inventory.filter(item => {
          const info = getItemInfo(item.id)
-         if (inventoryTab.value === 'Equip') return info.type === 'Equip'
-         if (inventoryTab.value === 'Usable') return info.type === 'Usable'
+          if (inventoryTab.value === 'Equip') return info.type === 'Equip' || info.type === 'Ammo'
+          if (inventoryTab.value === 'Usable') return info.type === 'Usable'
          if (inventoryTab.value === 'Card') return info.type === 'Card'
          if (inventoryTab.value === 'Etc') return info.type === 'Etc'
          return true
@@ -462,7 +462,8 @@
           'Garment': '披肩',
           'Footgear': '鞋子',
           'Accessory1': '饰品 1',
-          'Accessory2': '饰品 2'
+          'Accessory2': '饰品 2',
+          'Ammo': '箭矢/弹药'
       }
       return names[slot] || slot
   }
@@ -472,7 +473,8 @@
       'HeadTop', 'HeadMid', 'HeadLow',
       'Weapon', 'Shield', 'Armor',
       'Garment', 'Footgear',
-      'Accessory1', 'Accessory2'
+      'Accessory1', 'Accessory2',
+      'Ammo'
   ]
 
   const isTwoHandedWeapon = (itemId) => {
@@ -870,19 +872,12 @@
                                  class="bg-[#1a1a1a] border border-gray-800 p-3 rounded flex justify-between items-center hover:border-gray-600 transition-colors"
                             >
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 bg-black rounded flex items-center justify-center border border-gray-800 relative">
-                                        <!-- Weight/Type mini indicator -->
-                                        <span class="absolute -top-1 -left-1 text-[8px] px-1 bg-gray-800 rounded text-gray-500">{{ getItemInfo(item.id).weight }}</span>
-                                        <span class="text-xl opacity-50">{{ item.id % 5 === 0 ? '📦' : (getItemInfo(item.id).type === 'Equip' ? '⚔️' : '💊') }}</span>
-                                    </div>
                                     <div class="flex-1 min-w-0">
                                         <div class="text-sm font-bold text-gray-200 truncate">{{ getEquippableName(item) }}</div>
                                         <div class="text-[10px] text-gray-500 flex gap-2">
                                             <span v-if="item.count > 1" class="text-cyan-500 ml-1">x{{ item.count }}</span>
                                         </div>
                                         <div class="text-[10px] text-gray-500 mt-0.5">
-```
-                                            {{ getItemInfo(item.id).subType || getItemInfo(item.id).type }}
                                             <span v-if="getItemInfo(item.id).slots" class="ml-2 text-cyan-800">插槽: {{ getItemInfo(item.id).slots }}</span>
                                         </div>
                                     </div>
@@ -891,10 +886,10 @@
                                     <button @click="handleEntityClick(item, true)" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-[10px] text-gray-300">详细</button>
                                     
                                     <!-- Context Actions -->
-                                    <template v-if="getItemInfo(item.id).type === 'Equip'">
+                                    <template v-if="getItemInfo(item.id).type === ItemType.EQUIP || getItemInfo(item.id).type === ItemType.AMMO">
                                         <button @click="handleEquip(item.id)" class="px-2 py-1 bg-blue-900 hover:bg-blue-800 rounded text-[10px] text-blue-100">装备</button>
                                     </template>
-                                    <template v-else-if="getItemInfo(item.id).type === 'Usable'">
+                                    <template v-else-if="getItemInfo(item.id).type === ItemType.USABLE">
                                         <button @click="handleUseItem(item.id)" class="px-2 py-1 bg-green-900 hover:bg-green-800 rounded text-[10px] text-green-100">使用</button>
                                     </template>
                                     <template v-else-if="getItemInfo(item.id).type === 'Card'">
