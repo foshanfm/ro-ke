@@ -194,7 +194,11 @@ export function calculateDamageFlow({
     const isCrit = Math.random() * 100 <= attackerCrit
 
     // 3. 基础伤害计算
+    // Apply damage variance (RO standard: ±5% for dynamic combat)
     let baseDmg = attackerAtk
+    const variance = 0.95 + Math.random() * 0.1 // 95% to 105%
+    baseDmg = Math.floor(baseDmg * variance)
+
     if (isCrit) {
         baseDmg = Math.floor(baseDmg * 1.4)
     }

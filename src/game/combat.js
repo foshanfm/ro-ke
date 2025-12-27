@@ -11,6 +11,7 @@ import { addLog } from './modules/logger.js'
 import * as MovementHandler from './combat/MovementHandler.js'
 import * as TargetingHandler from './combat/TargetingHandler.js'
 import * as CombatHandler from './combat/CombatHandler.js'
+import { CELL_SIZE } from './constants.js'
 
 // 游戏循环状态
 export const gameState = reactive({
@@ -236,7 +237,7 @@ async function aiTick(sessionId) {
 
         // 3. Check distance and chase if needed
         const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
-        const attackRange = player.attackRange || 10
+        const attackRange = (player.attackRange || 1) * CELL_SIZE
 
         if (dist > attackRange) {
             gameState.status = 'MOVING'
@@ -326,8 +327,8 @@ async function monsterActionLoop(sessionId, monsterMapId) {
     // 1. 距离检测
     const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
 
-    // 逻辑像素转格子: CELL_SIZE = 10
-    const attackRangePx = (targetTemplate.range1 || 1) * 10
+    // 逻辑像素转格子: CELL_SIZE
+    const attackRangePx = (targetTemplate.range1 || 1) * CELL_SIZE
 
     try {
         // 2. 行为分支
@@ -337,7 +338,7 @@ async function monsterActionLoop(sessionId, monsterMapId) {
             const reactDelay = Math.random() * 100 + 50 // 50-150ms 怪物反应快一点
 
             // 计算在此延迟内应该移动的距离
-            const moveSpeed = calcMoveSpeed(targetTemplate.speed || 400, 10, reactDelay)
+            const moveSpeed = calcMoveSpeed(targetTemplate.speed || 400, CELL_SIZE, reactDelay)
             const angle = Math.atan2(player.y - target.y, player.x - target.x)
 
             target.x += Math.cos(angle) * moveSpeed
@@ -346,8 +347,19 @@ async function monsterActionLoop(sessionId, monsterMapId) {
             monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, monsterMapId), reactDelay)
         } else {
             // [攻击模式]
+            // Sample random ATK from monster's range
+            // Fallback to old 'atk' field for backward compatibility
+            let monsterAtk
+            if (targetTemplate.atkMin !== undefined && targetTemplate.atkMax !== undefined) {
+                monsterAtk = targetTemplate.atkMin +
+                    Math.floor(Math.random() * (targetTemplate.atkMax - targetTemplate.atkMin + 1))
+            } else {
+                // Fallback for old monster instances
+                monsterAtk = targetTemplate.atk || 30
+            }
+
             const res = calculateDamageFlow({
-                attackerAtk: targetTemplate.atk,
+                attackerAtk: monsterAtk,
                 attackerHit: targetTemplate.hit || 50,
                 attackerCrit: 0,
                 defenderDef: player.def,

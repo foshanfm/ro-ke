@@ -1,4 +1,5 @@
 import { mapState, findNearestMonster, randomWalk } from '../mapManager.js'
+import { formatPos } from '../constants.js'
 
 /**
  * TargetingHandler
@@ -17,7 +18,7 @@ export function searchForTarget(viewRange, log, getMobTemplate) {
 
     if (monster) {
         const mobTemplate = getMobTemplate(monster)
-        log(`[${mobTemplate.name}] detected at (${Math.floor(monster.x / 10)}, ${Math.floor(monster.y / 10)})!`, 'dim')
+        log(`[${mobTemplate.name}] detected at ${formatPos(monster.x, monster.y)}!`, 'dim')
         return { monster, shouldPatrol: false }
     }
 
@@ -26,7 +27,7 @@ export function searchForTarget(viewRange, log, getMobTemplate) {
     const arrived = randomWalk()
 
     if (isFirstPatrol) {
-        log(`No monsters nearby. Patrolling to (${Math.floor(mapState.patrolTarget.x / 10)}, ${Math.floor(mapState.patrolTarget.y / 10)})...`, 'dim')
+        log(`No monsters nearby. Patrolling to ${formatPos(mapState.patrolTarget.x, mapState.patrolTarget.y)}...`, 'dim')
     }
 
     return { monster: null, shouldPatrol: true, delay: arrived ? 500 : 100 }

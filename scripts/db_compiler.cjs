@@ -299,7 +299,8 @@ function parseMobDB() {
             exp: parseInt(parts[7]),
             jobExp: parseInt(parts[8]),
             battleStats: {
-                atk: Math.floor((parseInt(parts[10]) + parseInt(parts[11])) / 2),
+                atkMin: (parseInt(parts[10]) || 0) - (parseInt(parts[11]) || 0),
+                atkMax: (parseInt(parts[10]) || 0) + (parseInt(parts[11]) || 0),
                 def: parseInt(parts[12]) || 0,
                 mdef: parseInt(parts[13]) || 0,
                 hit: parseInt(parts[18]) || 0,

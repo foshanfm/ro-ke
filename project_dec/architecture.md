@@ -48,8 +48,10 @@ We prioritize "Feel" over "Academic Accuracy", but use **Authentic Data Sources*
 *   **HP/SP:** Uses `job_basehpsp_db.txt` for non-linear growth curves + VIT/INT scaling.
 *   **Stats:** Uses `job_db2.txt` for authentic Job Level bonuses key to hitting breakpoints.
 *   **Hit Rate:** `min(100, max(5, Hit + 80 - Flee))`.
-*   **Damage:** `Atk * (600 / (600 + Def))`.
-*   **Crit:** `Atk * 1.4` (Subject to Def reduction), ignore Flee.
+*   **Damage:** `sampledAtk * variance * (600 / (600 + Def))`.
+    - **Monster ATK**: Sampled from `[atkMin, atkMax]` (loaded as `BaseAtk ± Variance` from `mob_db`).
+    - **Damage Variance**: Sub-10% random fluctuation (±5%) applied to all hits for dynamic combat feel.
+*   **Crit:** `sampledAtk * variance * 1.4` (Subject to Def reduction), ignore Flee.
 *   **ASPD (Standard):** Based on RO Renewal mechanics.
 
 

@@ -149,12 +149,31 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Stat Manager**: Extracted complex stat calculation logic into `statManager.js`.
 - [x] **AI Handler Pattern**: Split monolithic `aiTick` into specialized `MovementHandler`, `TargetingHandler`, and `CombatHandler`.
 - [x] **Code Quality**: Improved testability and readablity of the core combat loop.
+- [x] **Navigation Graph Fix**: Restored missing `buildNavigationGraph` call in `DataManager.js` initialization.
+
+### Phase 25: UI & Logic Stabilization [Upcoming]
+- [ ] **Navigation Path UI**: Visual indicator of the current path planned by the AI.
+- [ ] **Map Context Menu**: Right-click on map names or entities to trigger actions.
+- [ ] **Warp De-duplication Refinement**: Better proximity-based merging for large cities.
+
+### Phase 26: Coordinate System Standardization [Completed]
+- [x] **Universal Constant**: Introduced `CELL_SIZE = 10` in `constants.js`.
+- [x] **Refactoring**: Updated `mapManager`, `combat`, and `MovementHandler` to use centralized defaults instead of magic numbers.
+- [x] **Helpers**: Added `toGrid`, `toPixel`, and `formatPos` for consistent logging.
+
+### Phase 27: Authentic RO Damage System Implementation [Completed]
+- [x] **DB Range Storage**: Updated `db_compiler.cjs` to store `atkMin` and `atkMax` using the `base ± variance` formula.
+- [x] **Dynamic Sampling**: Modified `combat.js` to sample random ATK from monster ranges during attack.
+- [x] **Damage Variance**: Added ±5% damage variance to `calculateDamageFlow` in `formulas.js` for unpredictable combat.
+- [x] **Backward Compatibility**: Implemented fallback for legacy monster instances to prevent `NaN` damage.
+- [x] **Data Re-compilation**: Regenerated monster database (1964 mobs) with enhanced ATK metadata.
 
 ## 4. Current State
-*   **Version:** 2.5.0 (Phase 24 - Codebase Modularization & Refactoring)
-*   **Stability:** High. Cleaned up core logic with specialized handlers.
-*   **Performance:** Elite. Optimized stat recalculation and UI logging.
+*   **Version:** 2.6.0 (Phase 27 - Authentic RO Damage System)
+*   **Stability:** High. Added monster ATK range fallback for legacy data.
+*   **Performance:** Elite.
 *   **New Features:**
-    - **Modular AI**: Combat logic is now split into Movement, Targeting, and Combat handlers.
-    - **Global Event Bus**: Centralized logging system via `logger.js`.
+    - **Authentic ATK Ranges**: Monsters now deal damage based on their true database ranges (e.g. Thief Bug 51-61 ATK).
+    - **Damage Variance**: Sub-10% random fluctuation on all hits for a more "alive" feel.
+    - **Recompiled Content**: 1964 monsters updated with range data.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

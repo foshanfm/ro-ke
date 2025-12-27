@@ -1,6 +1,8 @@
 import { player } from '../player.js'
 import { mapState, movePlayerToward, checkWarpCollision } from '../mapManager.js'
 import { warp } from '../player.js'
+import { formatPos } from '../constants.js'
+
 
 /**
  * MovementHandler
@@ -21,7 +23,7 @@ export function handleManualMovement(target, log) {
     const dist = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2))
 
     if (dist < 5) {
-        log(`到达目的地 (${Math.floor(x / 10)}, ${Math.floor(y / 10)})`, 'success')
+        log(`到达目的地 ${formatPos(x, y)}`, 'success')
         return { shouldContinue: false, arrived: true }
     }
 
@@ -38,7 +40,7 @@ export function handleManualMovement(target, log) {
                 const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
                 player.x = warpInfo.targetX + offsetX
                 player.y = warpInfo.targetY + offsetY
-                log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)})`, 'success')
+                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
             }
         }, 500)
         return { shouldContinue: false, warped: true }
@@ -106,7 +108,7 @@ export function handleChaseTarget(target, log, lastActionLog, getMobTemplate) {
     const mobTemplate = getMobTemplate(target)
 
     if (lastActionLog.value !== `chase_${target.guid}`) {
-        log(`Moving toward [${mobTemplate.name}] at (${Math.floor(target.x / 10)}, ${Math.floor(target.y / 10)})...`, 'dim')
+        log(`Moving toward [${mobTemplate.name}] at ${formatPos(target.x, target.y)}...`, 'dim')
         lastActionLog.value = `chase_${target.guid}`
     }
 
@@ -123,7 +125,7 @@ export function handleChaseTarget(target, log, lastActionLog, getMobTemplate) {
                 const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
                 player.x = warpInfo.targetX + offsetX
                 player.y = warpInfo.targetY + offsetY
-                log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)})`, 'success')
+                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
             }
         }, 500)
         return { shouldContinue: false, warped: true }

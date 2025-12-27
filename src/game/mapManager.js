@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 import { Maps } from './maps.js'
 import { getMonster } from './monsters.js'
 import { player } from './player.js'
+import { CELL_SIZE } from './constants.js'
 
 export const mapState = reactive({
     currentMapId: null,
@@ -124,10 +125,10 @@ function spawnSingleMonsterById(mobId, spawnArea = null) {
         spawnY = Math.floor(Math.random() * mapState.height)
     }
 
-    // 适配逻辑: 如果 x1/x2 很小(旧格式或者格数格式), 乘以 CELL_SIZE (目前是 10)
+    // 适配逻辑: 如果 x1/x2 很小(旧格式或者格数格式), 乘以 CELL_SIZE
     if (spawnX < 500 && spawnY < 500 && mapState.width > 1000) {
-        spawnX *= 10
-        spawnY *= 10
+        spawnX *= CELL_SIZE
+        spawnY *= CELL_SIZE
     }
 
     const instance = {

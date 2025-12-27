@@ -5,6 +5,7 @@ import { getStaticData, setStaticData, isStaticDataStale } from '../db/index.js'
 import { loadItemDB, loadMobDB, loadSpawnData, loadWarpData } from './dataLoader.js';
 import { loadJobStatsDB } from './modules/jobDataLoader.js';
 import { analyzeConnectivity } from './utils/mapGraph.js';
+import { buildNavigationGraph } from './navigation.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
 const DATA_VERSION = 11;
@@ -69,6 +70,10 @@ export async function initializeGameData(maxLevel = 99) {
     console.log('[DataManager] 正在分析世界地图连通性...');
     const connectivityReport = analyzeConnectivity(warpCache);
     console.log('[DataManager] 世界连通性报告:', connectivityReport);
+
+    // 6. 构建导航图 (Building Navigation Graph for findPath)
+    console.log('[DataManager]正在构建导航图...');
+    buildNavigationGraph(warpCache);
 
     console.log('[DataManager] 游戏数据初始化完成');
     console.log(`  - 物品: ${Object.keys(itemsCache).length} 个`);
