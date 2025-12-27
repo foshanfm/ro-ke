@@ -18,14 +18,53 @@ export function getStatPointCost(currentVal) {
 
 // --- 基础属性 ---
 
-export function calcMaxHp(baseLv, vit, jobMod) {
-    const base = 100 + (baseLv * 10)
-    return Math.floor((base + vit * 5) * jobMod)
+/**
+ * 计算最大 HP (支持 RO 数据库)
+ * @param {number} baseLv 等级
+ * @param {number} vit VIT 素质点
+ * @param {Array} hpTable 基础 HP 表 (可选)
+ * @param {number} hpMulti HPMultiplicator (可选, 默认 500)
+ */
+export function calcMaxHp(baseLv, vit, jobModOrTable, hpMulti = 500) {
+    let base = 0
+    if (Array.isArray(jobModOrTable)) {
+        // 使用数据库表
+        base = jobModOrTable[baseLv - 1] || (100 + baseLv * 10)
+    } else {
+        // 后向兼容: 使用旧的简易公式 (jobModOrTable 为 jobMod)
+        const jobMod = jobModOrTable || 1.0
+        base = (100 + (baseLv * 10)) * jobMod
+    }
+
+    // VIT 加成 (1% per VIT)
+    const vitBonus = 1 + (vit * 0.01)
+    // Multiplicator (官方标准 500 为 100%)
+    const multiBonus = hpMulti / 500
+
+    return Math.floor(base * vitBonus * multiBonus)
 }
 
-export function calcMaxSp(baseLv, int, jobMod) {
-    const base = 20 + (baseLv * 2)
-    return Math.floor((base + int * 2) * jobMod)
+/**
+ * 计算最大 SP (支持 RO 数据库)
+ * @param {number} baseLv 等级
+ * @param {number} int INT 素质点
+ * @param {Array} spTable 基础 SP 表 (可选)
+ */
+export function calcMaxSp(baseLv, int, jobModOrTable) {
+    let base = 0
+    if (Array.isArray(jobModOrTable)) {
+        // 使用数据库表
+        base = jobModOrTable[baseLv - 1] || (20 + baseLv * 2)
+    } else {
+        // 后向兼容
+        const jobMod = jobModOrTable || 1.0
+        base = (20 + (baseLv * 2)) * jobMod
+    }
+
+    // INT 加成 (1% per INT)
+    const intBonus = 1 + (int * 0.01)
+
+    return Math.floor(base * intBonus)
 }
 
 export function calcAtk(baseLv, str, dex, luk, weaponAtk = 0, masteryAtk = 0) {

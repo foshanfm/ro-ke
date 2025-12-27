@@ -34,6 +34,7 @@ All math logic resides in `src/game/formulas.js`.
 *   **`db/index.js`**: Dexie.js Database Wrapper. Manages `saves` and `static_data` object stores.
 *   **`DataManager.js`**: Logic Orchestrator. Manages the lifecycle of game data, including parsing, caching to IndexedDB, and memory retrieval.
 *   **`dataLoader.js`**: Parser. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts. Called by `DataManager` if cache is stale.
+*   **`modules/jobDataLoader.js`**: Job Data Parser. Specialized loader for `job_db1.txt` (Factors/ASPD), `job_db2.txt` (Bonuses), and `job_basehpsp_db.txt` (HP/SP tables).
 *   **`navigation.js`**: Pathfinding Engine. Constructs a world graph from warp links and provides shortest-path BFS for multi-map navigation.
 *   **`monsters.js`**: Template Cache. Stores monster templates loaded from `mob_db.txt`. Provides `getMonster(id)` for attribute lookup.
 *   **`mapManager.js`**: Instance Manager. Manages live monster instances (`mapState.monsters`) and active warps. Uses Template-Instance Pattern:
@@ -42,8 +43,10 @@ All math logic resides in `src/game/formulas.js`.
 
 ## 3. Core Algorithms (Standard)
 
-### 3.1. Combat Formula (Renewal Standard)
-We prioritize "Feel" over "Academic Accuracy".
+### 3.1. Compact Formulas & Authentic Stats
+We prioritize "Feel" over "Academic Accuracy", but use **Authentic Data Sources**.
+*   **HP/SP:** Uses `job_basehpsp_db.txt` for non-linear growth curves + VIT/INT scaling.
+*   **Stats:** Uses `job_db2.txt` for authentic Job Level bonuses key to hitting breakpoints.
 *   **Hit Rate:** `min(100, max(5, Hit + 80 - Flee))`.
 *   **Damage:** `Atk * (600 / (600 + Def))`.
 *   **Crit:** `Atk * 1.4` (Subject to Def reduction), ignore Flee.

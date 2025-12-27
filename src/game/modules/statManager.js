@@ -2,6 +2,7 @@ import { getItemInfo, ItemType } from '../items.js'
 import { EquipType, WeaponType, WeaponRangeTable } from '../equipment.js'
 import * as Formulas from '../formulas.js'
 import { JobConfig } from '../jobs.js'
+import { getJobFactors, getJobBaseStats, getJobBonuses, getJobBaseAspd } from '../DataManager.js'
 
 /**
  * Stat Manager Module
@@ -18,7 +19,9 @@ export function parseBonuses(equipment) {
     const bonus = {
         str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0,
         atk: 0, def: 0, matk: 0, mdef: 0, hp: 0, sp: 0,
-        crit: 0, flee: 0, hit: 0
+        crit: 0, flee: 0, hit: 0,
+        // Detailed tracking
+        jobStr: 0, jobAgi: 0, jobVit: 0, jobInt: 0, jobDex: 0, jobLuk: 0
     }
 
     const aspdModifiers = {
@@ -118,10 +121,20 @@ export function recalculatePlayerStats(player) {
     const dex = player.dex || 1
     const luk = player.luk || 1
     const baseLv = player.lv || 1
+    const jobId = jobCfg.id
 
-    // Calculate base HP/SP
-    player.maxHp = Formulas.calcMaxHp(baseLv, vit, jobCfg.hpMod)
-    player.maxSp = Formulas.calcMaxSp(baseLv, int, jobCfg.spMod)
+    // Fetch RO-specific data from DataManager
+    const baseStatsData = getJobBaseStats(jobId)
+    const jobFactors = getJobFactors(jobId)
+
+    // Calculate base HP/SP (using RO database if available, else legacy)
+    if (baseStatsData && baseStatsData.hp) {
+        player.maxHp = Formulas.calcMaxHp(baseLv, vit, baseStatsData.hp, jobFactors?.hpMulti || 500)
+        player.maxSp = Formulas.calcMaxSp(baseLv, int, baseStatsData.sp)
+    } else {
+        player.maxHp = Formulas.calcMaxHp(baseLv, vit, jobCfg.hpMod)
+        player.maxSp = Formulas.calcMaxSp(baseLv, int, jobCfg.spMod)
+    }
 
     // Safety checks
     if (isNaN(player.hp)) player.hp = player.maxHp
@@ -131,6 +144,25 @@ export function recalculatePlayerStats(player) {
 
     // Parse equipment bonuses
     const { bonus, aspdModifiers, weaponAtk, equipDef, weaponType, hasShield } = parseBonuses(player.equipment)
+
+    // Fetch and apply Job Bonuses
+    const jobBonuses = getJobBonuses(jobId, player.jobLv || 1)
+    if (jobBonuses) {
+        bonus.str += jobBonuses.str
+        bonus.agi += jobBonuses.agi
+        bonus.vit += jobBonuses.vit
+        bonus.int += jobBonuses.int
+        bonus.dex += jobBonuses.dex
+        bonus.luk += jobBonuses.luk
+
+        // Store for UI display
+        bonus.jobStr = jobBonuses.str
+        bonus.jobAgi = jobBonuses.agi
+        bonus.jobVit = jobBonuses.vit
+        bonus.jobInt = jobBonuses.int
+        bonus.jobDex = jobBonuses.dex
+        bonus.jobLuk = jobBonuses.luk
+    }
 
     // Apply stat bonuses
     const finalStr = str + bonus.str
@@ -160,14 +192,38 @@ export function recalculatePlayerStats(player) {
 
     player.crit = Formulas.calcCrit(finalLuk, bonus.crit)
 
+    // Fetch authentic base ASPD
+    const roBaseAspd = getJobBaseAspd(jobId, weaponType)
+
     // ASPD calculation
+    // Note: Formulas.calcAspd might need update to accept baseASPD if it calculates it internally.
+    // However, looking at formulas.js, calcAspd accepts jobType and weaponType to let aspdCalculator handle it.
+    // We should ideally pass the baseASPD to it if we want to override the hardcoded json in aspdCalculator.
+    // For now, let's inject it into aspdModifiers.flatBonus as a quick fix OR update calcAspd signature.
+    // Better: Update formulas.js later to accept baseAspd explicitly. 
+    // BUT Wait, the current calcAspd uses `aspdCalculator` which likely looks up `job_base_aspd.json`.
+    // We just loaded the REAL data. We should use it.
+    // Let's pass it as a special modifier for now to avoid breaking signature too much, or rely on Formulas update.
+
+    // Actually, `Formulas.calcAspd` calls `aspdCalculator.calculate`.
+    // We should probably update `Formulas.calcAspd` to take an optional `baseAspdOverride`.
+    // For this step, I will stick to the existing signature but pass a "baseAspd" field in modifiers if supported, 
+    // or just assume standard calc for now until I check Formulas.js/aspdCalculator again.
+    // UPON RE-READING formulas.js: it takes (jobType, weaponType...).
+    // I should modify formulas.js to accept an override. 
+
+    // Let's proceed with standard call but add the real data if possible.
+    // Re-reading implementation plan: "Pass the job specific base ASPD to calcAspd"
+    // So I need to update Formulas.js too. I will do that in next step.
+    // Here I will pass it in modifiers map as `baseAspd`.
+
     player.aspd = Formulas.calcAspd(
         player.job,
         weaponType,
         hasShield,
         finalAgi,
         finalDex,
-        aspdModifiers
+        { ...aspdModifiers, baseAspd: roBaseAspd }
     )
 
     // Movement speed

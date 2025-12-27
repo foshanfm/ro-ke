@@ -1,8 +1,8 @@
 //=============================================================
-// Job¾ßÌåÖµÊı¾İ¿â£¨¸´ĞËºó£©
+// Jobå…·ä½“å€¼æ•°æ®åº“ï¼ˆå¤å…´åï¼‰
 //=============================================================
 //
-// Êı¾İ¿â½á¹¹:
+// æ•°æ®åº“ç»“æ„:
 // JobID,Weight,HPFactor,HPMultiplicator,SPFactor,Unarmed,Dagger,1HSword,2HSword,1HSpear,2HSpear,1HAxe,2HAxe,1HMace,2HMace(unused),Rod,Bow,Knuckle,Instrument,Whip,Book,Katar,Revolver,Rifle,Gatling Gun,Shotgun,Grenade Launcher,Fuuma Shuriken,2HStaff,Shield
 //
 // Novice

@@ -291,7 +291,7 @@
   const initializeGameDataAsync = async () => {
     addLog('正在加载游戏数据...', 'system')
     try {
-      const { itemsDB, mobsDB, spawnData, warpDB } = await initializeGameData(99)
+      const { itemsDB, mobsDB, spawnData, warpDB, jobStats } = await initializeGameData(99)
       
       setItemsDB(itemsDB)
       setMonstersDB(mobsDB)
@@ -306,6 +306,10 @@
       // 数据加载后，显式初始化当前地图
       if (player.currentMap) {
           initMap(player.currentMap)
+      }
+
+      if (jobStats) {
+        addLog('职业属性数据库加载成功!', 'success')
       }
 
       addLog('游戏数据加载完成!', 'success')
@@ -784,7 +788,13 @@
             <div class="space-y-2 text-sm">
                 <div v-for="stat in ['Str', 'Agi', 'Vit', 'Int', 'Dex', 'Luk']" :key="stat" class="flex items-center justify-between bg-gray-900 p-2 rounded">
                     <span class="w-8 font-bold text-gray-400">{{ stat }}</span>
-                    <span class="text-white font-mono text-lg">{{ player[stat.toLowerCase()] }}</span>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-white font-mono text-lg">{{ player[stat.toLowerCase()] }}</span>
+                        <!-- Bonus Display: Sum of Equip Bonus + Job Bonus -->
+                        <span class="text-green-400 text-xs font-bold" v-if="(player.equipmentBonuses?.[stat.toLowerCase()] || 0) + (player.equipmentBonuses?.[`job${stat}`] || 0) > 0">
+                            +{{ (player.equipmentBonuses?.[stat.toLowerCase()] || 0) + (player.equipmentBonuses?.[`job${stat}`] || 0) }}
+                        </span>
+                    </div>
                     <div class="flex items-center gap-2">
                          <span class="text-gray-500 text-xs">Cost: {{ getStatPointCost(player[stat.toLowerCase()]) }}</span>
                          <button @click="handleIncreaseStat(stat.toLowerCase())" class="bg-green-700 hover:bg-green-600 text-white px-3 py-1 rounded">+</button>

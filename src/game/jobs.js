@@ -11,6 +11,7 @@ export const JobType = {
 
 export const JobConfig = {
     [JobType.NOVICE]: {
+        id: 0,
         name: '初学者', // Novice
         maxJobLv: 10,
         hpMod: 1.0,
@@ -18,6 +19,7 @@ export const JobConfig = {
         aspdBonus: 0
     },
     [JobType.SWORDMAN]: {
+        id: 1,
         name: '剑士', // Swordman
         maxJobLv: 50,
         hpMod: 1.5,
@@ -25,6 +27,7 @@ export const JobConfig = {
         aspdBonus: 2
     },
     [JobType.MAGICIAN]: {
+        id: 2,
         name: '法师', // Magician
         maxJobLv: 50,
         hpMod: 0.8,
@@ -32,6 +35,7 @@ export const JobConfig = {
         aspdBonus: 0
     },
     [JobType.ARCHER]: {
+        id: 3,
         name: '弓箭手', // Archer
         maxJobLv: 50,
         hpMod: 0.9,
@@ -39,6 +43,7 @@ export const JobConfig = {
         aspdBonus: 5
     },
     [JobType.THIEF]: {
+        id: 6,
         name: '盗贼', // Thief
         maxJobLv: 50,
         hpMod: 1.1,
@@ -46,6 +51,7 @@ export const JobConfig = {
         aspdBonus: 10
     },
     [JobType.ACOLYTE]: {
+        id: 4,
         name: '服事', // Acolyte
         maxJobLv: 50,
         hpMod: 1.0,

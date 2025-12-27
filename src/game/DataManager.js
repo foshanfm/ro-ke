@@ -3,6 +3,7 @@
 
 import { getStaticData, setStaticData, isStaticDataStale } from '../db/index.js';
 import { loadItemDB, loadMobDB, loadSpawnData, loadWarpData } from './dataLoader.js';
+import { loadJobStatsDB } from './modules/jobDataLoader.js';
 import { analyzeConnectivity } from './utils/mapGraph.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
@@ -13,6 +14,7 @@ let itemsCache = null;
 let mobsCache = null;
 let spawnCache = null;
 let warpCache = null;
+let jobStatsCache = null;
 
 /**
  * 初始化游戏数据
@@ -59,6 +61,10 @@ export async function initializeGameData(maxLevel = 99) {
     console.log('[DataManager] 加载传送点数据...');
     warpCache = await loadWarpData();
 
+    // 6. 加载职业基础属性数据
+    console.log('[DataManager] 加载职业属性数据库...');
+    jobStatsCache = await loadJobStatsDB();
+
     // 5. 进行地图图论分析 (Graph Analysis)
     console.log('[DataManager] 正在分析世界地图连通性...');
     const connectivityReport = analyzeConnectivity(warpCache);
@@ -77,7 +83,8 @@ export async function initializeGameData(maxLevel = 99) {
         itemsDB: itemsCache,
         mobsDB: mobsCache,
         spawnData: spawnCache,
-        warpDB: warpCache
+        warpDB: warpCache,
+        jobStats: jobStatsCache
     };
 }
 
@@ -144,6 +151,54 @@ export function getWarpInfo(mapId) {
         return [];
     }
     return warpCache[mapId] || [];
+}
+
+/**
+ * 获取职业基础属性因子
+ */
+export function getJobFactors(jobId) {
+    if (!jobStatsCache) return null;
+    return jobStatsCache.jobFactors[jobId] || null;
+}
+
+/**
+ * 获取职业基础 HP/SP 表
+ */
+export function getJobBaseStats(jobId) {
+    if (!jobStatsCache) return null;
+    return {
+        hp: jobStatsCache.baseStats.hp[jobId] || null,
+        sp: jobStatsCache.baseStats.sp[jobId] || null
+    };
+}
+
+/**
+ * 获取职业等级加成 (Job Level Bonus)
+ * @param {number} jobId
+ * @param {number} jobLv
+ * @returns {Object} { str, agi, vit, int, dex, luk }
+ */
+export function getJobBonuses(jobId, jobLv) {
+    if (!jobStatsCache || !jobStatsCache.jobBonuses[jobId]) return null;
+    const bonusArr = jobStatsCache.jobBonuses[jobId];
+    // jobLv is index (Lv 1 = index 1, Lv 0 = index 0)
+    // Safety clamp
+    const safeLv = Math.min(Math.max(0, jobLv), bonusArr.length - 1);
+    return bonusArr[safeLv] || null;
+}
+
+/**
+ * 获取职业基础 ASPD
+ * @param {number} jobId
+ * @param {string} weaponType (e.g. 'DAGGER', 'SWORD')
+ * @returns {number} Base ASPD
+ */
+export function getJobBaseAspd(jobId, weaponType) {
+    if (!jobStatsCache || !jobStatsCache.jobBaseAspd[jobId]) return null;
+    const baseAspds = jobStatsCache.jobBaseAspd[jobId];
+    // Return specific weapon ASPD or unarmed as fallback?
+    // RO logic: if weapon not usable, usually invalid. But for calc sake:
+    return baseAspds[weaponType] || baseAspds['NONE'] || 150;
 }
 
 /**
