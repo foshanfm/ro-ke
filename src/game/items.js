@@ -164,7 +164,7 @@ export function getItemInfo(id) {
   let finalType = merged.type || ItemType.ETC
   if (EquipDB[id]) finalType = ItemType.EQUIP
   // Special case: Ammo is technically equipment in some DBs but we handle it as Ammo type
-  if (merged.subType === 'Ammo' || merged.type === 'Ammo') finalType = ItemType.AMMO
+  if (merged.subType === 'Ammo' || merged.type === 'Ammo' || (merged.name && merged.name.includes('箭矢'))) finalType = ItemType.AMMO
 
   return {
     ...merged,

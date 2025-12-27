@@ -149,8 +149,8 @@ export function recalculateMaxStats() {
 
     // Ammo Bonus
     // Ammo counts as equipment instance in the slot AMMO.
-    // It usually provides Atk.
-    if (player.equipment[EquipType.AMMO]) {
+    // It only provides ATK if a BOW is equipped.
+    if (player.equipment[EquipType.AMMO] && weaponType === WeaponType.BOW) {
         const ammoInstance = player.equipment[EquipType.AMMO]
         const ammoInfo = getItemInfo(ammoInstance.id)
         if (ammoInfo) {
@@ -660,6 +660,8 @@ export function equipItem(itemNameOrId) {
         targetSlot = EquipType.WEAPON
     } else if (targetSlot === 'Shield') {
         targetSlot = EquipType.SHIELD
+    } else if (equipData.type === ItemType.AMMO || targetSlot === 'Ammo') {
+        targetSlot = EquipType.AMMO
     }
 
     // Check if subType is a valid slot key

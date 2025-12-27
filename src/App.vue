@@ -699,7 +699,10 @@
         <!-- Details Panel (Overlay on right side) -->
         <div v-if="selectedDetail" class="fixed right-4 top-20 w-72 bg-[#1e1e1e] border border-gray-600 h-[500px] flex flex-col shadow-2xl z-[90] rounded">
             <div class="flex justify-between items-center p-2 border-b border-gray-700">
-                <span class="text-yellow-500 font-bold">{{ selectedDetail.type === 'Item' ? getEquippableName(selectedDetail.instance || { id: selectedDetail.data.id }) : selectedDetail.data.name }}</span>
+                <div class="flex flex-col">
+                    <span class="text-yellow-500 font-bold">{{ selectedDetail.type === 'Item' ? getEquippableName(selectedDetail.instance || { id: selectedDetail.data.id }) : selectedDetail.data.name }}</span>
+                    <span class="text-[9px] text-gray-600">ID: {{ selectedDetail.data.id }}</span>
+                </div>
                 <button @click="selectedDetail = null" class="text-gray-500 hover:text-white font-bold">×</button>
             </div>
             <div class="p-3 text-xs space-y-3 overflow-y-auto custom-scrollbar flex-1">
@@ -873,7 +876,10 @@
                             >
                                 <div class="flex items-center gap-3">
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-bold text-gray-200 truncate">{{ getEquippableName(item) }}</div>
+                                        <div class="text-sm font-bold text-gray-200 truncate">
+                                            {{ getEquippableName(item) }}
+                                            <span class="text-[9px] text-gray-600 ml-1">#{{ item.id }}</span>
+                                        </div>
                                         <div class="text-[10px] text-gray-500 flex gap-2">
                                             <span v-if="item.count > 1" class="text-cyan-500 ml-1">x{{ item.count }}</span>
                                         </div>
@@ -886,10 +892,10 @@
                                     <button @click="handleEntityClick(item, true)" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-[10px] text-gray-300">详细</button>
                                     
                                     <!-- Context Actions -->
-                                    <template v-if="getItemInfo(item.id).type === ItemType.EQUIP || getItemInfo(item.id).type === ItemType.AMMO">
+                                    <template v-if="getItemInfo(item.id).type === 'Equip' || getItemInfo(item.id).type === 'Ammo'">
                                         <button @click="handleEquip(item.id)" class="px-2 py-1 bg-blue-900 hover:bg-blue-800 rounded text-[10px] text-blue-100">装备</button>
                                     </template>
-                                    <template v-else-if="getItemInfo(item.id).type === ItemType.USABLE">
+                                    <template v-else-if="getItemInfo(item.id).type === 'Usable'">
                                         <button @click="handleUseItem(item.id)" class="px-2 py-1 bg-green-900 hover:bg-green-800 rounded text-[10px] text-green-100">使用</button>
                                     </template>
                                     <template v-else-if="getItemInfo(item.id).type === 'Card'">

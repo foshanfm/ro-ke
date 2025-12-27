@@ -75,11 +75,13 @@ We prioritize "Feel" over "Academic Accuracy".
     - **Automated logic**: Scripts (e.g., `{itemheal rand(45,65)}`) are parsed into machine-readable data during compilation.
     - **Dynamic Naming**: `items.js` implements a RO-standard equippable naming engine supporting `[Multiplier] [Prefix] [BaseName] [Suffix]`.
     - **Strict Validation**: The system enforces bitmask-based location validation for card insertion, ensuring cross-referenced ground truth from the item database.
-    - **Ammo System (Equipable Stack)**:
-        - Unlike normal equipment, items of type `AMMO` move their entire `count` to the `Ammo` slot.
-        - Combat logic enforces `player.equipment.Ammo` check for `WeaponType.BOW`.
-        - Consumption occurs per-hit in the combat tick.
-    - **Efficiency**: Eliminates expensive string splitting and regex parsing in the browser.
+- [x] **Ammo System**: Dedicated `Ammo` gear slot with stack-based equipping logic.
+- [x] **Combat Enforcement**: Bow attacks require and consume 1 arrow per hit.
+- [x] **ATK Logic**: Ammo bonus is conditionally applied only when a Bow is equipped.
+- [x] **UI & UX Refinement**: 
+    - Text-only inventory and detail-panel Item ID display.
+    - Fixed item type identification for Arrows (removed "Use" button).
+- [x] **Legacy Migration**: Automated equipment object patching for existing accounts.
     - **Persistence Constraint**: Functions (closures) cannot be stored in IndexedDB. Data is stored as pure JSON, and logic (e.g., item healing effects) is **hydrated** post-load via `injectRuntimeEffects` in `items.js`.
 
 ### 3.4. Drop System (Layered)
