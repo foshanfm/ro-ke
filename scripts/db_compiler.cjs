@@ -2,10 +2,14 @@
 const fs = require('fs');
 const path = require('path');
 
-const ITEM_DB_PATH = path.join(__dirname, '../src/game/data/item_db.txt');
-const MOB_DB_PATH = path.join(__dirname, '../src/game/data/mob_db.txt');
+const DATA_DIR = path.join(__dirname, '../src/game/data');
+
+const ITEM_DB_PATH = path.join(DATA_DIR, 'item_db.txt');
+const CARD_PREFIX_PATH = path.join(DATA_DIR, 'cardprefixnametable.txt');
+const CARD_POSTFIX_PATH = path.join(DATA_DIR, 'cardpostfixnametable.txt');
+const DESC_TABLE_PATH = path.join(DATA_DIR, 'idnum2itemdesctable.txt');
+const MOB_DB_PATH = path.join(DATA_DIR, 'mob_db.txt');
 const OUTPUT_DIR = path.join(__dirname, '../src/game/data/compiled');
-const ITEM_DESC_PATH = path.join(__dirname, '../src/game/data/idnum2itemdesctable.txt');
 
 if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -32,20 +36,78 @@ function splitROLine(line) {
 }
 
 function parseDescriptions() {
-    if (!fs.existsSync(ITEM_DESC_PATH)) return {};
+    if (!fs.existsSync(DESC_TABLE_PATH)) return {};
     console.log('Parsing Item Descriptions...');
-    const content = fs.readFileSync(ITEM_DESC_PATH, 'utf-8');
+    const content = fs.readFileSync(DESC_TABLE_PATH, 'utf-8');
     const sections = content.split(/(\d+)#/);
     const descMap = {};
     for (let i = 1; i < sections.length; i += 2) {
         const id = parseInt(sections[i]);
         const text = sections[i + 1].split('#')[0].trim();
-        if (id && text) {
-            // Remove the color codes like ^000000
-            descMap[id] = text.replace(/\^[0-9A-Fa-f]{6}/g, '').trim();
+        if (!id || !text) continue;
+
+        // 清理描述中的颜色代码 ^0000CC 和 导航标记 <NAVI>
+        let compoundOn = null;
+        const compoundMatch = text.match(/Compound on:\s*(.*)/i);
+        if (compoundMatch) {
+            compoundOn = compoundMatch[1].replace(/\^[0-9A-Fa-f]{6}/g, '').trim();
         }
+
+        const cleanDesc = text
+            .replace(/\^[0-9A-Fa-f]{6}/g, '')
+            .replace(/<NAVI>.*?<INFO>.*?<\/INFO><\/NAVI>/g, '') // 移除完整的导航标记
+            .replace(/Can be enchanted by:[\s\n]*/gi, '') // 彻底移除残留的描述行
+            .trim();
+
+        descMap[id] = {
+            text: cleanDesc,
+            compoundOn: compoundOn
+        };
     }
     return descMap;
+}
+
+function parseCardPrefixes() {
+    console.log('Parsing Card Prefixes...');
+    const cardPrefixes = {};
+    if (!fs.existsSync(CARD_PREFIX_PATH)) {
+        console.warn('Card prefix table not found, skipping prefixes.');
+        return cardPrefixes;
+    }
+    const content = fs.readFileSync(CARD_PREFIX_PATH, 'utf-8');
+    const lines = content.split('\n');
+    for (const line of lines) {
+        if (!line.trim() || line.startsWith('//')) continue;
+        const parts = line.split('#');
+        if (parts.length >= 2) {
+            const id = parseInt(parts[0]);
+            const prefix = parts[1].trim();
+            if (id && prefix) {
+                cardPrefixes[id] = prefix;
+            }
+        }
+    }
+    return cardPrefixes;
+}
+
+function parseCardPostfixes() {
+    console.log('Parsing Card Postfix Table...');
+    const cardPostfixes = new Set();
+    if (!fs.existsSync(CARD_POSTFIX_PATH)) {
+        console.warn('Card postfix table not found, skipping.');
+        return cardPostfixes;
+    }
+    const content = fs.readFileSync(CARD_POSTFIX_PATH, 'utf-8');
+    const lines = content.split('\n');
+    for (const line of lines) {
+        if (!line.trim() || line.startsWith('//')) continue;
+        const parts = line.split('#');
+        const id = parseInt(parts[0]);
+        if (id) {
+            cardPostfixes.add(id);
+        }
+    }
+    return cardPostfixes;
 }
 
 const JOB_MAPPING = [
@@ -86,6 +148,8 @@ const WEAPON_TYPE_MAP = {
 function parseItemDB() {
     console.log('Compiling Item DB...');
     const descMap = parseDescriptions();
+    const cardPrefixes = parseCardPrefixes();
+    const cardPostfixMarkers = parseCardPostfixes();
     const content = fs.readFileSync(ITEM_DB_PATH, 'utf-8');
     const lines = content.split('\n');
     const items = {};
@@ -115,7 +179,7 @@ function parseItemDB() {
             name: parts[2],
             type: mapItemType(type),
             price: { buy: buyPrice, sell: sellPrice },
-            weight: (parseInt(parts[6]) || 0), // RO 原始数据可能是 70 表示 7.0，这里保留原始数值，UI 处理或直接用
+            weight: (parseInt(parts[6]) || 0),
             atk: 0,
             matk: 0,
             def: parseInt(parts[8]) || 0,
@@ -124,8 +188,11 @@ function parseItemDB() {
             reqLv: parseInt(parts[16]) || 1,
             jobs: getJobNames(jobMask),
             location: location,
-            description: descMap[id] || '',
-            script: parts[19] || ''
+            description: descMap[id]?.text || '',
+            compoundOn: descMap[id]?.compoundOn || null,
+            script: parts[19] || '',
+            prefix: cardPrefixes[id] || null,
+            isPostfix: cardPostfixMarkers.has(id)
         };
 
         // Parse ATK:MATK
@@ -137,7 +204,7 @@ function parseItemDB() {
 
         // SubType Mapping
         if (item.type === 'Equip') {
-            if (type === 5 || (location & 2)) { // Weapon Type or Weapon Slot
+            if (type === 5) { // Weapon Type
                 item.subType = WEAPON_TYPE_MAP[view] || 'Weapon';
             } else {
                 // Armor SubTypes
@@ -150,6 +217,11 @@ function parseItemDB() {
                 else if (location & 64) item.subType = 'Footgear';
                 else if (location & 136) item.subType = 'Accessory'; // 8 or 128
             }
+        }
+
+        // Logic for Card Compounding (from Location bitmask)
+        if (item.type === 'Card') {
+            item.compoundOn = mapLocation(location);
         }
 
         // --- SCRIPT PARSING ---
@@ -188,6 +260,21 @@ function parseItemDB() {
 
     fs.writeFileSync(path.join(OUTPUT_DIR, 'items.json'), JSON.stringify(items, null, 2));
     console.log(`Compiled ${Object.keys(items).length} items.`);
+}
+
+function mapLocation(loc) {
+    if (!loc) return 'Common';
+    const slots = [];
+    if (loc & 2) slots.push('Weapon');
+    if (loc & 32) slots.push('Shield');
+    if (loc & 16) slots.push('Armor');
+    if (loc & 4) slots.push('Garment');
+    if (loc & 64) slots.push('Footgear');
+    if (loc & 256) slots.push('Head(Top)');
+    if (loc & 512) slots.push('Head(Mid)');
+    if (loc & 1) slots.push('Head(Low)');
+    if (loc & 136) slots.push('Accessory');
+    return slots.length > 0 ? slots.join(' / ') : `Unknown(${loc})`;
 }
 
 function parseMobDB() {

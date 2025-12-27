@@ -69,9 +69,12 @@ We prioritize "Feel" over "Academic Accuracy".
     - Parses script strings into JSON objects (`bonuses`, `effects`).
     - Merges flavor text from `idnum2itemdesctable.txt`.
     - Maps complex bitmasks (Jobs, Locations) into readable strings.
+    - **Card Metadata**: Parses `cardprefixnametable.txt` and `cardpostfixnametable.txt` to tag cards with `prefix` and `isPostfix` metadata.
 - **DataManager**: Handles asynchronous loading and IndexedDB caching for large assets.
 - **Data Strategy**:
-    - **Automated logic**: Scripts (e.g., `{itemheal rand(45,65)}`) are parsed into machine-readable data (`{"hp": [45, 65]}`) during compilation.
+    - **Automated logic**: Scripts (e.g., `{itemheal rand(45,65)}`) are parsed into machine-readable data during compilation.
+    - **Dynamic Naming**: `items.js` implements a RO-standard equippable naming engine supporting `[Multiplier] [Prefix] [BaseName] [Suffix]`.
+    - **Strict Validation**: The system enforces bitmask-based location validation for card insertion, ensuring cross-referenced ground truth from the item database.
     - **Efficiency**: Eliminates expensive string splitting and regex parsing in the browser.
     - **Persistence Constraint**: Functions (closures) cannot be stored in IndexedDB. Data is stored as pure JSON, and logic (e.g., item healing effects) is **hydrated** post-load via `injectRuntimeEffects` in `items.js`.
 

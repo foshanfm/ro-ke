@@ -125,12 +125,25 @@ A web-based idle game recreating the experience of using automated botting softw
 - [ ] **1st Jobs Action Skills**: Bash, Double Strafe, Elemental Bolts.
 - [ ] **Cast Time System**: Variable cast times based on DEX and skill level.
 
+### Phase 21: Advanced Item Systems [Upcoming]
+- [ ] **Enchantment System**: 
+    - Support for NPC-based item stat re-rolling.
+    - Note: Metadata for enchantment NPCs (NAVI tags) is currently stripped in `db_compiler.cjs` to clean up UI, will need to be restored or parsed into a proper `enchant_at` field later.
+- [ ] **Refining System**: Material-based equipment upgrades (e.g., Elunium, Oridecon).
+
+### Phase 22: Advanced Inventory & Card System [Completed]
+- [x] **Inventory UI**: Modal-based management for Gear, Usables, and Cards.
+- [x] **Card Insertion Flow**: Interactive UI for compounding cards with location validation.
+- [x] **Multiplier Naming**: Support for Double/Triple/Quadruple prefixes.
+- [x] **Suffix Support**: Integration of `cardpostfixnametable.txt` for `of XXX` naming convention.
+- [x] **Sub-Detail Inspection**: Clickable card slots in equipment details for rapid cross-referencing.
+
 ## 4. Current State
-*   **Version:** 2.2.1 (Phase 21 - Metadata & Data Enrichment)
-*   **Stability:** High. Full integration with rAthena DB and description tables.
-*   **Performance:** Elite. Decoupled UI logic from raw data parsing.
+*   **Version:** 2.3.0 (Phase 22 - Advanced Inventory & Card System)
+*   **Stability:** High. Full integration with rAthena DB, description tables, and card naming standards.
+*   **Performance:** Elite. Optimized data compiler and instance-aware UI components.
 *   **New Features:**
-    - **Unified Stat Engine**: All 12k+ items provide correct stats via script parsing.
-    - **Enriched Metadata**: Items now contain full job names, locations, and flavor text.
-    - **Conflict Handling**: Intelligent two-handed weapon and shield management.
+    - **Inventory Modal**: Integrated equipment and item management.
+    - **Advanced Card System**: Full support for prefixes, suffixes, and multipliers.
+    - **Validation**: Strict location-based card insertion to ensure data integrity.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

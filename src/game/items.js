@@ -169,6 +169,87 @@ export function getItemInfo(id) {
 }
 
 /**
+ * 获取装备的动态名称 (包含插卡前缀)
+ * @param {Object} instance 装备实例 { id, cards: [] }
+ */
+export function getEquippableName(instance) {
+  if (!instance) return ''
+  const baseInfo = getItemInfo(instance.id)
+  if (!baseInfo) return '未知装备'
+
+  if (instance.cards && instance.cards.length > 0) {
+    const validCards = instance.cards.filter(id => id !== null)
+    if (validCards.length === 0) return baseInfo.name
+
+    // 统计前缀和后缀，并将它们分类
+    const activePrefixes = []
+    const activeSuffixes = []
+
+    // RO 规则：如果是同一类卡片（同前缀或同后缀），显示倍数。
+    // 如果是混合卡片，取最后一张有效卡片的面值。
+
+    // 我们先看是否有统一的倍数前缀/后缀
+    const prefixes = []
+    const suffixes = []
+    validCards.forEach(cardId => {
+      const cardInfo = getItemInfo(cardId)
+      if (cardInfo) {
+        if (cardInfo.isPostfix && cardInfo.prefix) suffixes.push(cardInfo.prefix)
+        else if (cardInfo.prefix) prefixes.push(cardInfo.prefix)
+      }
+    })
+
+    // 倍数逻辑：2:Double, 3:Triple, 4:Quadruple
+    const multipliers = { 2: 'Double', 3: 'Triple', 4: 'Quadruple' }
+
+    let finalPrefix = ''
+    let finalSuffix = ''
+
+    // 处理前缀倍数
+    if (prefixes.length > 0) {
+      const unique = [...new Set(prefixes)]
+      if (unique.length === 1 && prefixes.length > 1) {
+        finalPrefix = (multipliers[prefixes.length] || '') + ' ' + unique[0]
+      } else {
+        // 混合前缀取最后一张带前缀卡片的前缀
+        for (let i = instance.cards.length - 1; i >= 0; i--) {
+          const cInfo = getItemInfo(instance.cards[i])
+          if (cInfo && cInfo.prefix && !cInfo.isPostfix) {
+            finalPrefix = cInfo.prefix
+            break
+          }
+        }
+      }
+    }
+
+    // 处理后缀倍数 (虽然 RO 很少见后缀倍数，但逻辑上保持一致)
+    if (suffixes.length > 0) {
+      const unique = [...new Set(suffixes)]
+      if (unique.length === 1 && suffixes.length > 1) {
+        finalSuffix = (multipliers[suffixes.length] || '') + ' ' + unique[0]
+      } else {
+        // 混合后缀取最后一张带后缀卡片的后缀
+        for (let i = instance.cards.length - 1; i >= 0; i--) {
+          const cInfo = getItemInfo(instance.cards[i])
+          if (cInfo && cInfo.prefix && cInfo.isPostfix) {
+            finalSuffix = cInfo.prefix
+            break
+          }
+        }
+      }
+    }
+
+    let fullName = baseInfo.name
+    if (finalPrefix) fullName = finalPrefix.trim() + ' ' + fullName
+    if (finalSuffix) fullName = fullName + ' ' + finalSuffix.trim()
+
+    return fullName.trim()
+  }
+
+  return baseInfo.name
+}
+
+/**
  * 检查物品数据库是否已加载
  */
 export function isItemsDBLoaded() {

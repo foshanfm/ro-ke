@@ -97,6 +97,7 @@ export const EquipDB = {
         id: 2301,
         name: '棉衬衫',
         type: EquipType.ARMOR,
+        subType: 'Armor',
         def: 1,
         weight: 10,
         reqLv: 1,

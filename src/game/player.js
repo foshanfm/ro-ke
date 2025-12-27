@@ -641,7 +641,7 @@ export function equipItem(itemNameOrId) {
     } else if (targetSlot === 'Head') {
         // Default headgear to Top if not specified (should be mapped in dataLoader)
         targetSlot = EquipType.HEAD_TOP
-    } else if (targetSlot === 'Weapon') {
+    } else if (targetSlot === 'Weapon' || Object.values(WeaponType).includes(targetSlot)) {
         targetSlot = EquipType.WEAPON
     } else if (targetSlot === 'Shield') {
         targetSlot = EquipType.SHIELD
@@ -711,12 +711,25 @@ export function insertCard(cardName, equipType) {
         return { success: false, msg: '该部位没有装备。' }
     }
 
+    const cardItem = player.inventory[cardIndex]
+    const cardInfo = getItemInfo(cardItem.id)
+    const equipInfo = getItemInfo(equipment.id)
+
+    // Location compatibility check
+    // Cards usually have a bitmask representing valid slots.
+    // Weapons: 2, Armor: 16, Shield: 32, etc.
+    // Equipment has a bitmask representing its own slot.
+    if (cardInfo.location && equipInfo.location) {
+        if (!(cardInfo.location & equipInfo.location)) {
+            return { success: false, msg: `这张卡片无法插在此装备上 (该卡片适用于: ${cardInfo.compoundOn || '其他部位'})。` }
+        }
+    }
+
     const emptySlotIndex = equipment.cards.indexOf(null)
     if (emptySlotIndex === -1) {
         return { success: false, msg: '该装备没有剩余插槽。' }
     }
 
-    const cardItem = player.inventory[cardIndex]
     equipment.cards[emptySlotIndex] = cardItem.id
 
     cardItem.count--
@@ -727,8 +740,6 @@ export function insertCard(cardName, equipType) {
     recalculateMaxStats()
     saveGame()
 
-    const cardInfo = getItemInfo(cardItem.id)
-    const equipInfo = getItemInfo(equipment.id)
     return { success: true, msg: `已将 [${cardInfo.name}] 插入 [${equipInfo.name}]！` }
 }
 
