@@ -24,7 +24,13 @@ All math logic resides in `src/game/formulas.js`.
 
 ## 2. Module Responsibilities
 
-*   **`player.js`**: State Owner. Handles Inventory, Stats, Config. Delegates persistence to `db/index.js`.
+*   **`player.js`**: State Owner. Handles Inventory, Stats, Config. Delegates persistence to `db/index.js` and stat calculation to `statManager.js`.
+*   **`modules/logger.js`**: Global Event Bus. Provides a reactive log stream for UI rendering and decoupled module communication.
+*   **`modules/statManager.js`**: Calculation Engine. Extracts formula-heavy logic from `player.js` to compute HP, SP, ATK, DEF, and ASPD.
+*   **`combat.js`**: AI Orchestrator. Manages the high-level `aiTick` loop, delegating specific behaviors to Handlers.
+    - **MovementHandler**: Moving, Returning, and Warp collision.
+    - **TargetingHandler**: Monster search and validation.
+    - **CombatHandler**: Attack execution, ammo check, and damage application.
 *   **`db/index.js`**: Dexie.js Database Wrapper. Manages `saves` and `static_data` object stores.
 *   **`DataManager.js`**: Logic Orchestrator. Manages the lifecycle of game data, including parsing, caching to IndexedDB, and memory retrieval.
 *   **`dataLoader.js`**: Parser. Responsible for parsing external text databases (`item_db.txt`, `mob_db.txt`) and map spawn scripts. Called by `DataManager` if cache is stale.

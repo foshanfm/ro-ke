@@ -1,29 +1,38 @@
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { player, addExp, addItem, useItem, saveGame, warp, respawn } from './player'
 import { spawnMonster, getMonster } from './monsters'
 import { getItemInfo } from './items'
 import { calcAspdDelay, calculateDamageFlow, calcMoveSpeed } from './formulas'
 import { calculateDrops } from './drops'
 import { PassiveHooks } from './skillEngine'
-import { mapState, initMap, findNearestMonster, movePlayerToward, randomWalk, removeMonster, checkWarpCollision } from './mapManager'
-import { findPath } from './navigation' // Import findPath
+import { mapState, initMap, removeMonster } from './mapManager'
+import { findPath } from './navigation'
+import { addLog } from './modules/logger.js'
+import * as MovementHandler from './combat/MovementHandler.js'
+import * as TargetingHandler from './combat/TargetingHandler.js'
+import * as CombatHandler from './combat/CombatHandler.js'
 
 // 游戏循环状态
 export const gameState = reactive({
     isAuto: false,
-    goalMap: null, // 目标挂机地图
-    currentMonster: null, // 当前锁定的目标
-    manualTarget: null, // 手动移动目标 { x, y }
-    status: 'IDLE', // IDLE, MOVING, ATTACKING, SEARCHING, RETURNING
-    lastActionLog: '' // 防止重复打日志
+    goalMap: null,
+    currentMonster: null,
+    manualTarget: null,
+    status: 'IDLE',
+    lastActionLog: ''
 })
 
+// Use ref for lastActionLog to pass by reference to handlers
+const lastActionLogRef = ref('')
+
+// Backward compatibility: keep setLogCallback for external modules
 let logCallback = null
 export function setLogCallback(fn) {
     logCallback = fn
 }
 
 function log(msg, type = 'info') {
+    addLog(msg, type)
     if (logCallback) logCallback(msg, type)
 }
 
@@ -153,254 +162,145 @@ async function aiTick(sessionId) {
 
         checkAutoPotion()
 
-        // 0. 检查是否在目标地图
+        // 0. Check if on goal map
         const curMapId = (player.currentMap || '').toLowerCase()
         const goalMapId = (gameState.goalMap || '').toLowerCase()
 
         if (goalMapId && curMapId !== goalMapId) {
             gameState.status = 'RETURNING'
-            // 寻路返回
-            const path = findPath(curMapId, goalMapId)
+            lastActionLogRef.value = gameState.lastActionLog
+            const result = MovementHandler.handleReturnToGoalMap(
+                curMapId,
+                goalMapId,
+                findPath,
+                log,
+                lastActionLogRef
+            )
+            gameState.lastActionLog = lastActionLogRef.value
 
-            if (!path || path.length < 2) {
-                log(`无法找到返回 ${gameState.goalMap} 的路径!`, 'error')
+            if (result.error) {
+                log(result.error, 'error')
                 stopBot()
                 return
             }
 
-            const nextMap = path[1] // path[0] is current
-
-            // 寻找通往 nextMap 的传送点
-            // mapState.activeWarps 应该包含所有传送点信息
-            // activeWarps: [{x, y, targetMap, name}]
-            const warpToNext = mapState.activeWarps.find(w => w.targetMap === nextMap)
-
-            if (warpToNext) {
-                if (gameState.lastActionLog !== `return_${nextMap}`) {
-                    log(`Returning to ${gameState.goalMap}... Next step: ${nextMap}`, 'system')
-                    gameState.lastActionLog = `return_${nextMap}`
-                }
-
-                // 移动向传送点
-                movePlayerToward(warpToNext.x, warpToNext.y, player.moveSpeed)
-
-                // 检查是否触碰传送点 (复用原有逻辑)
-                const warpInfo = checkWarpCollision(player.x, player.y)
-                if (warpInfo) {
-                    // ... warp logic (reuse existing block via function extraction could be better, but inline works)
-                    log(`进入传送点 [${warpInfo.name}]...`, 'warning')
-                    // 暂时停止一下让 warp 生效，不要 stopBot，因为我们要跨图
-                    // 但目前的 warp 实现是立即生效 + 异步
-                    // 我们不需要 stopBot，只需要让这一帧结束，等待 warp 更新 map
-                    const res = warp(warpInfo.targetMap)
-                    if (res.success) {
-                        // Warp successful
-                        // Update player pos slightly to avoid immediate re-warp if bidirectional (handled by offset)
-                        // But wait, warp() changes map, InitMap will trigger.
-                        // On next aiTick, player.currentMap will be new map.
-                        return
-                    }
-                }
-            } else {
-                // 找不到传送点 (可能是 warp 数据缺失)
-                log(`Unknown warp to ${nextMap} on current map!`, 'error')
-                stopBot()
-            }
-
-            mainLoopId = setTimeout(() => aiTick(sessionId), 100)
+            mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
             return
         }
 
-        // 1. 优先处理手动移动目标
+        // 1. Handle manual movement
         if (gameState.manualTarget) {
             gameState.status = 'MOVING'
-            const { x, y } = gameState.manualTarget
-            const dist = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2))
+            const result = MovementHandler.handleManualMovement(gameState.manualTarget, log)
 
-            if (dist < 5) {
-                log(`到达目的地 (${Math.floor(x / 10)}, ${Math.floor(y / 10)})`, 'success')
+            if (result.arrived) {
                 gameState.manualTarget = null
                 stopBot()
                 return
             }
 
-            movePlayerToward(x, y, player.moveSpeed)
-
-            // 检查传送阵触碰
-            const warpInfo = checkWarpCollision(player.x, player.y)
-            if (warpInfo) {
-                log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
-                stopBot()
-                setTimeout(() => {
-                    const res = warp(warpInfo.targetMap)
-                    if (res.success) {
-                        // 添加微小偏移量，防止踩在传送阵动弹不得
-                        const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                        const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                        player.x = warpInfo.targetX + offsetX
-                        player.y = warpInfo.targetY + offsetY
-                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)})`, 'success')
-                    }
-                }, 500)
+            if (result.warped) {
                 return
             }
 
-            mainLoopId = setTimeout(() => aiTick(sessionId), 100)
+            mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
             return
         }
 
-        // 1. 如果没有目标，则寻怪
+        // 2. Search for target
         if (!gameState.currentMonster) {
             gameState.status = 'SEARCHING'
-            const { monster, distance } = findNearestMonster(player.config.viewRange)
+            const result = TargetingHandler.searchForTarget(
+                player.config.viewRange,
+                log,
+                getMobTemplate
+            )
 
-            if (monster) {
-                gameState.currentMonster = monster
-                const mobTemplate = getMobTemplate(monster)
-                log(`[${mobTemplate.name}] detected at (${Math.floor(monster.x / 10)}, ${Math.floor(monster.y / 10)})!`, 'dim')
-                gameState.lastActionLog = '' // 重置动作日志
-            } else {
-                // 没怪，随机漫步 (巡逻)
-                const isFirstPatrol = !mapState.patrolTarget
-                const arrived = randomWalk()
-
-                if (isFirstPatrol) {
-                    log(`No monsters nearby. Patrolling to (${Math.floor(mapState.patrolTarget.x / 10)}, ${Math.floor(mapState.patrolTarget.y / 10)})...`, 'dim')
-                }
-
-                mainLoopId = setTimeout(() => aiTick(sessionId), arrived ? 500 : 100) // 如果到达了等久一点
+            if (result.monster) {
+                gameState.currentMonster = result.monster
+                gameState.lastActionLog = ''
+            } else if (result.shouldPatrol) {
+                mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
                 return
             }
         }
 
         const target = gameState.currentMonster
 
-        // 校验目标有效性 (是否已死亡)
-        if (target.hp <= 0) {
+        // Validate target
+        if (!TargetingHandler.isTargetValid(target)) {
             gameState.currentMonster = null
             mainLoopId = setTimeout(() => aiTick(sessionId), 200)
             return
         }
 
-        // 2. 检查距离
+        // 3. Check distance and chase if needed
         const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
         const attackRange = player.attackRange || 10
 
         if (dist > attackRange) {
-            // 距离太远，追击
             gameState.status = 'MOVING'
-            const mobTemplate = getMobTemplate(target)
+            lastActionLogRef.value = gameState.lastActionLog
+            const result = MovementHandler.handleChaseTarget(
+                target,
+                log,
+                lastActionLogRef,
+                getMobTemplate
+            )
+            gameState.lastActionLog = lastActionLogRef.value
 
-            if (gameState.lastActionLog !== `chase_${target.guid}`) {
-                log(`Moving toward [${mobTemplate.name}] at (${Math.floor(target.x / 10)}, ${Math.floor(target.y / 10)})...`, 'dim')
-                gameState.lastActionLog = `chase_${target.guid}`
-            }
-
-            movePlayerToward(target.x, target.y, player.moveSpeed) // 使用计算出的玩家速度
-
-            // 检查是否触碰传送点
-            const warpInfo = checkWarpCollision(player.x, player.y)
-            if (warpInfo) {
-                log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
-                stopBot()
-                setTimeout(() => {
-                    const res = warp(warpInfo.targetMap)
-                    if (res.success) {
-                        // 添加微小偏移量，防止踩在传送阵动弹不得
-                        const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                        const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                        player.x = warpInfo.targetX + offsetX
-                        player.y = warpInfo.targetY + offsetY
-                        log(`已到达 ${warpInfo.targetMap} (${Math.floor(player.x / 10)}, ${Math.floor(player.y / 10)})`, 'success')
-                    }
-                }, 500)
+            if (result.warped) {
                 return
             }
 
-            mainLoopId = setTimeout(() => aiTick(sessionId), 100)
+            mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
             return
         }
 
-        // 3. 开始攻击逻辑
-
-        // --- AMMO CHECK FOR BOWS ---
-        // If weapon is BOW (or based on WeaponType.BOW), verify ammo.
-        let weaponType = 'NONE'
-        if (player.equipment && player.equipment.Weapon) {
-            const wInfo = getItemInfo(player.equipment.Weapon.id)
-            if (wInfo) weaponType = wInfo.subType
-        }
-
-        // Compatibility: Check both Enum and String 'BOW'
-        if (weaponType === 'BOW') {
-            const ammo = player.equipment.Ammo
-            if (!ammo || ammo.count <= 0) {
-                if (gameState.lastActionLog !== 'no_ammo') {
-                    log('You need arrows to attack!', 'error')
-                    gameState.lastActionLog = 'no_ammo'
-                }
-                // Do not attack. Stop bot eventually? Or just stand there. 
-                // RO behavior: Stand there and fail to attack. 
-                // However, we should stop to prevent spam.
-                stopBot()
-                return
-            }
-
-            // Consume Ammo
-            ammo.count--
-            if (ammo.count <= 0) {
-                // Out of ammo
-                player.equipment.Ammo = null
-                log('Out of arrows!', 'warning')
-                stopBot()
-                return
-            }
-        }
-
+        // 4. Attack logic
         gameState.status = 'ATTACKING'
 
-        // 攻击逻辑 (保持原有的 formulas)
-        const passiveRes = PassiveHooks.onNormalAttack(target)
-        const targetTemplate = getMobTemplate(target)
-        const res = calculateDamageFlow({
-            attackerAtk: player.atk,
-            attackerHit: player.hit,
-            attackerCrit: player.crit,
-            defenderDef: targetTemplate.def || 0,
-            defenderFlee: targetTemplate.flee || 1,
-            isPlayerAttacking: true
-        })
+        // Check ammo for ranged weapons
+        const weaponType = CombatHandler.getWeaponType()
+        lastActionLogRef.value = gameState.lastActionLog
+        const ammoCheck = CombatHandler.checkAmmo(weaponType, log, lastActionLogRef)
+        gameState.lastActionLog = lastActionLogRef.value
 
-        if (res.type === 'miss') {
-            log(`You miss [${targetTemplate.name}]!`, 'dim')
-        } else {
-            let damage = res.damage
-            if (passiveRes.damageMod !== 1.0) damage = Math.floor(damage * passiveRes.damageMod)
-
-            if (res.type === 'crit') log(`CRITICAL! You deal ${damage} damage.`, 'warning')
-            else log(`You attack [${targetTemplate.name}] for ${damage} damage.`, 'default')
-
-            passiveRes.logs.forEach(l => log(l.msg, l.type))
-
-            target.hp -= damage
-
-            // 怪物被攻击，激活怪物 AI
-            if (!monsterLoopId && target.hp > 0) {
-                // 延迟启动怪物反击 (模拟反应)
-                const startMapId = mapState.currentMapId
-                monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, startMapId), 200)
+        if (!ammoCheck.hasAmmo) {
+            if (ammoCheck.shouldStop) {
+                stopBot()
             }
+            return
+        }
 
-            if (target.hp <= 0) {
-                monsterDead(target)
-                if (monsterLoopId) {
-                    clearTimeout(monsterLoopId)
-                    monsterLoopId = null
-                }
-                saveGame()
-                mainLoopId = setTimeout(() => aiTick(sessionId), 500)
+        // Consume ammo if using bow
+        if (weaponType === 'BOW') {
+            const consumed = CombatHandler.consumeAmmo(log)
+            if (!consumed) {
+                stopBot()
                 return
             }
+        }
+
+        // Execute attack
+        const attackResult = CombatHandler.executeAttack(target, getMobTemplate, log)
+
+        // Activate monster AI if hit and alive
+        if (attackResult.type !== 'miss' && !attackResult.killed && !monsterLoopId) {
+            const startMapId = mapState.currentMapId
+            monsterLoopId = setTimeout(() => monsterActionLoop(sessionId, startMapId), 200)
+        }
+
+        // Handle monster death
+        if (attackResult.killed) {
+            monsterDead(target)
+            if (monsterLoopId) {
+                clearTimeout(monsterLoopId)
+                monsterLoopId = null
+            }
+            saveGame()
+            mainLoopId = setTimeout(() => aiTick(sessionId), 500)
+            return
         }
 
         // 攻击间隔

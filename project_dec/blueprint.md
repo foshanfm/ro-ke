@@ -144,11 +144,17 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **UI Cleanup**: Transitioned to lean, text-only inventory (removed icons and redundant type tags).
 - [x] **Legacy Migration**: Automated equipment object patching for existing accounts.
 
+### Phase 24: Codebase Modularization & Refactoring [Completed]
+- [x] **Global Logger**: Dedicated reactive logging module (`logger.js`) for decoupled event tracking.
+- [x] **Stat Manager**: Extracted complex stat calculation logic into `statManager.js`.
+- [x] **AI Handler Pattern**: Split monolithic `aiTick` into specialized `MovementHandler`, `TargetingHandler`, and `CombatHandler`.
+- [x] **Code Quality**: Improved testability and readablity of the core combat loop.
+
 ## 4. Current State
-*   **Version:** 2.4.0 (Phase 23 - Ammo System & UI Refinement)
-*   **Stability:** High. robust error handling in monster loops and safe data migration.
-*   **Performance:** Elite. Faster inventory rendering and efficient combat checks.
+*   **Version:** 2.5.0 (Phase 24 - Codebase Modularization & Refactoring)
+*   **Stability:** High. Cleaned up core logic with specialized handlers.
+*   **Performance:** Elite. Optimized stat recalculation and UI logging.
 *   **New Features:**
-    - **Arrow Support**: Bow users now strictly require arrows to function.
-    - **Minimalist UI**: Cleaner and more industrial inventory aesthetic.
+    - **Modular AI**: Combat logic is now split into Movement, Targeting, and Combat handlers.
+    - **Global Event Bus**: Centralized logging system via `logger.js`.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.
