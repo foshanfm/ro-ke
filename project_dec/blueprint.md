@@ -168,12 +168,20 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Backward Compatibility**: Implemented fallback for legacy monster instances to prevent `NaN` damage.
 - [x] **Data Re-compilation**: Regenerated monster database (1964 mobs) with enhanced ATK metadata.
 
+### Phase 28: Merchant NPC & Bot Strategies [Completed]
+- [x] **Merchant Infrastructure**: City-based NPC deployment with `npcs.js`.
+- [x] **Proximity Enforcement**: Trading requires being within 5 cells of a Merchant.
+- [x] **Official Item Shop**: Dynamic inventory loading from `dealer.json`.
+- [x] **Advanced Configuration**: `conf strategy` command for per-item supply/loot rules.
+- [x] **Autonomous Restocking**: FSM-based `RestockHandler` for recall, trading, and auto-return to field.
+- [x] **Smart Looting**: Protected items (Cards/Rares) vs automated junk (ETC) liquidation.
+
 ## 4. Current State
-*   **Version:** 2.6.0 (Phase 27 - Authentic RO Damage System)
-*   **Stability:** High. Added monster ATK range fallback for legacy data.
+*   **Version:** 2.7.0 (Phase 28 - Merchant & Smart Bot)
+*   **Stability:** High. FSM transitions verified.
 *   **Performance:** Elite.
 *   **New Features:**
-    - **Authentic ATK Ranges**: Monsters now deal damage based on their true database ranges (e.g. Thief Bug 51-61 ATK).
-    - **Damage Variance**: Sub-10% random fluctuation on all hits for a more "alive" feel.
-    - **Recompiled Content**: 1964 monsters updated with range data.
+    - **Merchant NPCs**: Interactive city-based shops.
+    - **Auto-Restock**: Zero-touch replenishment (Field -> Town -> Shop -> Field).
+    - **Strategy CLI**: Configurable looting and supply thresholds.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

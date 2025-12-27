@@ -74,6 +74,10 @@ We prioritize "Feel" over "Academic Accuracy", but use **Authentic Data Sources*
     - **Save Point**: `savePoint` (map/x/y) in player state allows city-based respawning. Triggered upon death or initial AI startup if dead.
     - **Deduplication**: `dataLoader.js` performs aggressive deduplication, keeping only one portal per destination map to ensure a clean UI.
     - **Smart Navigation (BFS)**: `navigation.js` allows the robot to find the shortest map route between its current location and a target map. Used by `combat.js` (`gameState.goalMap`).
+*   **Autonomous Restocking (FSM)**:
+    - **Detection**: `strategy.js` triggers a restock state when supplies (Potions/Arrows) fall below user-defined thresholds.
+    - **Workflow**: `RestockHandler.js` manages a 4-stage machine: `START` (Recall via Wing) -> `FIND_NPC` (Navigate to City Merchant) -> `TRADING` (Filtered Sell & Restock Buy) -> `DONE` (Return to Combat Loop).
+    - **Trade Rules**: Smart loot logic protects Cards and Rares (Price > 5000) while liquidating ETC items.
 ### 3.3. Data Layer (Static)
 - **DB Compiler**: A Node.js script (`db_compiler.cjs`) which:
     - Normalizes rAthena TXT DBs into structured JSON.

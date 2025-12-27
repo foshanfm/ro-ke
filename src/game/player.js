@@ -6,6 +6,7 @@ import { getItemInfo, ItemType } from './items'
 import { Maps } from './maps'
 import * as Formulas from './formulas'
 import { saveSave, getSave, getAllSaves, deleteSave } from '../db/index.js'
+import { getNearbyNPCs, NPCType, getNPCShop } from './npcs.js'
 
 const defaultStats = {
     name: 'Novice',
@@ -30,9 +31,27 @@ const defaultStats = {
     config: {
         auto_hp_percent: 0,
         auto_hp_item: '红色药水',
-        auto_buy_potion: 0,
+        auto_buy_potion: 0, // 废弃，由 strategies 替代
         viewRange: 30 * 10, // 30格视野
-        attackRange: 10
+        attackRange: 10,
+        strategies: {
+            supply: {
+                restock_hp_item: '红色药水',
+                restock_hp_amount: 100,
+                restock_hp_trigger: 20,
+                restock_arrow_item: '箭矢',
+                restock_arrow_amount: 1000,
+                restock_arrow_trigger: 50,
+                use_butterfly_wing: true
+            },
+            loot: {
+                sell_all_etc: true,
+                keep_cards: true,
+                keep_rares: true,
+                whitelist: [], // 强制保留的物品 ID
+                blacklist: []  // 强制卖出的物品 ID
+            }
+        }
     },
     currentMap: 'prt_fild08',
     x: 400 * 10 / 2, y: 400 * 10 / 2, // 初始位置设在地图中央
@@ -144,6 +163,11 @@ export async function loadGame(saveId) {
         }
 
         Object.assign(player, parsed)
+
+        // 策略设置迁移/初始化
+        if (!player.config.strategies) {
+            player.config.strategies = JSON.parse(JSON.stringify(defaultStats.config.strategies))
+        }
 
         if (!player.inventory) player.inventory = []
 
@@ -758,10 +782,20 @@ export function respawn() {
     return { success: true, msg: '你已在存储点复活，状态已恢复。' }
 }
 
-export function sellItem(itemNameOrId, count = 1) {
+export function sellItem(itemNameOrId, count = 1, mapId, playerX, playerY) {
     // Zeny 安全性检查
     player.zeny = player.zeny || 0
     if (isNaN(player.zeny)) player.zeny = 0
+
+    // 特殊处理：sell all 不需要 NPC（为了兼容旧的自动卖垃圾逻辑）
+    // 但单个物品出售需要在 NPC 附近
+    if (itemNameOrId !== 'all' && mapId && playerX !== undefined && playerY !== undefined) {
+        const nearbyMerchants = getNearbyNPCs(mapId, playerX, playerY, 5, NPCType.MERCHANT)
+
+        if (nearbyMerchants.length === 0) {
+            return { success: false, msg: '附近没有商人 NPC。请靠近道具商人后再出售物品。' }
+        }
+    }
 
     if (itemNameOrId === 'all') {
         let totalZeny = 0
@@ -822,20 +856,36 @@ export function sellItem(itemNameOrId, count = 1) {
     return { success: true, msg: `卖出 ${info.name} x ${amountToSell}，获得 ${earning.toLocaleString()} Zeny。` }
 }
 
-const ShopList = [
-    { id: 501, price: 50 },
-]
+/**
+ * 获取商店列表（需要在 NPC 附近）
+ * @param {string} mapId - 当前地图 ID
+ * @param {number} playerX - 玩家 X 坐标
+ * @param {number} playerY - 玩家 Y 坐标
+ * @returns {Array} 商店物品列表
+ */
+export function getShopList(mapId, playerX, playerY) {
+    // 查找附近的商人 NPC（5 格范围内）
+    const nearbyMerchants = getNearbyNPCs(mapId, playerX, playerY, 5, NPCType.MERCHANT)
 
-export function getShopList() {
-    return ShopList.map(item => {
-        const info = getItemInfo(item.id)
-        return { ...info, price: item.price }
-    })
+    if (nearbyMerchants.length === 0) {
+        return [] // 附近没有商人
+    }
+
+    // 使用第一个找到的商人的商店
+    const merchant = nearbyMerchants[0]
+    return getNPCShop(merchant.id)
 }
 
-export function buyItem(itemName, count = 1) {
+export function buyItem(itemName, count = 1, mapId, playerX, playerY) {
+    // 检查是否在商人附近
+    const shopList = getShopList(mapId, playerX, playerY)
+
+    if (shopList.length === 0) {
+        return { success: false, msg: '附近没有商人 NPC。请靠近道具商人后再购买。' }
+    }
+
     const lowerName = itemName.toLowerCase()
-    const shopItem = ShopList.find(item => {
+    const shopItem = shopList.find(item => {
         const info = getItemInfo(item.id)
         return info.name.toLowerCase().includes(lowerName)
     })
@@ -857,3 +907,4 @@ export function buyItem(itemName, count = 1) {
     const info = getItemInfo(shopItem.id)
     return { success: true, msg: `购买了 ${info.name} x ${count}，花费 ${totalCost.toLocaleString()} Zeny。` }
 }
+

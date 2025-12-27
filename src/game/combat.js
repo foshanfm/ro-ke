@@ -11,6 +11,8 @@ import { addLog } from './modules/logger.js'
 import * as MovementHandler from './combat/MovementHandler.js'
 import * as TargetingHandler from './combat/TargetingHandler.js'
 import * as CombatHandler from './combat/CombatHandler.js'
+import * as RestockHandler from './combat/RestockHandler.js'
+import { checkNeedsRestock } from './modules/strategy.js'
 import { CELL_SIZE } from './constants.js'
 
 // 游戏循环状态
@@ -55,6 +57,16 @@ let monsterLoopId = null
 let recoveryTimer = null
 let combatSessionId = 0
 
+/**
+ * 启动新的一轮 AI 会话，终结所有旧的异步循环
+ * @returns {number} 新的会话 ID
+ */
+function nextSession() {
+    combatSessionId++
+    clearLoops()
+    return combatSessionId
+}
+
 export function startBot() {
     if (gameState.isAuto) return
 
@@ -65,8 +77,7 @@ export function startBot() {
     }
 
     gameState.isAuto = true
-    combatSessionId++
-    const currentSession = combatSessionId
+    const currentSession = nextSession()
 
     // 初始化地图
     initMap(player.currentMap)
@@ -77,11 +88,11 @@ export function startBot() {
 
     log(`AI Initiated (Session ${currentSession}). Target: ${gameState.goalMap}.`, 'system')
 
-    clearLoops()
     aiTick(currentSession)
 }
 
 export function stopBot() {
+    if (!gameState.isAuto) return
     gameState.isAuto = false
     gameState.status = 'IDLE'
     gameState.goalMap = null // 停止时清除目标
@@ -101,10 +112,9 @@ export function moveTo(x, y) {
     if (!gameState.isAuto) {
         startBot()
     } else {
-        // 如果 bot 开着，我们可能需要立即刷新 aiTick 以响应移动，
-        // 而不是等待当前的 attackDelay 结束
-        clearLoops() // 清除当前的 setTimeout
-        aiTick(combatSessionId) // 重新触发一个 Tick
+        // 如果 bot 开着，立即开启新会话以响应指令
+        const currentSession = nextSession()
+        aiTick(currentSession)
     }
 }
 
@@ -163,10 +173,39 @@ async function aiTick(sessionId) {
 
         checkAutoPotion()
 
-        // 0. Check if on goal map
+        // 1. 获取基本状态
         const curMapId = (player.currentMap || '').toLowerCase()
         const goalMapId = (gameState.goalMap || '').toLowerCase()
 
+        // 0. Check for restock need
+        const restockCheck = checkNeedsRestock(player)
+        if (restockCheck.needsRestock || gameState.status === 'RESTOCKING') {
+            gameState.status = 'RESTOCKING'
+            const restockRes = RestockHandler.handleRestock(player, gameState, log)
+
+            if (restockRes.done) {
+                log('补给流程结束，恢复战斗模式。', 'system')
+                gameState.status = 'SEARCHING'
+                // Continue to search logic in next tick
+            } else {
+                if (restockRes.walkTo) {
+                    // Reuse return-to-goal-map logic but with saveMap as target
+                    const result = MovementHandler.handleReturnToGoalMap(
+                        curMapId,
+                        restockRes.walkTo,
+                        findPath,
+                        log,
+                        lastActionLogRef
+                    )
+                    mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
+                } else {
+                    mainLoopId = setTimeout(() => aiTick(sessionId), restockRes.delay || 500)
+                }
+                return
+            }
+        }
+
+        // 2. Check if on goal map
         if (goalMapId && curMapId !== goalMapId) {
             gameState.status = 'RETURNING'
             lastActionLogRef.value = gameState.lastActionLog

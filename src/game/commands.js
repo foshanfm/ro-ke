@@ -1,4 +1,4 @@
-import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob, insertCard, setSavePoint } from './player.js'
+import { player, increaseStat, learnSkill, equipItem, unequipItem, useItem, setConfig, warp, sellItem, buyItem, getShopList, changeJob, insertCard, setSavePoint, saveGame } from './player.js'
 import { getItemInfo, ItemType } from './items.js'
 import { startBot, stopBot, gameState, moveTo } from './combat.js'
 import { JobConfig, JobType } from './jobs.js'
@@ -436,7 +436,13 @@ registerCommand({
             const target = args[0]
             const count = args.length > 1 ? parseInt(args[1]) : 1
             const asId = parseInt(target)
-            const res = sellItem(isNaN(asId) ? target : asId, isNaN(count) ? 1 : count)
+            const res = sellItem(
+                isNaN(asId) ? target : asId,
+                isNaN(count) ? 1 : count,
+                player.currentMap,
+                player.x,
+                player.y
+            )
             if (res.success) {
                 log(res.msg, 'success')
             } else {
@@ -450,22 +456,33 @@ registerCommand({
     name: 'buy',
     description: '购买物品 (用法: buy <物品名>)',
     suggest: (arg) => {
-        const shop = getShopList()
-        return shop.filter(item => item.name.toLowerCase().includes(arg))
-            .map(item => ({ text: item.name, hint: `${item.price}z`, type: 'arg' }))
+        // 智能提示时不检查位置，显示所有可能的商品
+        const shop = getShopList(player.currentMap, player.x, player.y)
+        return shop.filter(item => {
+            const info = getItemInfo(item.id)
+            return info.name.toLowerCase().includes(arg)
+        }).map(item => {
+            const info = getItemInfo(item.id)
+            return { text: info.name, hint: `${item.price}z`, type: 'arg' }
+        })
     },
     execute: (args, { log }) => {
         if (args.length === 0) {
-            const list = getShopList()
+            const list = getShopList(player.currentMap, player.x, player.y)
+            if (list.length === 0) {
+                log('附近没有商人 NPC。请靠近道具商人后再查看商店。', 'error')
+                return
+            }
             log('[ 商店列表 ]', 'system')
             list.forEach(item => {
-                log(`  ${item.name} - ${item.price}z`, 'dim')
+                const info = getItemInfo(item.id)
+                log(`  ${info.name} - ${item.price}z`, 'dim')
             })
             log('输入 buy <物品名> [数量] 进行购买。', 'system')
         } else {
             const target = args[0]
             const count = args.length > 1 ? parseInt(args[1]) : 1
-            const res = buyItem(target, isNaN(count) ? 1 : count)
+            const res = buyItem(target, isNaN(count) ? 1 : count, player.currentMap, player.x, player.y)
             if (res.success) {
                 log(res.msg, 'success')
             } else {
@@ -559,6 +576,93 @@ registerCommand({
                 }
             }
         }
+    }
+})
+
+registerCommand({
+    name: 'conf',
+    description: '设置配置项 (用法: conf <key> <value> 或 conf strategy <type> <key> <value>)',
+    suggest: (arg) => {
+        const keys = [
+            { text: 'auto_hp_percent', hint: '自动喝药 HP%', type: 'arg' },
+            { text: 'auto_hp_item', hint: '自动喝药物品名', type: 'arg' },
+            { text: 'strategy', hint: '自动补给/拣货策略', type: 'arg' }
+        ]
+        return keys.filter(k => k.text.includes(arg))
+    },
+    execute: (args, { log }) => {
+        if (args.length < 2) {
+            log('当前配置:', 'system')
+            log(`  auto_hp_percent: ${player.config.auto_hp_percent}%`, 'dim')
+            log(`  auto_hp_item: ${player.config.auto_hp_item}`, 'dim')
+            log(`  攻击范围: ${player.config.attackRange}`, 'dim')
+            log('策略配置 (使用 conf strategy 查看详情):', 'system')
+            log(`  补给: ${player.config.strategies.supply.restock_hp_item} x ${player.config.strategies.supply.restock_hp_amount}`, 'dim')
+            log(`  售卖杂物: ${player.config.strategies.supply.sell_all_etc ? '是' : '否'}`, 'dim')
+            return
+        }
+
+        const key = args[0]
+
+        // 处理 strategy 子命令
+        if (key === 'strategy') {
+            const type = args[1] // supply 或 loot
+            const subKey = args[2]
+            const val = args[3]
+
+            if (!type || !subKey || val === undefined) {
+                log('用法: conf strategy <supply|loot> <key> <value>', 'error')
+                log('示例: conf strategy supply hp_item 白色药水', 'dim')
+                log('示例: conf strategy loot sell_all_etc true', 'dim')
+                return
+            }
+
+            if (!player.config.strategies[type]) {
+                log(`无效的策略类型: ${type} (仅限 supply, loot)`, 'error')
+                return
+            }
+
+            // 映射 key 名 (为了更友好的命令输入)
+            let configKey = subKey
+            if (type === 'supply') {
+                if (subKey === 'hp_item') configKey = 'restock_hp_item'
+                if (subKey === 'hp_cnt') configKey = 'restock_hp_amount'
+                if (subKey === 'hp_trig') configKey = 'restock_hp_trigger'
+                if (subKey === 'arr_item') configKey = 'restock_arrow_item'
+                if (subKey === 'arr_cnt') configKey = 'restock_arrow_amount'
+                if (subKey === 'arr_trig') configKey = 'restock_arrow_trigger'
+                if (subKey === 'use_bwing') configKey = 'use_butterfly_wing'
+            }
+
+            if (player.config.strategies[type][configKey] === undefined) {
+                log(`无效的配置项: ${subKey}`, 'error')
+                return
+            }
+
+            // 转换类型
+            let finalVal = val
+            if (val === 'true') finalVal = true
+            else if (val === 'false') finalVal = false
+            else if (!isNaN(parseInt(val)) && val.match(/^\d+$/)) finalVal = parseInt(val)
+
+            player.config.strategies[type][configKey] = finalVal
+            saveGame()
+            log(`策略更新: [${type}] ${configKey} = ${finalVal}`, 'success')
+            return
+        }
+
+        const value = args[1]
+        if (key === 'auto_hp_percent') {
+            player.config.auto_hp_percent = parseInt(value)
+        } else if (key === 'auto_hp_item') {
+            player.config.auto_hp_item = value
+        } else {
+            log(`未知配置项: ${key}`, 'error')
+            return
+        }
+
+        saveGame()
+        log(`配置已更新: ${key} = ${value}`, 'success')
     }
 })
 

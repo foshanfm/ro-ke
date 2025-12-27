@@ -1,0 +1,443 @@
+[
+    {
+        "id": 501,
+        "name_cn": "红色药水",
+        "name_en": "Red Potion",
+        "type": "USABLE",
+        "price": 50,
+        "effect": "HP +45",
+        "weight": 70
+    },
+    {
+        "id": 502,
+        "name_cn": "赤色药水",
+        "name_en": "Orange Potion",
+        "type": "USABLE",
+        "price": 200,
+        "effect": "HP +105",
+        "weight": 100
+    },
+    {
+        "id": 503,
+        "name_cn": "黄色药水",
+        "name_en": "Yellow Potion",
+        "type": "USABLE",
+        "price": 550,
+        "effect": "HP +175",
+        "weight": 130
+    },
+    {
+        "id": 504,
+        "name_cn": "白色药水",
+        "name_en": "White Potion",
+        "type": "USABLE",
+        "price": 1200,
+        "effect": "HP +325",
+        "weight": 150
+    },
+    {
+        "id": 506,
+        "name_cn": "绿色药水",
+        "name_en": "Green Potion",
+        "type": "USABLE",
+        "price": 40,
+        "effect": "Cure Poison/Silence",
+        "weight": 10
+    },
+    {
+        "id": 601,
+        "name_cn": "苍蝇翅膀",
+        "name_en": "Fly Wing",
+        "type": "USABLE",
+        "price": 60,
+        "effect": "Teleport Level 1",
+        "weight": 5
+    },
+    {
+        "id": 602,
+        "name_cn": "蝴蝶翅膀",
+        "name_en": "Butterfly Wing",
+        "type": "USABLE",
+        "price": 300,
+        "effect": "Return to Save Point",
+        "weight": 5
+    },
+    {
+        "id": 611,
+        "name_cn": "放大镜",
+        "name_en": "Magnifier",
+        "type": "USABLE",
+        "price": 40,
+        "effect": "Identify Item",
+        "weight": 10
+    },
+    {
+        "id": 1065,
+        "name_cn": "觉醒药水",
+        "name_en": "Awakening Potion",
+        "type": "USABLE",
+        "price": 1500,
+        "effect": "ASPD +15% (Lv40+)",
+        "weight": 100
+    },
+    {
+        "id": 1243,
+        "name_cn": "波色克药水",
+        "name_en": "Berserk Potion",
+        "type": "USABLE",
+        "price": 3000,
+        "effect": "ASPD +20% (Lv60+ specific classes)",
+        "weight": 180
+    },
+    {
+        "id": 717,
+        "name_cn": "蓝色魔力矿石",
+        "name_en": "Blue Gemstone",
+        "type": "ETC",
+        "price": 500,
+        "effect": "Skill Catalyst",
+        "weight": 30
+    },
+    {
+        "id": 1750,
+        "name_cn": "箭矢",
+        "name_en": "Arrow",
+        "type": "AMMO",
+        "price": 1,
+        "atk": 25,
+        "element": "Neutral",
+        "weight": 0.1
+    },
+    {
+        "id": 1751,
+        "name_cn": "银箭矢",
+        "name_en": "Silver Arrow",
+        "type": "AMMO",
+        "price": 3,
+        "atk": 30,
+        "element": "Holy",
+        "weight": 0.2
+    },
+    {
+        "id": 1204,
+        "name_cn": "短剑",
+        "name_en": "Dagger",
+        "type": "WEAPON",
+        "subtype": "Dagger",
+        "price": 50,
+        "atk": 43,
+        "slots": 0,
+        "equip_level": 1
+    },
+    {
+        "id": 1207,
+        "name_cn": "笨拙短剑",
+        "name_en": "Main Gauche",
+        "type": "WEAPON",
+        "subtype": "Dagger",
+        "price": 2400,
+        "atk": 43,
+        "slots": 3,
+        "equip_level": 1,
+        "note": "NPC特例卖3洞版本"
+    },
+    {
+        "id": 1210,
+        "name_cn": "厚刃短剑",
+        "name_en": "Stiletto",
+        "type": "WEAPON",
+        "subtype": "Dagger",
+        "price": 19500,
+        "atk": 87,
+        "slots": 0,
+        "equip_level": 12
+    },
+    {
+        "id": 1216,
+        "name_cn": "大马士革短剑",
+        "name_en": "Damascus",
+        "type": "WEAPON",
+        "subtype": "Dagger",
+        "price": 49000,
+        "atk": 118,
+        "slots": 0,
+        "equip_level": 27
+    },
+    {
+        "id": 1107,
+        "name_cn": "弯刀",
+        "name_en": "Blade",
+        "type": "WEAPON",
+        "subtype": "1H_Sword",
+        "price": 2900,
+        "atk": 53,
+        "slots": 0,
+        "equip_level": 1
+    },
+    {
+        "id": 1101,
+        "name_cn": "长剑",
+        "name_en": "Sword",
+        "type": "WEAPON",
+        "subtype": "1H_Sword",
+        "price": 100,
+        "atk": 25,
+        "slots": 0,
+        "equip_level": 1
+    },
+    {
+        "id": 1126,
+        "name_cn": "弯刀",
+        "name_en": "Saber",
+        "type": "WEAPON",
+        "subtype": "1H_Sword",
+        "price": 49000,
+        "atk": 115,
+        "slots": 0,
+        "equip_level": 27
+    },
+    {
+        "id": 1116,
+        "name_cn": "武士刀",
+        "name_en": "Katana",
+        "type": "WEAPON",
+        "subtype": "2H_Sword",
+        "price": 2000,
+        "atk": 60,
+        "slots": 0,
+        "equip_level": 1
+    },
+    {
+        "id": 1119,
+        "name_cn": "双手巨剑",
+        "name_en": "Two-handed Sword",
+        "type": "WEAPON",
+        "subtype": "2H_Sword",
+        "price": 60000,
+        "atk": 160,
+        "slots": 0,
+        "equip_level": 2
+    },
+    {
+        "id": 1410,
+        "name_cn": "长矛",
+        "name_en": "Pike",
+        "type": "WEAPON",
+        "subtype": "Spear",
+        "price": 3450,
+        "atk": 60,
+        "slots": 0,
+        "equip_level": 1
+    },
+    {
+        "id": 1522,
+        "name_cn": "链锤",
+        "name_en": "Chain",
+        "type": "WEAPON",
+        "subtype": "Mace",
+        "price": 23000,
+        "atk": 84,
+        "slots": 0,
+        "equip_level": 14
+    },
+    {
+        "id": 1602,
+        "name_cn": "手杖",
+        "name_en": "Rod",
+        "type": "WEAPON",
+        "subtype": "Staff",
+        "price": 50,
+        "atk": 15,
+        "matk": 15,
+        "slots": 0,
+        "equip_level": 1
+    },
+    {
+        "id": 1714,
+        "name_cn": "复合弓",
+        "name_en": "Composite Bow",
+        "type": "WEAPON",
+        "subtype": "Bow",
+        "price": 2500,
+        "atk": 29,
+        "slots": 3,
+        "equip_level": 1,
+        "note": "NPC特例卖3洞版本"
+    },
+    {
+        "id": 1718,
+        "name_cn": "十字弓",
+        "name_en": "Cross Bow",
+        "type": "WEAPON",
+        "subtype": "Bow",
+        "price": 17000,
+        "atk": 65,
+        "slots": 0,
+        "equip_level": 18
+    },
+    {
+        "id": 2307,
+        "name_cn": "大衣",
+        "name_en": "Mantle",
+        "type": "ARMOR",
+        "subtype": "Body",
+        "price": 10000,
+        "def": 32,
+        "slots": 0,
+        "equip_level": 1,
+        "jobs": "All except Novice"
+    },
+    {
+        "id": 2309,
+        "name_cn": "厚大衣",
+        "name_en": "Coat",
+        "type": "ARMOR",
+        "subtype": "Body",
+        "price": 22000,
+        "def": 42,
+        "slots": 0,
+        "equip_level": 1,
+        "jobs": "Mage/Archer/Thief"
+    },
+    {
+        "id": 2314,
+        "name_cn": "锁子甲",
+        "name_en": "Chain Mail",
+        "type": "ARMOR",
+        "subtype": "Body",
+        "price": 65000,
+        "def": 55,
+        "slots": 0,
+        "equip_level": 1,
+        "jobs": "Swordman/Merchant/Thief/Priest"
+    },
+    {
+        "id": 2316,
+        "name_cn": "全身铠甲",
+        "name_en": "Full Plate",
+        "type": "ARMOR",
+        "subtype": "Body",
+        "price": 80000,
+        "def": 65,
+        "slots": 0,
+        "equip_level": 1,
+        "jobs": "Swordman/Knight"
+    },
+    {
+        "id": 2101,
+        "name_cn": "长手套",
+        "name_en": "Guard",
+        "type": "ARMOR",
+        "subtype": "Shield",
+        "price": 500,
+        "def": 20,
+        "slots": 0
+    },
+    {
+        "id": 2103,
+        "name_cn": "圆盾",
+        "name_en": "Buckler",
+        "type": "ARMOR",
+        "subtype": "Shield",
+        "price": 14000,
+        "def": 40,
+        "slots": 0
+    },
+    {
+        "id": 2105,
+        "name_cn": "铁盾",
+        "name_en": "Shield",
+        "type": "ARMOR",
+        "subtype": "Shield",
+        "price": 56000,
+        "def": 60,
+        "slots": 0
+    },
+    {
+        "id": 2501,
+        "name_cn": "披风",
+        "name_en": "Hood",
+        "type": "ARMOR",
+        "subtype": "Garment",
+        "price": 1000,
+        "def": 4,
+        "slots": 0
+    },
+    {
+        "id": 2503,
+        "name_cn": "斗篷",
+        "name_en": "Muffler",
+        "type": "ARMOR",
+        "subtype": "Garment",
+        "price": 5000,
+        "def": 8,
+        "slots": 0
+    },
+    {
+        "id": 2403,
+        "name_cn": "长靴",
+        "name_en": "Shoes",
+        "type": "ARMOR",
+        "subtype": "Foot",
+        "price": 3500,
+        "def": 10,
+        "slots": 0
+    },
+    {
+        "id": 2405,
+        "name_cn": "战士长靴",
+        "name_en": "Boots",
+        "type": "ARMOR",
+        "subtype": "Foot",
+        "price": 18000,
+        "def": 16,
+        "slots": 0
+    },
+    {
+        "id": 2228,
+        "name_cn": "圆帽",
+        "name_en": "Cap",
+        "type": "ARMOR",
+        "subtype": "Head_Top",
+        "price": 12000,
+        "def": 4,
+        "slots": 0
+    },
+    {
+        "id": 2220,
+        "name_cn": "头盔",
+        "name_en": "Helm",
+        "type": "ARMOR",
+        "subtype": "Head_Top",
+        "price": 44000,
+        "def": 16,
+        "slots": 0
+    },
+    {
+        "id": 2201,
+        "name_cn": "太阳眼镜",
+        "name_en": "Sunglasses",
+        "type": "ARMOR",
+        "subtype": "Head_Mid",
+        "price": 15000,
+        "def": 0,
+        "slots": 0,
+        "effect": "Blind Resistance +5%"
+    },
+    {
+        "id": 901,
+        "name_cn": "空瓶",
+        "name_en": "Empty Bottle",
+        "type": "ETC",
+        "price": 10,
+        "effect": "Crafting Material"
+    },
+    {
+        "id": 1010,
+        "name_cn": "空试管",
+        "name_en": "Empty Test Tube",
+        "type": "ETC",
+        "price": 3,
+        "effect": "Crafting Material"
+    }
+]
