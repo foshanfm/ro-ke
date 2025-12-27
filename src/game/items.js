@@ -130,24 +130,42 @@ export function setItemsDB(newItemsDB) {
  * 获取物品信息
  */
 export function getItemInfo(id) {
-  // 1. 先查装备库
-  const equip = EquipDB[id]
-  if (equip) {
-    return { ...equip, type: ItemType.EQUIP }
+  // 1. 获取基础数据 (从加载的 DB 或 后备库)
+  const base = itemsDB[id] || fallbackItemsDB[id] || {}
+
+  // 2. 获取装备数据
+  const equip = EquipDB[id] || {}
+
+  // 3. 合并数据 (装备数据优先级更高，以保留 JS 中定义的特殊描述或逻辑)
+  const merged = { ...base, ...equip }
+
+  // 4. 如果完全没有数据，返回未知物品
+  if (Object.keys(merged).length === 0) {
+    return { name: `未知物品 (${id})`, type: ItemType.ETC, buyPrice: 0, sellPrice: 0 }
   }
 
-  // 2. 查询加载的物品库
-  if (itemsDB[id]) {
-    return itemsDB[id]
+  // 5. 归一化价格
+  let buyPrice = 0
+  let sellPrice = 0
+
+  if (merged.price && typeof merged.price === 'object') {
+    buyPrice = merged.price.buy || 0
+    sellPrice = merged.price.sell || 0
+  } else {
+    buyPrice = merged.buyPrice || merged.price || 0
+    sellPrice = merged.sellPrice || Math.floor(buyPrice / 2)
   }
 
-  // 3. 查询后备物品库
-  if (fallbackItemsDB[id]) {
-    return fallbackItemsDB[id]
-  }
+  // 6. 确定最终类型
+  let finalType = merged.type || ItemType.ETC
+  if (EquipDB[id]) finalType = ItemType.EQUIP
 
-  // 4. 返回未知物品
-  return { name: `未知物品 (${id})`, type: ItemType.ETC }
+  return {
+    ...merged,
+    type: finalType,
+    buyPrice,
+    sellPrice
+  }
 }
 
 /**

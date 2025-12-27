@@ -110,18 +110,24 @@ A web-based idle game recreating the experience of using automated botting softw
   - [x] **Monster Persistence**: Monsters continue attacking if player stops bot but remains in range.
   - [x] **Safety Checks**: Prevented cross-map zombie loops.
 
-### Phase 19: SP Mechanics & Skills [Upcoming]
+### Phase 19: Economy & Data Stability [Completed]
+- [x] **Dynamic Pricing**: Hybrid price system merging compiled DB with hardcoded objects.
+- [x] **Automatic Price Generation**: Compiler now auto-calculates sell prices (50% of buy) if missing in DB.
+- [x] **Account Migration Safety**: Incremented `DATA_VERSION` to force DB refresh for legacy characters.
+- [x] **Zeny Safeguards**: Robust `NaN` protection and formatted number displays.
+- [x] **Equipment Data Merging**: Decoupled pricing from combat attributes in `EquipDB`.
+
+### Phase 20: SP Mechanics & Skills [Upcoming]
 - [ ] **SP Consumption**: Integrate cast costs into `castSkill`.
 - [ ] **1st Jobs Action Skills**: Bash, Double Strafe, Elemental Bolts.
 - [ ] **Cast Time System**: Variable cast times based on DEX and skill level.
 
 ## 4. Current State
-*   **Version:** 2.1.1 (Phase 18 - Stability & Realism)
-*   **Stability:** High. Content fully synchronized and ID case-sensitivity resolved.
-*   **Performance:** Elite. Safe persistence with post-load logic injection.
+*   **Version:** 2.1.2 (Phase 19 - Economy & Data Stability)
+*   **Stability:** High. Full protection against NaN currency and fragmented item data.
+*   **Performance:** Elite. Optimized price lookup and automated DB maintenance.
 *   **New Features:**
-    - **Global Content**: All maps and monsters (Lv 1-99) now fully spawning.
-    - **Robust Saving**: Eliminated DataCloneErrors by isolating non-serializable logic.
-    - **Combat Realism**: Monsters don't evaporate when you stop the bot.
-    - **Precise Warp Deduplication**: Preserve multi-entrance layouts while cleaning redundant data.
+    - **Smart Pricing**: 12k+ items now have valid sell prices via automatic calculation.
+    - **Data Unification**: Hardcoded equipment now inherits prices from the global database.
+    - **Robust Economy**: Fixed legacy account Zeny corruption and improved currency display formatting.
 *   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.

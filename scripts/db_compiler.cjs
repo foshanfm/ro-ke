@@ -47,12 +47,20 @@ function parseItemDB() {
         const location = parseInt(parts[14]) || 0;
 
         // Basic Item Object
+        const buyPrice = parseInt(parts[4]) || 0;
+        let sellPrice = parseInt(parts[5]) || 0;
+
+        // Default sell price to 50% of buy price if missing or 0
+        if (sellPrice === 0 && buyPrice > 0) {
+            sellPrice = Math.floor(buyPrice / 2);
+        }
+
         const item = {
             id,
             aegisName: parts[1],
             name: parts[2],
             type: mapItemType(type),
-            price: { buy: parseInt(parts[4]) || 0, sell: parseInt(parts[5]) || 0 },
+            price: { buy: buyPrice, sell: sellPrice },
             weight: parseInt(parts[6]) || 0,
             atk: 0,
             matk: 0,

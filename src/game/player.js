@@ -810,6 +810,10 @@ export function respawn() {
 }
 
 export function sellItem(itemNameOrId, count = 1) {
+    // Zeny 安全性检查
+    player.zeny = player.zeny || 0
+    if (isNaN(player.zeny)) player.zeny = 0
+
     if (itemNameOrId === 'all') {
         let totalZeny = 0
         let soldCount = 0
@@ -817,7 +821,7 @@ export function sellItem(itemNameOrId, count = 1) {
             const slot = player.inventory[i]
             const info = getItemInfo(slot.id)
             if (info.type === ItemType.ETC) {
-                const price = info.price || 0
+                const price = info.sellPrice || 0
                 const earning = price * slot.count
                 totalZeny += earning
                 soldCount += slot.count
@@ -827,7 +831,7 @@ export function sellItem(itemNameOrId, count = 1) {
         if (soldCount > 0) {
             player.zeny += totalZeny
             saveGame()
-            return { success: true, msg: `卖出了 ${soldCount} 个杂物，获得 ${totalZeny} Zeny。` }
+            return { success: true, msg: `卖出了 ${soldCount} 个杂物，获得 ${totalZeny.toLocaleString()} Zeny。` }
         } else {
             return { success: false, msg: '背包里没有可贩卖的杂物。' }
         }
@@ -856,16 +860,17 @@ export function sellItem(itemNameOrId, count = 1) {
     }
 
     const amountToSell = Math.min(slot.count, count)
-    const unitPrice = info.price || 100
+    const unitPrice = info.sellPrice || 0
 
-    player.zeny += unitPrice * amountToSell
+    const earning = unitPrice * amountToSell
+    player.zeny += earning
     slot.count -= amountToSell
     if (slot.count <= 0) {
         player.inventory.splice(slotIndex, 1)
     }
 
     saveGame()
-    return { success: true, msg: `卖出 ${info.name} x ${amountToSell}，获得 ${unitPrice * amountToSell} Zeny。` }
+    return { success: true, msg: `卖出 ${info.name} x ${amountToSell}，获得 ${earning.toLocaleString()} Zeny。` }
 }
 
 const ShopList = [
@@ -892,7 +897,7 @@ export function buyItem(itemName, count = 1) {
 
     const totalCost = shopItem.price * count
     if (player.zeny < totalCost) {
-        return { success: false, msg: `Zeny 不足 (需要 ${totalCost}, 拥有 ${player.zeny})。` }
+        return { success: false, msg: `Zeny 不足 (需要 ${totalCost.toLocaleString()}, 拥有 ${player.zeny.toLocaleString()})。` }
     }
 
     player.zeny -= totalCost
@@ -901,5 +906,5 @@ export function buyItem(itemName, count = 1) {
     saveGame()
 
     const info = getItemInfo(shopItem.id)
-    return { success: true, msg: `购买了 ${info.name} x ${count}。` }
+    return { success: true, msg: `购买了 ${info.name} x ${count}，花费 ${totalCost.toLocaleString()} Zeny。` }
 }
