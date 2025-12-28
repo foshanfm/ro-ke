@@ -179,19 +179,26 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Smart Looting**: Protected items (Cards/Rares) vs automated junk (ETC) liquidation.
 - [x] **Stabilization**: Resolved `saveGame` import missing in `commands.js` and `curMapId` initialization order in `combat.js`.
 
-### Phase 30: Size Modifiers (体型修正) [Completed]
+### Phase 29: Elemental Damage System [Completed]
+- [x] **Elemental Table**: 10 element types with 4-level damage modifier matrix based on `attr_fix.txt`.
+- [x] **Monster Element Parsing**: `db_compiler.cjs` extracts element code from `mob_db.txt` (fixed formula).
+- [x] **Damage Integration**: `formulas.js` applies elemental modifiers during damage calculation.
+- [x] **UI Enhancement**: Map monsters now display element type (e.g., "波利 (水)").
+
+### Phase 30: Advanced Combat Modifiers (Size & Race) [Completed]
 - [x] **Size Fix Matrix**: Weapon damage correction based on `size_fix.txt` (Dagger vs Large = 50%, etc.).
-- [x] **Monster Scale Extraction**: `db_compiler.cjs` parses monster size from `mob_db.txt`.
-- [x] **Item Elemental Properties**: `db_compiler.cjs` extracts `bAtkEle` from item scripts (e.g., 火箭矢 = Fire).
-- [x] **Combat Integration**: Damage formula applies both elemental AND size modifiers.
-- [x] **UI Display**: Map monsters show element and size (e.g., "波利 (水/中)").
+- [x] **Race & Size Extraction**: `db_compiler.cjs` parses monster size and race from `mob_db.txt`.
+- [x] **Multiplier Engine**: `statManager.js` aggregates percentages from `bonus2 bAddRace/Ele/Size`.
+- [x] **Combat Integration**: Damage formula applies Elemental, Size, and Card multipliers (Race/Ele/Size).
+- [x] **UI Display**: Map monsters show full metadata (e.g., "波利 (水/中/植物)").
+- [x] **Ammo Property**: Arrow element propagates to Player attack element for bows.
 
 ## 4. Current State
-*   **Version:** 3.0.0 (Phase 30 - Size & Advanced Combat)
-*   **Stability:** High. Verified with `test_combat`.
+*   **Version:** 3.1.0 (Phase 30 - Advanced Combat Modifiers)
+*   **Stability:** High. Fully data-driven combat calculations.
 *   **Performance:** Elite.
 *   **New Features:**
-    - **Weapon-Size Interaction**: Weapons now deal scaled damage based on target size.
-    - **Elemental Arrows**: Bow users' attack property now follows equipped AMMO.
-    - **Rich UI**: Real-time monster element/size display.
-*   **Next Objective:** Implement Card Bonus Logic (Race/Size/Element bonuses).
+    - **Advanced Multipliers**: Race, Element, and Size bonuses from cards/equip are now functional.
+    - **Elemental Arrows**: Player attack property automatically inherits from equipped arrows.
+    - **Full Metadata UI**: Real-time display of monster Element, Size, and Race in navigation.
+*   **Next Objective:** Skill Mechanics Upgrade (SP costs, Cast Time, Cool Down).

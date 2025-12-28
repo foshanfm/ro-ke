@@ -8,7 +8,7 @@ import { analyzeConnectivity } from './utils/mapGraph.js';
 import { buildNavigationGraph } from './navigation.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
-const DATA_VERSION = 15; // v15: Added item elemental properties
+const DATA_VERSION = 16; // v16: Added monster race and card multipliers
 
 // 内存缓存
 let itemsCache = null;

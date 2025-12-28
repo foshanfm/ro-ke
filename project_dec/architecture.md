@@ -48,9 +48,13 @@ We prioritize "Feel" over "Academic Accuracy", but use **Authentic Data Sources*
 *   **HP/SP:** Uses `job_basehpsp_db.txt` for non-linear growth curves + VIT/INT scaling.
 *   **Stats:** Uses `job_db2.txt` for authentic Job Level bonuses key to hitting breakpoints.
 *   **Hit Rate:** `min(100, max(5, Hit + 80 - Flee))`.
-*   **Damage:** `sampledAtk * variance * (600 / (600 + Def))`.
-    - **Monster ATK**: Sampled from `[atkMin, atkMax]` (loaded as `BaseAtk ± Variance` from `mob_db`).
-    - **Damage Variance**: Sub-10% random fluctuation (±5%) applied to all hits for dynamic combat feel.
+*   **Damage Flow**: `calculateDamageFlow()` implements the full RO damage stack:
+    1.  **ATK Sampling**: Randomly pick from `[atkMin, atkMax]`.
+    2.  **Elemental Modifier**: Lookup table based on `Attacker Element` vs `Defender Element (Lv)`.
+    3.  **Size Modifier**: Base weapon penalty based on `Size Type`.
+    4.  **Multiplier Aggregation**: Layered calculation for `Race`, `Target Element`, and `Target Size` card bonuses.
+    5.  **Def Reduction**: Renewal formula `600 / (600 + Def)`.
+    6.  **Variance**: Final ±5% fluctuation.
 *   **Crit:** `sampledAtk * variance * 1.4` (Subject to Def reduction), ignore Flee.
 *   **ASPD (Standard):** Based on RO Renewal mechanics.
 
