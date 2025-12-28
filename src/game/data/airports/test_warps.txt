@@ -1,0 +1,35 @@
+// Test Maps Warp Data
+// Format: sourceMap,x,y,0 warp Name spanX,spanY,targetMap,targetX,targetY
+
+// Entry from South Gate
+prt_fild08,180,180,0 warp To_Lv1 2,2,test_lv1,100,100
+
+// Chain the maps
+test_lv1,150,150,0 warp To_Lv11 2,2,test_lv11,100,100
+test_lv1,50,50,0 warp Back_to_SouthGate 2,2,prt_fild08,180,180
+
+test_lv11,150,150,0 warp To_Lv21 2,2,test_lv21,100,100
+test_lv11,50,50,0 warp Back_to_Lv1 2,2,test_lv1,150,150
+
+test_lv21,150,150,0 warp To_Lv31 2,2,test_lv31,100,100
+test_lv21,50,50,0 warp Back_to_Lv11 2,2,test_lv11,150,150
+
+test_lv31,150,150,0 warp To_Lv41 2,2,test_lv41,100,100
+test_lv31,50,50,0 warp Back_to_Lv21 2,2,test_lv21,150,150
+
+test_lv41,150,150,0 warp To_Lv51 2,2,test_lv51,100,100
+test_lv41,50,50,0 warp Back_to_Lv31 2,2,test_lv31,150,150
+
+test_lv51,150,150,0 warp To_Lv61 2,2,test_lv61,100,100
+test_lv51,50,50,0 warp Back_to_Lv41 2,2,test_lv41,150,150
+
+test_lv61,150,150,0 warp To_Lv71 2,2,test_lv71,100,100
+test_lv61,50,50,0 warp Back_to_Lv51 2,2,test_lv51,150,150
+
+test_lv71,150,150,0 warp To_Lv81 2,2,test_lv81,100,100
+test_lv71,50,50,0 warp Back_to_Lv61 2,2,test_lv61,150,150
+
+test_lv81,150,150,0 warp To_Lv91 2,2,test_lv91,100,100
+test_lv81,50,50,0 warp Back_to_Lv71 2,2,test_lv71,150,150
+
+test_lv91,50,50,0 warp Back_to_Lv81 2,2,test_lv81,150,150

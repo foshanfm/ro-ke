@@ -222,6 +222,11 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Session Breakthrough**: Allowed `auto` command to bypass state locks and force-reset the AI engine.
 - [x] **Loop Continuity**: Fixed race conditions during map transitions (warps) that caused the AI loop to die.
 - [x] **Standardized Movement**: Unified warp handling across manual and autonomous navigation.
+- [x] **Spawn Logic**: Fixed monster stacking via collision detection and robust HP initialization.
+- [x] **Navigation UI**: Added NPC list with coordinates and compacted indoor portals into a dropdown.
+- [x] **Batch Selling**: Implemented "Add All" and "Queue All Junk" functions in the Shop UI.
+- [x] **Test Support**: Created 10 level-distributed test maps (Lv 1-100) with chained warps.
+- [x] **UI Polish**: Optimized monster list with level-sorting and display limits.
 
 ## 4. Current State
 *   **Version:** 3.5.0 (Phase 33 - AI Stability)
@@ -229,6 +234,7 @@ A web-based idle game recreating the experience of using automated botting softw
 *   **Performance:** Elite.
 *   **New Features:**
     - **Session Breakthrough**: `auto` command now acts as a reset if the bot hangs.
-    - **Loop Continuity**: AI now persists through map transitions during manual/chase movement.
-    - **Stat Precision**: Guaranteed synchronization of job/equip bonuses in UI.
+    - **Test Ecosystem**: 10 standard-monster-only test maps (Lv 1-100) with chained navigation.
+    - **Batch Merchant Tools**: Batch selling of ETC junk and "Sell All" queue for inventory management.
+    - **Navigation Navigation**: NPC coordinates and facility dropdown for cleaner UI.
 *   **Next Objective:** Phase 20: SP Mechanics & Skills (SP costs, Cast Time, Cool Down).

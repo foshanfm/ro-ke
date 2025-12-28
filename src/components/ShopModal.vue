@@ -149,6 +149,20 @@ const addToSellQueue = (invIndex) => {
     }
 }
 
+const addAllToSellQueue = (invIndex) => {
+    const item = player.inventory[invIndex]
+    if (!item) return
+    sellQueue.value[invIndex] = item.count
+}
+
+const addAllJunkToQueue = () => {
+    sellableInventory.value.forEach(item => {
+        if (item.type === ItemType.ETC) {
+            addAllToSellQueue(item.invIndex)
+        }
+    })
+}
+
 const confirmSell = () => {
     // Process queue
     // Use a map to aggregate by ID to reduce spam, OR just sell one by one.
@@ -277,6 +291,11 @@ const getIconClass = (type) => {
                          <div v-if="sellableInventory.length === 0" class="text-center text-gray-500 mt-10">
                             背包里没有可贩卖的物品
                         </div>
+                        <div v-else class="mb-2 px-1">
+                            <button @click="addAllJunkToQueue" class="w-full bg-orange-900 hover:bg-orange-800 text-orange-100 text-[11px] py-1.5 rounded border border-orange-800 flex items-center justify-center gap-2">
+                                <span>🧹</span> 一键添加所有杂物 (ETC) 到待售
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 gap-2">
                             <div v-for="item in sellableInventory" :key="item.invIndex" class="bg-[#1a1a1a] p-2 rounded flex justify-between items-center border border-gray-800 hover:border-gray-600">
                                 <div class="flex items-center gap-2 overflow-hidden">
@@ -295,12 +314,15 @@ const getIconClass = (type) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <button @click="sellOne(item.rawItem)" class="bg-gray-800 hover:bg-red-900 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-gray-700">
-                                        卖 1 个
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button @click="sellOne(item.rawItem)" class="bg-gray-800 hover:bg-gray-700 text-gray-400 text-[10px] px-2 py-1 rounded border border-gray-700" title="直接出售 1 个">
+                                        1个
                                     </button>
-                                     <button @click="addToSellQueue(item.invIndex)" class="bg-red-900 hover:bg-red-800 text-red-100 text-[10px] px-2 py-1 rounded border border-red-800">
-                                        + 待售
+                                     <button @click="addToSellQueue(item.invIndex)" class="bg-red-950 hover:bg-red-900 text-red-300 text-[10px] px-2 py-1 rounded border border-red-900" title="添加 1 个到待售">
+                                        +待售
+                                    </button>
+                                    <button @click="addAllToSellQueue(item.invIndex)" class="bg-red-900 hover:bg-red-800 text-red-100 text-[10px] px-2 py-1 rounded border border-red-700 font-bold" title="全部添加到待售">
+                                        全部
                                     </button>
                                 </div>
                             </div>

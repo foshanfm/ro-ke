@@ -42,7 +42,17 @@ export const Maps = reactive({
         height: 300 * CELL_SIZE,
         minLv: 9,
         maxLv: 15
-    }
+    },
+    'test_lv1': { id: 'test_lv1', name: '试练场 Lv.1-10', width: 400 * CELL_SIZE, height: 400 * CELL_SIZE, minLv: 1, maxLv: 10 },
+    'test_lv11': { id: 'test_lv11', name: '试练场 Lv.11-20', width: 400 * CELL_SIZE, height: 400 * CELL_SIZE, minLv: 11, maxLv: 20 },
+    'test_lv21': { id: 'test_lv21', name: '试练场 Lv.21-30', width: 400 * CELL_SIZE, height: 400 * CELL_SIZE, minLv: 21, maxLv: 30 },
+    'test_lv31': { id: 'test_lv31', name: '试练场 Lv.31-40', width: 400 * CELL_SIZE, height: 400 * CELL_SIZE, minLv: 31, maxLv: 40 },
+    'test_lv41': { id: 'test_lv41', name: '试练场 Lv.41-50', width: 500 * CELL_SIZE, height: 500 * CELL_SIZE, minLv: 41, maxLv: 50 },
+    'test_lv51': { id: 'test_lv51', name: '试练场 Lv.51-60', width: 500 * CELL_SIZE, height: 500 * CELL_SIZE, minLv: 51, maxLv: 60 },
+    'test_lv61': { id: 'test_lv61', name: '试练场 Lv.61-70', width: 600 * CELL_SIZE, height: 600 * CELL_SIZE, minLv: 61, maxLv: 70 },
+    'test_lv71': { id: 'test_lv71', name: '试练场 Lv.71-80', width: 600 * CELL_SIZE, height: 600 * CELL_SIZE, minLv: 71, maxLv: 80 },
+    'test_lv81': { id: 'test_lv81', name: '试练场 Lv.81-90', width: 800 * CELL_SIZE, height: 800 * CELL_SIZE, minLv: 81, maxLv: 90 },
+    'test_lv91': { id: 'test_lv91', name: '试练场 Lv.91-100', width: 800 * CELL_SIZE, height: 800 * CELL_SIZE, minLv: 91, maxLv: 100 }
 })
 
 export function getMapInfo(mapId) {

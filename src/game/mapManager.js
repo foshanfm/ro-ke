@@ -105,45 +105,68 @@ function fillMonstersFromSpawnData(spawnInfo) {
 }
 
 /**
- * 生成单个怪物 (按 ID)
+ * 生成单个怪物 (按 ID) - 优化版：防止堆叠
  */
 function spawnSingleMonsterById(mobId, spawnArea = null) {
     const template = getMonster(mobId)
+    if (!template) return
 
     let spawnX, spawnY
-    if (spawnArea && (spawnArea.x1 !== 0 || spawnArea.x2 !== 0)) {
-        // 使用指定的刷怪区域
-        const minX = Math.min(spawnArea.x1, spawnArea.x2)
-        const maxX = Math.max(spawnArea.x1, spawnArea.x2)
-        const minY = Math.min(spawnArea.y1, spawnArea.y2)
-        const maxY = Math.max(spawnArea.y1, spawnArea.y2)
-        spawnX = minX + Math.floor(Math.random() * (maxX - minX + 1))
-        spawnY = minY + Math.floor(Math.random() * (maxY - minY + 1))
-    } else {
-        // 全地图随机
-        spawnX = Math.floor(Math.random() * mapState.width)
-        spawnY = Math.floor(Math.random() * mapState.height)
+    let attempts = 0
+    const maxAttempts = 10 // 最大重试次数，防止在极小区域死循环
+    let validPosition = false
+
+    // 尝试寻找一个空闲位置
+    while (!validPosition && attempts < maxAttempts) {
+        attempts++
+
+        if (spawnArea && (spawnArea.x1 !== 0 || spawnArea.x2 !== 0)) {
+            // 使用指定的刷怪区域
+            const minX = Math.min(spawnArea.x1, spawnArea.x2)
+            const maxX = Math.max(spawnArea.x1, spawnArea.x2)
+            const minY = Math.min(spawnArea.y1, spawnArea.y2)
+            const maxY = Math.max(spawnArea.y1, spawnArea.y2)
+            spawnX = minX + Math.floor(Math.random() * (maxX - minX + 1))
+            spawnY = minY + Math.floor(Math.random() * (maxY - minY + 1))
+        } else {
+            // 全地图随机
+            spawnX = Math.floor(Math.random() * mapState.width)
+            spawnY = Math.floor(Math.random() * mapState.height)
+        }
+
+        // 适配逻辑: 如果 x1/x2 很小(旧格式或者格数格式), 乘以 CELL_SIZE
+        // 注意：这里需要确保比较基准一致，通常地图宽是像素单位
+        if (spawnX < 500 && spawnY < 500 && mapState.width > 1000) {
+            spawnX *= CELL_SIZE
+            spawnY *= CELL_SIZE
+        }
+
+        // 碰撞检测：检查当前坐标是否已有怪物 (距离小于 5 像素视为重叠)
+        const isOccupied = mapState.monsters.some(m =>
+            Math.abs(m.x - spawnX) < 5 && Math.abs(m.y - spawnY) < 5
+        )
+
+        if (!isOccupied) {
+            validPosition = true
+        }
     }
 
-    // 适配逻辑: 如果 x1/x2 很小(旧格式或者格数格式), 乘以 CELL_SIZE
-    if (spawnX < 500 && spawnY < 500 && mapState.width > 1000) {
-        spawnX *= CELL_SIZE
-        spawnY *= CELL_SIZE
-    }
+    // 如果尝试多次仍未找到位置，强制使用最后一次的位置（避免不刷怪）
 
     const instance = {
         guid: ++guidCounter,
         templateId: mobId,           // 关联模板 ID
         x: spawnX,
         y: spawnY,
-        hp: template.hp,             // 实例化的当前血量
-        maxHp: template.hp,
+        hp: template.maxHp || template.hp, // 确保满血 (兼容性修正: 优先使用 maxHp, 回退到 hp)
+        maxHp: template.maxHp || template.hp,
         // 运行时状态
         isAggressive: false,
         lastAttackTime: 0
     }
 
     mapState.monsters.push(instance)
+    // console.log(`[MapManager] 生成怪物 ${template.name} (${instance.guid}) at ${instance.x},${instance.y}`)
 }
 
 /**

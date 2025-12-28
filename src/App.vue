@@ -13,6 +13,7 @@ import { moveTo } from './game/combat.js'
 import { parseElementCode, ElementNames } from './game/elementalTable.js'
 import { SizeNames } from './game/sizeTable.js'
 import { RaceNames } from './game/raceTable.js'
+import { getNPCsByMap } from './game/npcs.js'
 import LoginScreen from './components/LoginScreen.vue'
 import StrategyModal from './components/StrategyModal.vue'
 import ShopModal from './components/ShopModal.vue'
@@ -39,6 +40,8 @@ import ShopModal from './components/ShopModal.vue'
   const inventoryTab = ref('All')
   const cardInsertingMode = ref(false) 
   const activeCardId = ref(null) 
+  const showFacilities = ref(false) 
+  const showAllMonsters = ref(false)
   
   // --- Retro Boot Status ---
   const loadingLogs = ref([])
@@ -436,7 +439,14 @@ import ShopModal from './components/ShopModal.vue'
       monsterCounts[id].count++
     })
     
-    return Object.values(monsterCounts)
+    // Convert to array and sort by Level (descending)
+    return Object.values(monsterCounts).sort((a, b) => b.lv - a.lv)
+  })
+
+  // Display limit for monster list to prevent UI bloat
+  const displayMonsters = computed(() => {
+    if (showAllMonsters.value) return mapMonsters.value
+    return mapMonsters.value.slice(0, 8)
   })
 
   // SMART PORTAL CATEGORIZATION
@@ -479,8 +489,17 @@ import ShopModal from './components/ShopModal.vue'
 
     return {
       world: world, // Always show all world exits
-      facilities: sortedFacilities.slice(0, 4) // Show 4 closest facilities
+      facilities: sortedFacilities // Show all facilities in the dropdown
     }
+  })
+
+  const mapNPCs = computed(() => {
+    const rawNPCs = getNPCsByMap(player.currentMap)
+    return rawNPCs.map(npc => ({
+        ...npc,
+        pxX: npc.x * 10,
+        pxY: npc.y * 10
+    }))
   })
 
   // --- Inventory & Equipment Actions ---
@@ -759,43 +778,89 @@ import ShopModal from './components/ShopModal.vue'
           <div class="grid grid-cols-2 gap-2">
             <!-- Monsters -->
             <div>
-              <div class="text-cyan-400 font-bold mb-1">地图生物</div>
-              <div class="space-y-0.5">
+              <div class="text-cyan-400 font-bold mb-1 flex justify-between items-center">
+                  <span>地图生物</span>
+                  <button v-if="mapMonsters.length > 8" @click="showAllMonsters = !showAllMonsters" class="text-[9px] text-cyan-700 hover:text-cyan-400 uppercase">
+                      {{ showAllMonsters ? '收起' : '更多...' }}
+                  </button>
+              </div>
+              <div class="space-y-0.5 max-h-48 overflow-y-auto custom-scrollbar-mini">
                 <div v-if="mapMonsters.length === 0" class="text-gray-500">无数据</div>
-                <div v-for="mob in mapMonsters" :key="mob.id" class="text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700 rounded px-1 transition-colors" @click="handleEntityClick(mob.name)">
-                  <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }} <span class="text-cyan-600 text-[10px]">({{ mob.element }}/{{ mob.size }}/{{ mob.race }})</span>
+                <div v-for="mob in displayMonsters" :key="mob.id" class="text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700 rounded px-1 transition-colors flex justify-between items-center italic" @click="handleEntityClick(mob.name)">
+                  <span>
+                    <span class="text-yellow-600 font-mono not-italic">[Lv.{{ mob.lv }}]</span> {{ mob.name }}
+                  </span>
+                  <span class="text-gray-600 text-[9px] not-italic">{{ mob.count }}</span>
                 </div>
               </div>
             </div>
             
-            <!-- Portals -->
-            <div>
-              <div class="text-cyan-400 font-bold mb-1">主要出口 (World)</div>
-              <div class="space-y-0.5 mb-2">
-                <div v-if="mapPortals.world.length === 0" class="text-gray-500 text-[10px]">无出口</div>
-                <button 
-                  v-for="(portal, idx) in mapPortals.world" 
-                  :key="'w-'+idx"
-                  @click="navigateToPortal(portal.x, portal.y)"
-                  class="block w-full text-left px-2 py-0.5 bg-cyan-900 bg-opacity-30 border border-cyan-800 hover:bg-cyan-800 rounded text-cyan-100 transition-colors text-[11px]"
-                >
-                  <span class="mr-1">◈</span>{{ portal.targetName }}
-                  <span class="text-cyan-700 text-[9px] font-mono">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
-                </button>
+            <!-- Portals & NPCs -->
+            <div class="space-y-3">
+              <!-- NPCs -->
+              <div>
+                <div class="text-green-400 font-bold mb-1 flex justify-between items-center">
+                    <span>商人与设施 (NPCs)</span>
+                    <span class="text-[9px] text-gray-500 uppercase">Interactive</span>
+                </div>
+                <div class="space-y-0.5">
+                  <div v-if="mapNPCs.length === 0" class="text-gray-500 text-[10px]">附近无 NPC</div>
+                  <button 
+                    v-for="npc in mapNPCs" 
+                    :key="npc.id"
+                    @click="navigateToPortal(npc.pxX, npc.pxY)"
+                    class="block w-full text-left px-2 py-0.5 bg-green-900 bg-opacity-20 border border-green-800 border-opacity-30 hover:bg-green-800 hover:bg-opacity-40 rounded text-green-100 transition-colors text-[11px]"
+                  >
+                    <span class="mr-1">👤</span>{{ npc.name }}
+                    <span class="text-green-700 text-[9px] font-mono">({{ npc.x }}, {{ npc.y }})</span>
+                  </button>
+                </div>
               </div>
 
-              <div class="text-gray-500 font-bold mb-1 text-[11px] uppercase tracking-wider">地图设施 (Local)</div>
-              <div class="space-y-0.5 max-h-32 overflow-y-auto custom-scrollbar-mini pr-1">
-                <div v-if="mapPortals.facilities.length === 0" class="text-gray-600 text-[10px]">附近无设施</div>
+              <!-- World Portals -->
+              <div>
+                <div class="text-cyan-400 font-bold mb-1 flex justify-between items-center">
+                    <span>主要出口 (World)</span>
+                    <span class="text-[9px] text-gray-500 uppercase">Exit</span>
+                </div>
+                <div class="space-y-0.5">
+                  <div v-if="mapPortals.world.length === 0" class="text-gray-500 text-[10px]">无出口</div>
+                  <button 
+                    v-for="(portal, idx) in mapPortals.world" 
+                    :key="'w-'+idx"
+                    @click="navigateToPortal(portal.x, portal.y)"
+                    class="block w-full text-left px-2 py-0.5 bg-cyan-900 bg-opacity-30 border border-cyan-800 hover:bg-cyan-800 rounded text-cyan-100 transition-colors text-[11px]"
+                  >
+                    <span class="mr-1">◈</span>{{ portal.targetName }}
+                    <span class="text-cyan-700 text-[9px] font-mono">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Facilities (Dropdown) -->
+              <div class="relative">
                 <button 
-                  v-for="(portal, idx) in mapPortals.facilities" 
-                  :key="'f-'+idx"
-                  @click="navigateToPortal(portal.x, portal.y)"
-                  class="block w-full text-left px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-400 transition-colors text-[10px] border border-transparent hover:border-gray-600"
+                  @click="showFacilities = !showFacilities"
+                  class="w-full text-left px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-gray-400 transition-colors text-[11px] border border-gray-700 flex justify-between items-center"
                 >
-                  <span class="mr-1">○</span>{{ portal.targetName }}
-                  <span class="text-gray-600 text-[9px] font-mono">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
+                  <span class="font-bold flex items-center gap-1">
+                      <span class="text-gray-600">○</span> 地图设施 (Local)
+                  </span>
+                  <span class="text-[9px] transition-transform duration-200" :class="{'rotate-180': showFacilities}">▼</span>
                 </button>
+                
+                <div v-if="showFacilities" class="mt-1 space-y-0.5 max-h-48 overflow-y-auto custom-scrollbar-mini p-1 bg-gray-900 border border-gray-700 rounded shadow-xl animate-slide-in">
+                  <div v-if="mapPortals.facilities.length === 0" class="text-gray-600 text-[10px] p-2 italic">附近无室内设施</div>
+                  <button 
+                    v-for="(portal, idx) in mapPortals.facilities" 
+                    :key="'f-'+idx"
+                    @click="navigateToPortal(portal.x, portal.y); showFacilities = false"
+                    class="block w-full text-left px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-gray-400 transition-colors text-[10px] border border-transparent hover:border-gray-600"
+                  >
+                    <span class="mr-1 text-gray-600">○</span>{{ portal.targetName }}
+                    <span class="ml-auto text-gray-600 text-[9px] font-mono">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
