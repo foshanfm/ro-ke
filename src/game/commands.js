@@ -3,12 +3,13 @@ import { getItemInfo, ItemType } from './items.js'
 import { startBot, stopBot, gameState, moveTo } from './combat.js'
 import { JobConfig, JobType } from './jobs.js'
 import { Skills } from './skills.js'
-import { getEquipInfo, EquipType } from './equipment.js'
+import { getEquipInfo, EquipType, WeaponType } from './equipment.js'
 import { Maps } from './maps.js'
 import { runSimulation } from './simulator.js'
 import { castSkill } from './skillEngine.js'
 import { mapState } from './mapManager.js'
 import { getElementalModifier, parseElementCode, ElementNames } from './elementalTable.js'
+import { getSizeModifier, SizeNames } from './sizeTable.js'
 
 const commands = {}
 
@@ -774,36 +775,52 @@ registerCommand({
 })
 
 registerCommand({
-    name: 'test_element',
-    description: '测试属性系统 (调试用)',
+    name: 'test_combat',
+    aliases: ['test_element'],
+    description: '测试战斗修正系统 (属性/体型)',
     execute: (args, { log }) => {
-        log(`========== [ 属性系统测试 ] ==========`, 'system')
+        log(`========== [ 战斗修正系统测试 ] ==========`, 'system')
 
-        // 测试解析
-        const testCodes = [21, 43, 27, 49]
-        log(`[解析测试]`, 'dim')
+        // 1. 属性解析测试
+        const testCodes = [21, 42, 63, 89] // 水1, 地2, 火3, 不死4
+        log(`[属性解析测试]`, 'dim')
         testCodes.forEach(code => {
             const parsed = parseElementCode(code)
             log(`  Code ${code} => ${ElementNames[parsed.element]} Lv${parsed.level}`, 'info')
         })
 
-        // 测试修正
-        log(`[修正测试]`, 'dim')
-        const tests = [
+        // 2. 属性修正测试
+        log(`[属性修正测试]`, 'dim')
+        const eleTests = [
             { atk: 0, def: 2, defLv: 1, desc: '无属性 vs 地属性Lv1' },
             { atk: 3, def: 2, defLv: 1, desc: '火属性 vs 地属性Lv1' },
             { atk: 1, def: 3, defLv: 1, desc: '水属性 vs 火属性Lv1' },
             { atk: 6, def: 9, defLv: 1, desc: '圣属性 vs 不死Lv1' }
         ]
-        tests.forEach(t => {
+        eleTests.forEach(t => {
             const mod = getElementalModifier(t.atk, t.def, t.defLv)
             log(`  ${t.desc}: ${mod}%`, mod > 100 ? 'success' : (mod < 100 ? 'warning' : 'info'))
         })
 
-        // 显示玩家当前属性
-        log(`[玩家状态]`, 'dim')
-        log(`  攻击属性: ${ElementNames[player.attackElement || 0]}`, 'info')
+        // 3. 体型修正测试
+        log(`[体型修正测试]`, 'dim')
+        const sizeTests = [
+            { w: WeaponType.DAGGER, s: 2, desc: '短剑 vs 大型' },
+            { w: WeaponType.SWORD, s: 1, desc: '单手剑 vs 中型' },
+            { w: WeaponType.TWO_HAND_SWORD, s: 0, desc: '双手剑 vs 小型' },
+            { w: WeaponType.BOW, s: 2, desc: '弓 vs 大型' }
+        ]
+        sizeTests.forEach(t => {
+            const mod = getSizeModifier(t.w, t.s)
+            log(`  ${t.desc}: ${mod}%`, mod > 100 ? 'success' : (mod < 100 ? 'warning' : 'info'))
+        })
 
-        log(`======================================`, 'system')
+        // 4. 玩家当前状态
+        log(`[玩家当前状态]`, 'dim')
+        const wInfo = player.equipment?.Weapon ? getItemInfo(player.equipment.Weapon.id) : null
+        log(`  攻击属性: ${ElementNames[player.attackElement || 0]}`, 'info')
+        log(`  当前武器: ${wInfo ? wInfo.name : '空手'} (${wInfo ? wInfo.subType : 'NONE'})`, 'info')
+
+        log(`==========================================`, 'system')
     }
 })

@@ -145,6 +145,12 @@ const WEAPON_TYPE_MAP = {
     14: 'WHIP', 15: 'BOOK', 16: 'KATAR', 18: 'TWO_HAND_STAFF'
 };
 
+const ITEM_ELEMENT_MAP = {
+    'Ele_Neutral': 0, 'Ele_Water': 1, 'Ele_Earth': 2, 'Ele_Fire': 3,
+    'Ele_Wind': 4, 'Ele_Poison': 5, 'Ele_Holy': 6, 'Ele_Dark': 7,
+    'Ele_Ghost': 8, 'Ele_Undead': 9
+};
+
 function parseItemDB() {
     console.log('Compiling Item DB...');
     const descMap = parseDescriptions();
@@ -238,6 +244,12 @@ function parseItemDB() {
             });
         }
 
+        // Detect bAtkEle
+        const eleMatch = script.match(/bonus\s+bAtkEle,(Ele_\w+);/i);
+        if (eleMatch) {
+            item.element = ITEM_ELEMENT_MAP[eleMatch[1]] ?? 0;
+        }
+
         // Stat Bonuses
         const bonusMatches = script.matchAll(/bonus\s+b(\w+),(-?\d+);/g);
         const bonusMap = {};
@@ -298,6 +310,7 @@ function parseMobDB() {
             hp: parseInt(parts[5]),
             exp: parseInt(parts[7]),
             jobExp: parseInt(parts[8]),
+            scale: parseInt(parts[22]) || 0, // 体型 (0:Small, 1:Medium, 2:Large)
             element: parseInt(parts[24]) || 0, // 属性代码 (XY格式: X=属性, Y=等级)
             battleStats: {
                 atkMin: (parseInt(parts[10]) || 0) - (parseInt(parts[11]) || 0),

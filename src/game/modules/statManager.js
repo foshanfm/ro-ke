@@ -242,14 +242,18 @@ export function recalculatePlayerStats(player) {
 
     player.attackRange = rangeInCells * CELL_SIZE
 
-    // Attack Element (从武器获取)
+    // Attack Element (优先从弹药获取，对于弓；其次武器)
     player.attackElement = 0 // 默认无属性
-    if (player.equipment && player.equipment.Weapon) {
+
+    if (weaponType === WeaponType.BOW && player.equipment.Ammo) {
+        const ammoInfo = getItemInfo(player.equipment.Ammo.id)
+        if (ammoInfo && ammoInfo.element !== undefined) {
+            player.attackElement = ammoInfo.element
+        }
+    } else if (player.equipment && player.equipment.Weapon) {
         const weaponInfo = getItemInfo(player.equipment.Weapon.id)
-        if (weaponInfo && weaponInfo.element) {
-            // 武器属性代码 (如果存在)
-            const parsed = parseElementCode(weaponInfo.element)
-            player.attackElement = parsed.element
+        if (weaponInfo && weaponInfo.element !== undefined) {
+            player.attackElement = weaponInfo.element
         }
     }
 }

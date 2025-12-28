@@ -130,19 +130,19 @@ export function getElementalModifier(attackerElement, defenderElement, defenderE
 
 /**
  * 解析属性代码 (从 mob_db.txt 的 Element 字段)
- * 格式: XY (X = 属性, Y = 等级)
- * 例如: 21 = 水属性1级, 43 = 火属性3级
+ * 格式: (Level * 20) + Element
+ * 例如: 21 = 水属性1级, 43 = 火属性2级, 63 = 火属性3级
+ * 其中 Element: 0=无, 1=水, 2=地, 3=火, 4=风, 5=毒, 6=圣, 7=暗, 8=念, 9=不死
  * 
  * @param {number} elementCode - 属性代码
- * @returns {{ element: number, level: number }}
  */
 export function parseElementCode(elementCode) {
     if (!elementCode || elementCode === 0) {
         return { element: Element.NEUTRAL, level: 1 }
     }
 
-    const element = Math.floor(elementCode / 10)
-    const level = elementCode % 10
+    const level = Math.floor(elementCode / 20)
+    const element = elementCode % 20
 
     return {
         element: element >= 0 && element <= 9 ? element : Element.NEUTRAL,

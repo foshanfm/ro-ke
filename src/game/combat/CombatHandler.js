@@ -80,10 +80,12 @@ export function executeAttack(target, getMobTemplate, log) {
         attackerHit: player.hit,
         attackerCrit: player.crit,
         attackerElement: player.attackElement || 0, // 玩家攻击属性 (默认无属性)
+        attackerWeaponType: getWeaponType(),
         defenderDef: targetTemplate.def || 0,
         defenderFlee: targetTemplate.flee || 1,
         defenderElement,
         defenderElementLevel,
+        defenderScale: targetTemplate.scale || 1,
         isPlayerAttacking: true
     })
 
@@ -100,9 +102,13 @@ export function executeAttack(target, getMobTemplate, log) {
     if (res.type === 'crit') {
         log(`CRITICAL! You deal ${damage} damage.`, 'warning')
     } else {
-        // 如果有属性修正，显示修正信息
-        if (res.elementalModifier && res.elementalModifier !== 100) {
-            log(`You attack [${targetTemplate.name}] for ${damage} damage (${res.elementalModifier}% elemental).`, 'default')
+        // 组合修正信息
+        let modInfo = ''
+        if (res.elementalModifier && res.elementalModifier !== 100) modInfo += `${res.elementalModifier}% elemental`
+        if (res.sizeModifier && res.sizeModifier !== 100) modInfo += (modInfo ? ', ' : '') + `${res.sizeModifier}% size`
+
+        if (modInfo) {
+            log(`You attack [${targetTemplate.name}] for ${damage} damage (${modInfo}).`, 'default')
         } else {
             log(`You attack [${targetTemplate.name}] for ${damage} damage.`, 'default')
         }

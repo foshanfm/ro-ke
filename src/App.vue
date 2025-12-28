@@ -11,6 +11,7 @@
   import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
   import { moveTo } from './game/combat.js'
   import { parseElementCode, ElementNames } from './game/elementalTable.js'
+  import { SizeNames } from './game/sizeTable.js'
   import LoginScreen from './components/LoginScreen.vue'
 
   // --- 核心状态 ---
@@ -384,11 +385,16 @@
           const parsed = parseElementCode(template.element)
           elementName = ElementNames[parsed.element] || '无'
         }
+        
+        // 解析体型
+        const sizeName = SizeNames[template?.scale] || '中'
+
         monsterCounts[id] = {
           id,
           name: template?.name || `Monster ${id}`,
           lv: template?.lv || '?',
           element: elementName,
+          size: sizeName,
           count: 0
         }
       }
@@ -660,7 +666,7 @@
               <div class="space-y-0.5">
                 <div v-if="mapMonsters.length === 0" class="text-gray-500">无数据</div>
                 <div v-for="mob in mapMonsters" :key="mob.id" class="text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700 rounded px-1 transition-colors" @click="handleEntityClick(mob.name)">
-                  <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }} <span class="text-cyan-600 text-[10px]">({{ mob.element }})</span>
+                  <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }} <span class="text-cyan-600 text-[10px]">({{ mob.element }}/{{ mob.size }})</span>
                 </div>
               </div>
             </div>

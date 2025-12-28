@@ -2,6 +2,7 @@
 import { WeaponType } from './equipment'
 import { aspdCalculator } from './modules/aspd'
 import { getElementalModifier } from './elementalTable.js'
+import { getSizeModifier } from './sizeTable.js'
 
 // --- 素质点消耗 ---
 export function getStatPointCost(currentVal) {
@@ -187,14 +188,18 @@ export function calcLevelDiffRate(playerLv, monsterLv) {
  * @param {number} params.defenderLuk - 防御者 LUK
  * @param {number} params.defenderElement - 防御者属性 (0-9)
  * @param {number} params.defenderElementLevel - 防御者属性等级 (1-4)
+ * @param {string} params.attackerWeaponType - 攻击者武器类型 (NONE, DAGGER, etc.)
+ * @param {number} params.defenderScale - 防御者体型 (0:Small, 1:Medium, 2:Large)
  * @param {boolean} params.isPlayerAttacking - 是否玩家攻击
- * @returns {{ damage: number, type: string, hitRate: number, elementalModifier?: number }}
+ * @returns {{ damage: number, type: string, hitRate: number, elementalModifier?: number, sizeModifier?: number }}
  */
 export function calculateDamageFlow({
     attackerAtk, attackerHit, attackerCrit,
     attackerElement = 0,
+    attackerWeaponType = WeaponType.NONE,
     defenderDef, defenderFlee, defenderLuk = 1,
     defenderElement = 0, defenderElementLevel = 1,
+    defenderScale = 1,
     isPlayerAttacking = true
 }) {
     // 1. 命中判定 (RO 经典公式: 80 + AttackerHit - DefenderFlee)
@@ -235,7 +240,14 @@ export function calculateDamageFlow({
     // 应用属性修正
     baseDmg = Math.floor(baseDmg * (elementalModifier / 100))
 
-    // 5. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
+    // 5. 体型修正 (Size Modifier)
+    let sizeModifier = 100
+    if (isPlayerAttacking) {
+        sizeModifier = getSizeModifier(attackerWeaponType, defenderScale)
+        baseDmg = Math.floor(baseDmg * (sizeModifier / 100))
+    }
+
+    // 6. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
     const defReduction = 600 / (600 + defenderDef)
     const finalDamage = Math.max(1, Math.floor(baseDmg * defReduction))
 
@@ -243,6 +255,7 @@ export function calculateDamageFlow({
         damage: finalDamage,
         type: isCrit ? 'crit' : 'hit',
         hitRate: hitRate,
-        elementalModifier: elementalModifier !== 100 ? elementalModifier : undefined
+        elementalModifier: elementalModifier !== 100 ? elementalModifier : undefined,
+        sizeModifier: sizeModifier !== 100 ? sizeModifier : undefined
     }
 }
