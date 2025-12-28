@@ -68,7 +68,7 @@ function nextSession() {
 }
 
 export function startBot() {
-    if (gameState.isAuto) return
+    // 移除 if (gameState.isAuto) return; 允许通过 auto 指令重置/重启 AI 会话
 
     if (player.hp <= 0) {
         log('检测到玩家处于死亡状态。正在返回存储点复活...', 'warning')
@@ -240,6 +240,7 @@ async function aiTick(sessionId) {
             }
 
             if (result.warped) {
+                mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
                 return
             }
 
@@ -290,6 +291,7 @@ async function aiTick(sessionId) {
             gameState.lastActionLog = lastActionLogRef.value
 
             if (result.warped) {
+                mainLoopId = setTimeout(() => aiTick(sessionId), result.delay || 100)
                 return
             }
 

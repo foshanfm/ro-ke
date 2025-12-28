@@ -1,4 +1,4 @@
-import { mapState, findNearestMonster, randomWalk } from '../mapManager.js'
+import { mapState, findNearestMonster, randomWalk, isNearWarp } from '../mapManager.js'
 import { formatPos } from '../constants.js'
 
 /**
@@ -14,7 +14,8 @@ import { formatPos } from '../constants.js'
  * @returns {Object} - {monster: Object|null, shouldPatrol: boolean, delay: number}
  */
 export function searchForTarget(viewRange, log, getMobTemplate) {
-    const { monster, distance } = findNearestMonster(viewRange)
+    // 安全过滤: 忽略靠近传送点的怪物 (5格 = 50px)
+    const { monster, distance } = findNearestMonster(viewRange, (m) => !isNearWarp(m.x, m.y, 50))
 
     if (monster) {
         const mobTemplate = getMobTemplate(monster)

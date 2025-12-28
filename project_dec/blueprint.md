@@ -213,20 +213,22 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Smart Navigation UI**:
     - [x] Categorization of portals into "World Exits" (high priority) and "Local Facilities" (distance-filtered).
     - [x] Prevents major gates (e.g., Prontera East/West) from being hidden by indoor facilities.
-- [x] **Phase 32: Stat Stability & Precision [Completed]**
-    - [x] **Zero-Tolerance Loading**: Removed legacy "survival" HP/SP formulas. If DB fails, game errors out rather than showing inaccurate data.
-    - [x] **Attribute Bonus Sync**: Fixed data binding so that Job and Equipment bonuses (e.g., Novice Job 10's +1) are visible in the Stats Modal.
-    - [x] **Loading Pipeline Integrity**: Enforced strict validation of `JobStats` before game entry.
+### Phase 32: Stat Stability & Precision [Completed]
+- [x] **Zero-Tolerance Loading**: Removed legacy "survival" HP/SP formulas. If DB fails, game errors out rather than showing inaccurate data.
+- [x] **Attribute Bonus Sync**: Fixed data binding so that Job and Equipment bonuses (e.g., Novice Job 10's +1) are visible in the Stats Modal.
+- [x] **Loading Pipeline Integrity**: Enforced strict validation of `JobStats` before game entry.
+
+### Phase 33: AI Engine Stability [Completed]
+- [x] **Session Breakthrough**: Allowed `auto` command to bypass state locks and force-reset the AI engine.
+- [x] **Loop Continuity**: Fixed race conditions during map transitions (warps) that caused the AI loop to die.
+- [x] **Standardized Movement**: Unified warp handling across manual and autonomous navigation.
 
 ## 4. Current State
-*   **Version:** 3.4.0 (Phase 31+ - Retro Stability)
-*   **Stability:** High.
+*   **Version:** 3.5.0 (Phase 33 - AI Stability)
+*   **Stability:** High (Fixed AI loop death on warp).
 *   **Performance:** Elite.
 *   **New Features:**
-    - **Advanced Multipliers**: Race, Element, and Size bonuses from cards/equip are now functional.
-    - **Elemental Arrows**: Player attack property automatically inherits from equipped arrows.
-    - **Visual Strategy & Shop**: Complete GUI overhaul for bot configuration and merchant interaction.
-    - **Retro CMD Boot**: Authentic terminal-style loading sequence with strict data-readiness checks.
-    - **Smart Navigation**: Prioritized portal display and architectural categorization.
-    - **Full Metadata UI**: Real-time display of monster Element, Size, and Race in navigation.
-*   **Next Objective:** Skill Mechanics Upgrade (SP costs, Cast Time, Cool Down).
+    - **Session Breakthrough**: `auto` command now acts as a reset if the bot hangs.
+    - **Loop Continuity**: AI now persists through map transitions during manual/chase movement.
+    - **Stat Precision**: Guaranteed synchronization of job/equip bonuses in UI.
+*   **Next Objective:** Phase 20: SP Mechanics & Skills (SP costs, Cast Time, Cool Down).

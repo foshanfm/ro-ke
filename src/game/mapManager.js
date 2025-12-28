@@ -161,11 +161,33 @@ export function removeMonster(guid) {
 /**
  * 获取距离玩家最近的怪物
  */
-export function findNearestMonster(viewRange = 100) {
+/**
+ * 检查指定坐标是否靠近传送点
+ * @param {number} x - X 坐标
+ * @param {number} y - Y 坐标
+ * @param {number} threshold - 距离阈值 (默认 5 格 = 50 像素)
+ */
+export function isNearWarp(x, y, threshold = 50) {
+    if (!mapState.activeWarps) return false
+    return mapState.activeWarps.some(warp => {
+        const dist = Math.sqrt(Math.pow(x - warp.x, 2) + Math.pow(y - warp.y, 2))
+        return dist <= threshold
+    })
+}
+
+/**
+ * 获取距离玩家最近的怪物
+ * @param {number} viewRange - 视野范围
+ * @param {Function} filterFn - (可选) 额外的过滤函数
+ */
+export function findNearestMonster(viewRange = 100, filterFn = null) {
     let nearest = null
     let minDist = viewRange
 
     mapState.monsters.forEach(m => {
+        // 如果有过滤器且过滤失败，跳过
+        if (filterFn && !filterFn(m)) return
+
         const dist = Math.sqrt(Math.pow(m.x - player.x, 2) + Math.pow(m.y - player.y, 2))
         if (dist < minDist) {
             minDist = dist
@@ -209,13 +231,21 @@ export function randomWalk() {
         return arrived
     }
 
-    // 设定一个新的随机巡逻点
-    const angle = Math.random() * Math.PI * 2
-    const dist = 200 + Math.random() * 400 // 地图变大了，走远一点
-    const tx = Math.max(20, Math.min(mapState.width - 20, player.x + Math.cos(angle) * dist))
-    const ty = Math.max(20, Math.min(mapState.height - 20, player.y + Math.sin(angle) * dist))
+    // 设定一个新的随机巡逻点 (尝试 3 次以避开传送点)
+    for (let i = 0; i < 3; i++) {
+        const angle = Math.random() * Math.PI * 2
+        const dist = 200 + Math.random() * 400
+        const tx = Math.max(20, Math.min(mapState.width - 20, player.x + Math.cos(angle) * dist))
+        const ty = Math.max(20, Math.min(mapState.height - 20, player.y + Math.sin(angle) * dist))
 
-    mapState.patrolTarget = { x: tx, y: ty }
+        // 检查新目标点是否安全 (远离传送点 80px)
+        if (!isNearWarp(tx, ty, 80)) {
+            mapState.patrolTarget = { x: tx, y: ty }
+            return false
+        }
+    }
+
+    // 如果尝试失败，这次先不动，或者就在原地附近微调，避免强行去危险区域
     return false
 }
 

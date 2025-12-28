@@ -33,17 +33,15 @@ export function handleManualMovement(target, log) {
     const warpInfo = checkWarpCollision(player.x, player.y)
     if (warpInfo) {
         log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
-        setTimeout(() => {
-            const res = warp(warpInfo.targetMap)
-            if (res.success) {
-                const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                player.x = warpInfo.targetX + offsetX
-                player.y = warpInfo.targetY + offsetY
-                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
-            }
-        }, 500)
-        return { shouldContinue: false, warped: true }
+        const res = warp(warpInfo.targetMap)
+        if (res.success) {
+            const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+            const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+            player.x = warpInfo.targetX + offsetX
+            player.y = warpInfo.targetY + offsetY
+            log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+        }
+        return { shouldContinue: false, delay: 500, warped: true }
     }
 
     return { shouldContinue: true, delay: 100 }
@@ -118,17 +116,15 @@ export function handleChaseTarget(target, log, lastActionLog, getMobTemplate) {
     const warpInfo = checkWarpCollision(player.x, player.y)
     if (warpInfo) {
         log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
-        setTimeout(() => {
-            const res = warp(warpInfo.targetMap)
-            if (res.success) {
-                const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-                player.x = warpInfo.targetX + offsetX
-                player.y = warpInfo.targetY + offsetY
-                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
-            }
-        }, 500)
-        return { shouldContinue: false, warped: true }
+        const res = warp(warpInfo.targetMap)
+        if (res.success) {
+            const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+            const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
+            player.x = warpInfo.targetX + offsetX
+            player.y = warpInfo.targetY + offsetY
+            log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+        }
+        return { shouldContinue: false, delay: 500, warped: true }
     }
 
     return { shouldContinue: true, delay: 100 }
