@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue'
-import { player, saveGame, getStatPointCost, equipItem, unequipItem, useItem, insertCard, addItem, buyItem, getShopList } from './game/player.js'
+import { player, saveGame, getStatPointCost, equipItem, unequipItem, useItem, insertCard, addItem, buyItem, getShopList, recalculateMaxStats } from './game/player.js'
 import { setLogCallback, startRecovery, gameState } from './game/combat.js'
 import { JobConfig } from './game/jobs.js'
 import { Maps } from './game/maps.js'
@@ -8,7 +8,7 @@ import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggest
 import { initializeGameData } from './game/DataManager.js'
 import { setItemsDB, getItemInfo, getItemByName, ItemType, getEquippableName } from './game/items.js'
 import { setMonstersDB, getMonster, getMonsterByName } from './game/monsters.js'
-import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
+import { setSpawnData, setWarpData, mapState, initMap, hasMapSpawns } from './game/mapManager.js'
 import { moveTo } from './game/combat.js'
 import { parseElementCode, ElementNames } from './game/elementalTable.js'
 import { SizeNames } from './game/sizeTable.js'
@@ -39,6 +39,14 @@ import ShopModal from './components/ShopModal.vue'
   const inventoryTab = ref('All')
   const cardInsertingMode = ref(false) 
   const activeCardId = ref(null) 
+  
+  // --- Retro Boot Status ---
+  const loadingLogs = ref([])
+  const addLoadingLog = (msg) => {
+      loadingLogs.value.push({ msg, time: new Date().toLocaleTimeString() })
+      // Keep only last 10 logs
+      if (loadingLogs.value.length > 10) loadingLogs.value.shift()
+  }
   
   // --- 素质点加点 ---
   import { increaseStat } from './game/player.js'
@@ -254,9 +262,24 @@ import ShopModal from './components/ShopModal.vue'
   const handleLogin = async (saveId) => {
     isLoggedIn.value = true
     isInitializing.value = true
+    loadingLogs.value = []
 
-    // 初始化游戏数据
+    // 1. 异步加载所有基础数据并注册
+    // 本次改动：移除了 initializeGameDataAsync 中的 sleep，确保按真实速度加载
     await initializeGameDataAsync()
+
+    // 2. 关键同步点：等待 Vue 响应式系统同步数据库状态到 UI 或其他模块
+    await nextTick()
+
+    // 3. 核心计算：所有 DB 已在内存中，执行首次完整属性计算
+    recalculateMaxStats()
+    addLoadingLog('Character Stats Synchronized.')
+    
+    // 4. 验证数据正确性 (可选)
+    if (player.maxHp <= 0) {
+        addLoadingLog('WARN: Stat sync incomplete, retrying...')
+        recalculateMaxStats()
+    }
 
     const jobName = JobConfig[player.job] ? JobConfig[player.job].name : '初学者'
     const curMapId = (player.currentMap || '').toLowerCase()
@@ -266,20 +289,36 @@ import ShopModal from './components/ShopModal.vue'
     addLog(`当前位置: ${mapName}`, 'system')
     addLog(`系统就绪。输入 'auto' 开始挂机,输入 'help' 查看帮助。`, 'system')
     
-    isInitializing.value = false
-    focusInput()
+    // 5. 最终确认并关闭引导界面 (留 500ms 让人看一眼 "OK")
+    setTimeout(async () => {
+        addLoadingLog('Launching Shell...')
+        isInitializing.value = false
+        await nextTick()
+        focusInput()
+    }, 500)
   }
 
-  // 异步加载游戏数据
+  // 异步加载游戏数据 (Data-Driven, no artificial sleeps)
   const initializeGameDataAsync = async () => {
-    addLog('正在加载游戏数据...', 'system')
+    addLoadingLog('Microsoft(R) Windows DOS')
+    addLoadingLog('(C)Copyright Microsoft Corp 1981-1999.')
+    addLoadingLog('')
+    addLoadingLog('C:\\> RUN RO-KE.EXE /INIT')
+    
     try {
-      const { itemsDB, mobsDB, spawnData, warpDB, jobStats } = await initializeGameData(99)
+      // DataManager.initializeGameData 内部执行主要的加载逻辑
+      const data = await initializeGameData(99)
       
-      setItemsDB(itemsDB)
-      setMonstersDB(mobsDB)
-      setSpawnData(spawnData)
-      setWarpData(warpDB)
+      // 按序注册组件
+      addLoadingLog('Registering ItemDB...')
+      setItemsDB(data.itemsDB)
+
+      addLoadingLog('Registering MonsterDB & Spawns...')
+      setMonstersDB(data.mobsDB)
+      setSpawnData(data.spawnData)
+
+      addLoadingLog('Loading Warp Database...')
+      setWarpData(data.warpDB)
       
       if (player.currentMap) player.currentMap = player.currentMap.toLowerCase()
       
@@ -287,16 +326,19 @@ import ShopModal from './components/ShopModal.vue'
       
       if (player.currentMap) {
           initMap(player.currentMap)
+          addLoadingLog(`Initializing Map: ${player.currentMap}`)
       }
 
-      if (jobStats) {
-        addLog('职业属性数据库加载成功!', 'success')
+      if (data.jobStats) {
+        addLoadingLog('Registering Job Stat Formulas...')
       }
 
-      addLog('游戏数据加载完成!', 'success')
+      addLoadingLog('System Core: OK')
+      
     } catch (error) {
-      addLog('游戏数据加载失败,将使用后备数据', 'warning')
+      addLoadingLog('FATAL: Initialization failed.')
       console.error(error)
+      isDataLoaded.value = true
     }
   }
 
@@ -375,11 +417,11 @@ import ShopModal from './components/ShopModal.vue'
     return Object.values(monsterCounts)
   })
 
-  // OPTIMIZED PRONTERAD PORTALS
+  // SMART PORTAL CATEGORIZATION
   const mapPortals = computed(() => {
-    if (!mapState.activeWarps) return []
+    if (!mapState.activeWarps) return { world: [], facilities: [] }
     
-    let rawPortals = mapState.activeWarps.map(w => ({
+    const all = mapState.activeWarps.map(w => ({
       x: w.x,
       y: w.y,
       targetMap: w.targetMap,
@@ -387,16 +429,36 @@ import ShopModal from './components/ShopModal.vue'
       name: w.name
     }))
 
-    if (player.currentMap === 'prontera' && rawPortals.length > 6) {
-        const sorted = rawPortals.sort((a, b) => {
-             const distA = Math.pow(a.x - player.x, 2) + Math.pow(a.y - player.y, 2)
-             const distB = Math.pow(b.x - player.x, 2) + Math.pow(b.y - player.y, 2)
-             return distA - distB
-        })
-        return sorted.slice(0, 6)
-    }
+    const world = []
+    const facilities = []
 
-    return rawPortals
+    all.forEach(p => {
+      const id = p.targetMap.toLowerCase()
+      // WORLD EXIT CRITERIA:
+      // 1. Doesn't have indoor suffixes
+      // 2. OR has monster spawns
+      // 3. OR is a known city
+      const isIndoor = id.includes('_in') || id.includes('_room') || id.includes('_cas') || id.includes('_church') || id.includes('_mall')
+      const hasSpawns = hasMapSpawns(id)
+
+      if (!isIndoor || hasSpawns) {
+        world.push(p)
+      } else {
+        facilities.push(p)
+      }
+    })
+
+    // Facilities are distance-filtered
+    const sortedFacilities = facilities.sort((a, b) => {
+      const distA = Math.pow(a.x - player.x, 2) + Math.pow(a.y - player.y, 2)
+      const distB = Math.pow(b.x - player.x, 2) + Math.pow(b.y - player.y, 2)
+      return distA - distB
+    })
+
+    return {
+      world: world, // Always show all world exits
+      facilities: sortedFacilities.slice(0, 4) // Show 4 closest facilities
+    }
   })
 
   // --- Inventory & Equipment Actions ---
@@ -522,12 +584,37 @@ import ShopModal from './components/ShopModal.vue'
 <!-- 登录界面 -->
     <LoginScreen v-if="!isLoggedIn" @login="handleLogin" />
 
-    <!-- 加载中界面 -->
-    <div v-else-if="isInitializing" class="bg-black text-gray-300 font-mono h-screen flex items-center justify-center">
-      <div class="text-center">
-        <div class="text-2xl mb-4">加载中...</div>
-        <div class="text-sm text-gray-500">正在初始化游戏数据</div>
-      </div>
+    <!-- Retro Boot Overlay (Standard CMD Style) -->
+    <div v-if="isInitializing" class="fixed inset-0 bg-black z-[999] p-8 sm:p-12 font-mono text-gray-100 overflow-hidden terminal-boot-overlay" @click.stop>
+        <div class="relative z-10 w-full h-full flex flex-col items-start justify-start">
+            <!-- Large ASCII Banner -->
+            <pre class="text-[8px] sm:text-[10px] md:text-xs mb-10 leading-none text-gray-400">
+  _____   ____         _  __ ______ 
+ |  __ \ / __ \       | |/ /|  ____|
+ | |__) | |  | |______| ' / | |__   
+ |  _  /| |  | |______|  &lt;  |  __|  
+ | | \ \| |__| |      | . \ | |____ 
+ |_|  \_\\____/       |_|\_\|______|
+
+ [ RO-KE CORE ENGINE v1.0.4 - INITIALIZING SYSTEM ]
+            </pre>
+            
+            <div class="space-y-1 mb-8">
+                <div v-for="(log, idx) in loadingLogs" :key="idx" class="flex gap-2 text-[11px] font-normal">
+                    <span class="text-gray-500">{{ log.msg ? '>' : '' }}</span>
+                    <span class="text-gray-100">{{ log.msg }}</span>
+                </div>
+                <!-- Cursor -->
+                <div class="text-[11px] flex items-center gap-1">
+                    <div class="w-2 h-4 bg-gray-100 animate-pulse"></div>
+                </div>
+            </div>
+
+            <div class="mt-auto border-t border-gray-800 w-full pt-4 text-[10px] font-bold text-gray-600 flex justify-between uppercase tracking-wider">
+                <span>Memory: 640KB OK</span>
+                <span>System Initialization</span>
+            </div>
+        </div>
     </div>
 
     <!-- 主游戏界面 -->
@@ -661,17 +748,31 @@ import ShopModal from './components/ShopModal.vue'
             
             <!-- Portals -->
             <div>
-              <div class="text-cyan-400 font-bold mb-1">已知出口</div>
-              <div class="space-y-0.5">
-                <div v-if="mapPortals.length === 0" class="text-gray-500">无传送点</div>
+              <div class="text-cyan-400 font-bold mb-1">主要出口 (World)</div>
+              <div class="space-y-0.5 mb-2">
+                <div v-if="mapPortals.world.length === 0" class="text-gray-500 text-[10px]">无出口</div>
                 <button 
-                  v-for="(portal, idx) in mapPortals" 
-                  :key="idx"
+                  v-for="(portal, idx) in mapPortals.world" 
+                  :key="'w-'+idx"
                   @click="navigateToPortal(portal.x, portal.y)"
-                  class="block w-full text-left px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-200 transition-colors"
+                  class="block w-full text-left px-2 py-0.5 bg-cyan-900 bg-opacity-30 border border-cyan-800 hover:bg-cyan-800 rounded text-cyan-100 transition-colors text-[11px]"
                 >
-                  → {{ portal.targetName }}
-                  <span class="text-gray-500 text-[10px]">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
+                  <span class="mr-1">◈</span>{{ portal.targetName }}
+                  <span class="text-cyan-700 text-[9px] font-mono">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
+                </button>
+              </div>
+
+              <div class="text-gray-500 font-bold mb-1 text-[11px] uppercase tracking-wider">地图设施 (Local)</div>
+              <div class="space-y-0.5 max-h-32 overflow-y-auto custom-scrollbar-mini pr-1">
+                <div v-if="mapPortals.facilities.length === 0" class="text-gray-600 text-[10px]">附近无设施</div>
+                <button 
+                  v-for="(portal, idx) in mapPortals.facilities" 
+                  :key="'f-'+idx"
+                  @click="navigateToPortal(portal.x, portal.y)"
+                  class="block w-full text-left px-2 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-400 transition-colors text-[10px] border border-transparent hover:border-gray-600"
+                >
+                  <span class="mr-1">○</span>{{ portal.targetName }}
+                  <span class="text-gray-600 text-[9px] font-mono">({{ Math.floor(portal.x / 10) }}, {{ Math.floor(portal.y / 10) }})</span>
                 </button>
               </div>
             </div>
@@ -921,8 +1022,8 @@ import ShopModal from './components/ShopModal.vue'
                                             {{ getEquippableName(item) }}
                                             <span class="text-[9px] text-gray-600 ml-1">#{{ item.id }}</span>
                                         </div>
-                                        <div class="text-[10px] text-gray-500 flex gap-2">
-                                            <span v-if="item.count > 1" class="text-cyan-500 ml-1">x{{ item.count }}</span>
+                                        <div v-if="item.count > 1" class="text-[10px] text-gray-500 flex gap-2">
+                                            <span class="text-cyan-500 ml-1">x{{ item.count }}</span>
                                         </div>
                                         <div class="text-[10px] text-gray-500 mt-0.5">
                                             <span v-if="getItemInfo(item.id).slots > 0" class="ml-2 text-cyan-800">插槽: {{ getItemInfo(item.id).slots }}</span>
@@ -962,4 +1063,22 @@ import ShopModal from './components/ShopModal.vue'
 .custom-scrollbar::-webkit-scrollbar-track { background: #000; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+.custom-scrollbar-mini::-webkit-scrollbar { width: 2px; }
+.custom-scrollbar-mini::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar-mini::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+
+/* Retro Boot Interface Styles */
+.terminal-boot-overlay {
+    background-color: #000;
+}
+
+@keyframes slide-in {
+    from { transform: translateY(2px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-in {
+    animation: slide-in 0.1s ease-out forwards;
+}
 </style>
+```

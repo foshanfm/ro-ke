@@ -204,15 +204,24 @@ A web-based idle game recreating the experience of using automated botting softw
     - **Portal Decluttering**: Smart filtering of "Known Exits" list in high-density maps (e.g. Prontera).
     - **Modal Architecture**: Standardized overlay system for Shops, Strategy, Inventory, and Stats.
     - **Focus Protection**: Refactored `App.vue` to move modals to root level and implemented `@click.stop` to prevent console input stealing focus.
-    - **Interaction Polish**: Removed `pointer-events-none` from disabled strategy sections to allow configuration before activation.
+    - [x] **Interaction Polish**: Removed `pointer-events-none` from disabled strategy sections to allow configuration before activation.
+- [x] **Retro CMD Boot Interface**:
+    - [x] Standard B/W Terminal style with real-time initialization logs.
+    - [x] Sequential data-driven loading (Items -> Monsters -> Warps -> Maps).
+    - [x] Explicit stat recalculation gate to ensure 100% attribute accuracy on game start.
+- [x] **Smart Navigation UI**:
+    - [x] Categorization of portals into "World Exits" (high priority) and "Local Facilities" (distance-filtered).
+    - [x] Prevents major gates (e.g., Prontera East/West) from being hidden by indoor facilities.
 
 ## 4. Current State
-*   **Version:** 3.2.0 (Phase 31 - Advanced Config UI)
+*   **Version:** 3.4.0 (Phase 31+ - Retro Stability)
 *   **Stability:** High.
 *   **Performance:** Elite.
 *   **New Features:**
     - **Advanced Multipliers**: Race, Element, and Size bonuses from cards/equip are now functional.
     - **Elemental Arrows**: Player attack property automatically inherits from equipped arrows.
     - **Visual Strategy & Shop**: Complete GUI overhaul for bot configuration and merchant interaction.
+    - **Retro CMD Boot**: Authentic terminal-style loading sequence with strict data-readiness checks.
+    - **Smart Navigation**: Prioritized portal display and architectural categorization.
     - **Full Metadata UI**: Real-time display of monster Element, Size, and Race in navigation.
 *   **Next Objective:** Skill Mechanics Upgrade (SP costs, Cast Time, Cool Down).

@@ -44,6 +44,8 @@ All math logic resides in `src/game/formulas.js`.
 *   **`mapManager.js`**: Instance Manager. Manages live monster instances (`mapState.monsters`) and active warps. Uses Template-Instance Pattern:
     - **Template** (from `monsters.js`): Static data like `name`, `hp`, `atk`, `attackDelay`.
     - **Instance** (in `mapState.monsters`): Runtime data like `guid`, `templateId`, `x`, `y`, current `hp`.
+    - **Portal Categorization**: Provides logic to distinguish between "World Exits" (monsters/path nodes) and "Local Facilities" (indoors/NPCs) for UI prioritization.
+*   **Boot Sequence Lifecycle**: Implemented in `App.vue` to bridge data loading and UI readiness. It enforces a strict `Data Loaded -> UI NextTick -> Recalculate Stats -> Launch` flow to prevent race conditions with "naked" character stats.
 
 ## 3. Core Algorithms (Standard)
 

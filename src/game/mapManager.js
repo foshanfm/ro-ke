@@ -249,3 +249,10 @@ export function checkWarpCollision(playerX, playerY) {
     }
     return null
 }
+/**
+ * 检查地图是否有刷怪数据
+ */
+export function hasMapSpawns(mapId) {
+    const id = (mapId || '').toLowerCase()
+    return !!(spawnData[id] && spawnData[id].spawns && spawnData[id].spawns.length > 0)
+}
