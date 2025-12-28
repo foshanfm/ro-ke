@@ -651,7 +651,7 @@
               <div class="text-cyan-400 font-bold mb-1">地图生物</div>
               <div class="space-y-0.5">
                 <div v-if="mapMonsters.length === 0" class="text-gray-500">无数据</div>
-                <div v-for="mob in mapMonsters" :key="mob.id" class="text-gray-300">
+                <div v-for="mob in mapMonsters" :key="mob.id" class="text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700 rounded px-1 transition-colors" @click="handleEntityClick(mob.name)">
                   <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }}
                 </div>
               </div>
@@ -894,7 +894,7 @@
                                             <span v-if="item.count > 1" class="text-cyan-500 ml-1">x{{ item.count }}</span>
                                         </div>
                                         <div class="text-[10px] text-gray-500 mt-0.5">
-                                            <span v-if="getItemInfo(item.id).slots" class="ml-2 text-cyan-800">插槽: {{ getItemInfo(item.id).slots }}</span>
+                                            <span v-if="getItemInfo(item.id).slots > 0" class="ml-2 text-cyan-800">插槽: {{ getItemInfo(item.id).slots }}</span>
                                         </div>
                                     </div>
                                 </div>

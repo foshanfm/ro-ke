@@ -143,6 +143,8 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Combat Enforcement**: Bow attacks require and consume 1 arrow per hit.
 - [x] **UI Cleanup**: Transitioned to lean, text-only inventory (removed icons and redundant type tags).
 - [x] **Legacy Migration**: Automated equipment object patching for existing accounts.
+- [x] **Map Monster Details**: Clickable map monster list for instant stat inspection.
+- [x] **Slot Display Fix**: Only show slot indicators for items that actually have slots.
 
 ### Phase 24: Codebase Modularization & Refactoring [Completed]
 - [x] **Global Logger**: Dedicated reactive logging module (`logger.js`) for decoupled event tracking.
@@ -178,11 +180,13 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Stabilization**: Resolved `saveGame` import missing in `commands.js` and `curMapId` initialization order in `combat.js`.
 
 ## 4. Current State
-*   **Version:** 2.7.1 (Phase 28 - Merchant & Smart Bot)
-*   **Stability:** High. FSM transitions and initialization sequence verified.
+*   **Version:** 2.8.0 (Phase 28 - Merchant & UI Refinement)
+*   **Stability:** High. UI issues resolved.
 *   **Performance:** Elite.
 *   **New Features:**
     - **Merchant NPCs**: Interactive city-based shops.
     - **Auto-Restock**: Zero-touch replenishment (Field -> Town -> Shop -> Field).
     - **Strategy CLI**: Configurable looting and supply thresholds.
-*   **Next Objective:** Implement 1st Job active skills (Bash, Double Strafe, etc.) and SP consumption.
+    - **Interactive Map UI**: Clickable monsters.
+    - **Bug Fixes**: Melee range, dropped item slots.
+*   **Next Objective:** Implement Size Modifiers and Elemental Table.

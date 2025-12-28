@@ -276,7 +276,7 @@ async function aiTick(sessionId) {
 
         // 3. Check distance and chase if needed
         const dist = Math.sqrt(Math.pow(target.x - player.x, 2) + Math.pow(target.y - player.y, 2))
-        const attackRange = (player.attackRange || 1) * CELL_SIZE
+        const attackRange = (player.attackRange || CELL_SIZE)
 
         if (dist > attackRange) {
             gameState.status = 'MOVING'
