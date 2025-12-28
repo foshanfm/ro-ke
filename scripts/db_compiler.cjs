@@ -151,6 +151,16 @@ const ITEM_ELEMENT_MAP = {
     'Ele_Ghost': 8, 'Ele_Undead': 9
 };
 
+const ITEM_RACE_MAP = {
+    'RC_Formless': 0, 'RC_Undead': 1, 'RC_Brute': 2, 'RC_Plant': 3,
+    'RC_Insect': 4, 'RC_Fish': 5, 'RC_Demon': 6, 'RC_DemiHuman': 7,
+    'RC_Angel': 8, 'RC_Dragon': 9
+};
+
+const ITEM_SIZE_MAP = {
+    'Size_Small': 0, 'Size_Medium': 1, 'Size_Large': 2
+};
+
 function parseItemDB() {
     console.log('Compiling Item DB...');
     const descMap = parseDescriptions();
@@ -265,6 +275,35 @@ function parseItemDB() {
             bonusMap['aspdrate'] = (bonusMap['aspdrate'] || 0) + parseInt(m[1]);
         }
 
+        // Damage Bonuses (Race/Element/Size)
+        // Format: bonus2 bAddRace,RC_DemiHuman,20;
+        const addRaceMatches = script.matchAll(/bonus2\s+bAddRace,(\w+),(\d+);/g);
+        for (const m of addRaceMatches) {
+            const race = ITEM_RACE_MAP[m[1]];
+            if (race !== undefined) {
+                if (!item.raceBonuses) item.raceBonuses = {};
+                item.raceBonuses[race] = (item.raceBonuses[race] || 0) + parseInt(m[2]);
+            }
+        }
+
+        const addEleMatches = script.matchAll(/bonus2\s+bAddEle,(\w+),(\d+);/g);
+        for (const m of addEleMatches) {
+            const ele = ITEM_ELEMENT_MAP[m[1]];
+            if (ele !== undefined) {
+                if (!item.eleBonuses) item.eleBonuses = {};
+                item.eleBonuses[ele] = (item.eleBonuses[ele] || 0) + parseInt(m[2]);
+            }
+        }
+
+        const addSizeMatches = script.matchAll(/bonus2\s+bAddSize,(\w+),(\d+);/g);
+        for (const m of addSizeMatches) {
+            const size = ITEM_SIZE_MAP[m[1]];
+            if (size !== undefined) {
+                if (!item.sizeBonuses) item.sizeBonuses = {};
+                item.sizeBonuses[size] = (item.sizeBonuses[size] || 0) + parseInt(m[2]);
+            }
+        }
+
         if (Object.keys(bonusMap).length > 0) item.bonuses = bonusMap;
 
         items[id] = item;
@@ -311,6 +350,7 @@ function parseMobDB() {
             exp: parseInt(parts[7]),
             jobExp: parseInt(parts[8]),
             scale: parseInt(parts[22]) || 0, // 体型 (0:Small, 1:Medium, 2:Large)
+            race: parseInt(parts[23]) || 0, // 种族 (0:Formless, ..., 7:DemiHuman, etc.)
             element: parseInt(parts[24]) || 0, // 属性代码 (XY格式: X=属性, Y=等级)
             battleStats: {
                 atkMin: (parseInt(parts[10]) || 0) - (parseInt(parts[11]) || 0),

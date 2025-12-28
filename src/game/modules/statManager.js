@@ -32,6 +32,12 @@ export function parseBonuses(equipment) {
         flatBonus: 0
     }
 
+    const multipliers = {
+        race: {},
+        element: {},
+        size: {}
+    }
+
     let weaponAtk = 0
     let equipDef = 0
     let weaponType = WeaponType.NONE
@@ -71,17 +77,51 @@ export function parseBonuses(equipment) {
                     })
                 }
 
+                // Specialized Damage Bonuses
+                if (e.raceBonuses) {
+                    Object.entries(e.raceBonuses).forEach(([key, val]) => {
+                        multipliers.race[key] = (multipliers.race[key] || 0) + val
+                    })
+                }
+                if (e.eleBonuses) {
+                    Object.entries(e.eleBonuses).forEach(([key, val]) => {
+                        multipliers.element[key] = (multipliers.element[key] || 0) + val
+                    })
+                }
+                if (e.sizeBonuses) {
+                    Object.entries(e.sizeBonuses).forEach(([key, val]) => {
+                        multipliers.size[key] = (multipliers.size[key] || 0) + val
+                    })
+                }
+
                 // 4. Card bonuses
                 if (instance.cards) {
                     instance.cards.forEach(cardId => {
                         if (!cardId) return
                         const c = getItemInfo(cardId)
-                        if (c && c.bonuses) {
-                            Object.entries(c.bonuses).forEach(([key, val]) => {
-                                if (bonus.hasOwnProperty(key)) bonus[key] += val
-                                else if (key === 'maxhp') bonus.hp += val
-                                else if (key === 'maxsp') bonus.sp += val
-                            })
+                        if (c) {
+                            if (c.bonuses) {
+                                Object.entries(c.bonuses).forEach(([key, val]) => {
+                                    if (bonus.hasOwnProperty(key)) bonus[key] += val
+                                    else if (key === 'maxhp') bonus.hp += val
+                                    else if (key === 'maxsp') bonus.sp += val
+                                })
+                            }
+                            if (c.raceBonuses) {
+                                Object.entries(c.raceBonuses).forEach(([key, val]) => {
+                                    multipliers.race[key] = (multipliers.race[key] || 0) + val
+                                })
+                            }
+                            if (c.eleBonuses) {
+                                Object.entries(c.eleBonuses).forEach(([key, val]) => {
+                                    multipliers.element[key] = (multipliers.element[key] || 0) + val
+                                })
+                            }
+                            if (c.sizeBonuses) {
+                                Object.entries(c.sizeBonuses).forEach(([key, val]) => {
+                                    multipliers.size[key] = (multipliers.size[key] || 0) + val
+                                })
+                            }
                         }
                     })
                 }
@@ -101,6 +141,7 @@ export function parseBonuses(equipment) {
     return {
         bonus,
         aspdModifiers,
+        multipliers,
         weaponAtk,
         equipDef,
         weaponType,
@@ -144,7 +185,10 @@ export function recalculatePlayerStats(player) {
     if (player.sp > player.maxSp) player.sp = player.maxSp
 
     // Parse equipment bonuses
-    const { bonus, aspdModifiers, weaponAtk, equipDef, weaponType, hasShield } = parseBonuses(player.equipment)
+    const { bonus, aspdModifiers, multipliers, weaponAtk, equipDef, weaponType, hasShield } = parseBonuses(player.equipment)
+
+    // Store multipliers for damage formulas
+    player.multipliers = multipliers
 
     // Fetch and apply Job Bonuses
     const jobBonuses = getJobBonuses(jobId, player.jobLv || 1)

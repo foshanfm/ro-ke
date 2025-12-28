@@ -39,6 +39,7 @@ export async function loadMobDB(maxLevel = 99) {
           exp: mob.exp,
           jobExp: mob.jobExp,
           scale: mob.scale || 0, // 体型 (0:Small, 1:Medium, 2:Large)
+          race: mob.race || 0, // 种族
           element: mob.element || 0, // 属性代码
           atkMin: mob.battleStats.atkMin,
           atkMax: mob.battleStats.atkMax,

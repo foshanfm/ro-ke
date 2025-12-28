@@ -181,24 +181,22 @@ export function calcLevelDiffRate(playerLv, monsterLv) {
  * @param {Object} params - 伤害计算参数
  * @param {number} params.attackerAtk - 攻击者 ATK
  * @param {number} params.attackerHit - 攻击者 HIT
- * @param {number} params.attackerCrit - 攻击者暴击率
- * @param {number} params.attackerElement - 攻击者属性 (0-9, 默认0=无属性)
- * @param {number} params.defenderDef - 防御者 DEF
- * @param {number} params.defenderFlee - 防御者 FLEE
- * @param {number} params.defenderLuk - 防御者 LUK
- * @param {number} params.defenderElement - 防御者属性 (0-9)
  * @param {number} params.defenderElementLevel - 防御者属性等级 (1-4)
+ * @param {number} params.defenderRace - 防御者种族 (0-9)
  * @param {string} params.attackerWeaponType - 攻击者武器类型 (NONE, DAGGER, etc.)
  * @param {number} params.defenderScale - 防御者体型 (0:Small, 1:Medium, 2:Large)
+ * @param {Object} params.attackerMultipliers - 攻击者加成 (race: {}, element: {}, size: {})
  * @param {boolean} params.isPlayerAttacking - 是否玩家攻击
- * @returns {{ damage: number, type: string, hitRate: number, elementalModifier?: number, sizeModifier?: number }}
+ * @returns {{ damage: number, type: string, hitRate: number, elementalModifier?: number, sizeModifier?: number, cardModifier?: number }}
  */
 export function calculateDamageFlow({
     attackerAtk, attackerHit, attackerCrit,
     attackerElement = 0,
     attackerWeaponType = WeaponType.NONE,
+    attackerMultipliers = { race: {}, element: {}, size: {} },
     defenderDef, defenderFlee, defenderLuk = 1,
     defenderElement = 0, defenderElementLevel = 1,
+    defenderRace = 0,
     defenderScale = 1,
     isPlayerAttacking = true
 }) {
@@ -240,14 +238,34 @@ export function calculateDamageFlow({
     // 应用属性修正
     baseDmg = Math.floor(baseDmg * (elementalModifier / 100))
 
-    // 5. 体型修正 (Size Modifier)
+    // 5. 体型修正 (Base Weapon Scale Modifier)
     let sizeModifier = 100
     if (isPlayerAttacking) {
         sizeModifier = getSizeModifier(attackerWeaponType, defenderScale)
         baseDmg = Math.floor(baseDmg * (sizeModifier / 100))
     }
 
-    // 6. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
+    // 6. 卡片/装备百分比加成 (Card/Equip Multipliers)
+    let totalCardMod = 1.0
+    if (isPlayerAttacking && attackerMultipliers) {
+        // Race bonus
+        const raceBonus = attackerMultipliers.race?.[defenderRace] || 0
+        if (raceBonus) totalCardMod *= (1 + raceBonus / 100)
+
+        // Element bonus (Target Element)
+        const targetEleBonus = attackerMultipliers.element?.[defenderElement] || 0
+        if (targetEleBonus) totalCardMod *= (1 + targetEleBonus / 100)
+
+        // Size bonus (Target Size)
+        const sizeBonus = attackerMultipliers.size?.[defenderScale] || 0
+        if (sizeBonus) totalCardMod *= (1 + sizeBonus / 100)
+
+        if (totalCardMod !== 1.0) {
+            baseDmg = Math.floor(baseDmg * totalCardMod)
+        }
+    }
+
+    // 7. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
     const defReduction = 600 / (600 + defenderDef)
     const finalDamage = Math.max(1, Math.floor(baseDmg * defReduction))
 
@@ -256,6 +274,7 @@ export function calculateDamageFlow({
         type: isCrit ? 'crit' : 'hit',
         hitRate: hitRate,
         elementalModifier: elementalModifier !== 100 ? elementalModifier : undefined,
-        sizeModifier: sizeModifier !== 100 ? sizeModifier : undefined
+        sizeModifier: sizeModifier !== 100 ? sizeModifier : undefined,
+        cardModifier: totalCardMod !== 1.0 ? Math.round(totalCardMod * 100) : undefined
     }
 }

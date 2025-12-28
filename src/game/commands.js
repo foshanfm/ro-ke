@@ -10,6 +10,7 @@ import { castSkill } from './skillEngine.js'
 import { mapState } from './mapManager.js'
 import { getElementalModifier, parseElementCode, ElementNames } from './elementalTable.js'
 import { getSizeModifier, SizeNames } from './sizeTable.js'
+import { RaceNames } from './raceTable.js'
 
 const commands = {}
 
@@ -815,11 +816,23 @@ registerCommand({
             log(`  ${t.desc}: ${mod}%`, mod > 100 ? 'success' : (mod < 100 ? 'warning' : 'info'))
         })
 
-        // 4. 玩家当前状态
-        log(`[玩家当前状态]`, 'dim')
+        // 4. 加成统计测试
+        log(`[玩家当前加成状态]`, 'dim')
         const wInfo = player.equipment?.Weapon ? getItemInfo(player.equipment.Weapon.id) : null
         log(`  攻击属性: ${ElementNames[player.attackElement || 0]}`, 'info')
         log(`  当前武器: ${wInfo ? wInfo.name : '空手'} (${wInfo ? wInfo.subType : 'NONE'})`, 'info')
+
+        const m = player.multipliers || { race: {}, element: {}, size: {} }
+
+        if (Object.keys(m.race).length > 0) {
+            Object.entries(m.race).forEach(([id, val]) => log(`  对[${RaceNames[id]}]种族: +${val}%`, 'success'))
+        }
+        if (Object.keys(m.element).length > 0) {
+            Object.entries(m.element).forEach(([id, val]) => log(`  对[${ElementNames[id]}]属性: +${val}%`, 'success'))
+        }
+        if (Object.keys(m.size).length > 0) {
+            Object.entries(m.size).forEach(([id, val]) => log(`  对[${SizeNames[id]}]体型: +${val}%`, 'success'))
+        }
 
         log(`==========================================`, 'system')
     }

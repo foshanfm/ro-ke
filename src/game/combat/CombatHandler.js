@@ -79,12 +79,14 @@ export function executeAttack(target, getMobTemplate, log) {
         attackerAtk: player.atk,
         attackerHit: player.hit,
         attackerCrit: player.crit,
-        attackerElement: player.attackElement || 0, // 玩家攻击属性 (默认无属性)
+        attackerElement: player.attackElement || 0, // 玩家攻击属性
         attackerWeaponType: getWeaponType(),
+        attackerMultipliers: player.multipliers,
         defenderDef: targetTemplate.def || 0,
         defenderFlee: targetTemplate.flee || 1,
         defenderElement,
         defenderElementLevel,
+        defenderRace: targetTemplate.race || 0,
         defenderScale: targetTemplate.scale || 1,
         isPlayerAttacking: true
     })
@@ -106,6 +108,7 @@ export function executeAttack(target, getMobTemplate, log) {
         let modInfo = ''
         if (res.elementalModifier && res.elementalModifier !== 100) modInfo += `${res.elementalModifier}% elemental`
         if (res.sizeModifier && res.sizeModifier !== 100) modInfo += (modInfo ? ', ' : '') + `${res.sizeModifier}% size`
+        if (res.cardModifier && res.cardModifier !== 100) modInfo += (modInfo ? ', ' : '') + `${res.cardModifier}% card`
 
         if (modInfo) {
             log(`You attack [${targetTemplate.name}] for ${damage} damage (${modInfo}).`, 'default')
