@@ -179,14 +179,19 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Smart Looting**: Protected items (Cards/Rares) vs automated junk (ETC) liquidation.
 - [x] **Stabilization**: Resolved `saveGame` import missing in `commands.js` and `curMapId` initialization order in `combat.js`.
 
+### Phase 29: Elemental Damage System [Completed]
+- [x] **Elemental Table**: 10 element types with 4-level damage modifier matrix based on `attr_fix.txt`.
+- [x] **Monster Element Parsing**: `db_compiler.cjs` extracts element code from `mob_db.txt` column 24.
+- [x] **Damage Integration**: `formulas.js` applies elemental modifiers during damage calculation.
+- [x] **UI Enhancement**: Map monsters now display element type (e.g., "波利 (水)").
+- [x] **Test Command**: `test_element` for debugging elemental calculations.
+
 ## 4. Current State
-*   **Version:** 2.8.0 (Phase 28 - Merchant & UI Refinement)
-*   **Stability:** High. UI issues resolved.
+*   **Version:** 2.9.0 (Phase 29 - Elemental Damage System)
+*   **Stability:** High. Core combat mechanics enhanced.
 *   **Performance:** Elite.
 *   **New Features:**
-    - **Merchant NPCs**: Interactive city-based shops.
-    - **Auto-Restock**: Zero-touch replenishment (Field -> Town -> Shop -> Field).
-    - **Strategy CLI**: Configurable looting and supply thresholds.
-    - **Interactive Map UI**: Clickable monsters.
-    - **Bug Fixes**: Melee range, dropped item slots.
-*   **Next Objective:** Implement Size Modifiers and Elemental Table.
+    - **Elemental Modifiers**: Damage scales based on attacker/defender elements.
+    - **Element Display**: Monster element shown in map UI.
+    - **Data Pipeline Fix**: Element field correctly passed through dataLoader.
+*   **Next Objective:** Implement Size Modifiers (体型修正).

@@ -2,6 +2,7 @@ import { player } from '../player.js'
 import { getItemInfo } from '../items.js'
 import { calculateDamageFlow } from '../formulas.js'
 import { PassiveHooks } from '../skillEngine.js'
+import { parseElementCode } from '../elementalTable.js'
 
 /**
  * CombatHandler
@@ -65,12 +66,24 @@ export function executeAttack(target, getMobTemplate, log) {
     const passiveRes = PassiveHooks.onNormalAttack(target)
     const targetTemplate = getMobTemplate(target)
 
+    // 解析怪物属性
+    let defenderElement = 0
+    let defenderElementLevel = 1
+    if (targetTemplate.element) {
+        const parsed = parseElementCode(targetTemplate.element)
+        defenderElement = parsed.element
+        defenderElementLevel = parsed.level
+    }
+
     const res = calculateDamageFlow({
         attackerAtk: player.atk,
         attackerHit: player.hit,
         attackerCrit: player.crit,
+        attackerElement: player.attackElement || 0, // 玩家攻击属性 (默认无属性)
         defenderDef: targetTemplate.def || 0,
         defenderFlee: targetTemplate.flee || 1,
+        defenderElement,
+        defenderElementLevel,
         isPlayerAttacking: true
     })
 
@@ -87,7 +100,17 @@ export function executeAttack(target, getMobTemplate, log) {
     if (res.type === 'crit') {
         log(`CRITICAL! You deal ${damage} damage.`, 'warning')
     } else {
-        log(`You attack [${targetTemplate.name}] for ${damage} damage.`, 'default')
+        // 如果有属性修正，显示修正信息
+        if (res.elementalModifier && res.elementalModifier !== 100) {
+            log(`You attack [${targetTemplate.name}] for ${damage} damage (${res.elementalModifier}% elemental).`, 'default')
+        } else {
+            log(`You attack [${targetTemplate.name}] for ${damage} damage.`, 'default')
+        }
+    }
+
+    // Debug: Log elemental info
+    if (defenderElement !== 0 || player.attackElement !== 0) {
+        console.log(`[Elemental] Attacker: ${player.attackElement}, Defender: ${defenderElement} Lv${defenderElementLevel}, Modifier: ${res.elementalModifier}%`)
     }
 
     passiveRes.logs.forEach(l => log(l.msg, l.type))

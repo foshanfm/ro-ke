@@ -8,6 +8,7 @@ import { Maps } from './maps.js'
 import { runSimulation } from './simulator.js'
 import { castSkill } from './skillEngine.js'
 import { mapState } from './mapManager.js'
+import { getElementalModifier, parseElementCode, ElementNames } from './elementalTable.js'
 
 const commands = {}
 
@@ -769,5 +770,40 @@ registerCommand({
 
         log(`[提示] 输入指令时按 Tab 键可智能补全`, 'system')
         log(`==================================`, 'system')
+    }
+})
+
+registerCommand({
+    name: 'test_element',
+    description: '测试属性系统 (调试用)',
+    execute: (args, { log }) => {
+        log(`========== [ 属性系统测试 ] ==========`, 'system')
+
+        // 测试解析
+        const testCodes = [21, 43, 27, 49]
+        log(`[解析测试]`, 'dim')
+        testCodes.forEach(code => {
+            const parsed = parseElementCode(code)
+            log(`  Code ${code} => ${ElementNames[parsed.element]} Lv${parsed.level}`, 'info')
+        })
+
+        // 测试修正
+        log(`[修正测试]`, 'dim')
+        const tests = [
+            { atk: 0, def: 2, defLv: 1, desc: '无属性 vs 地属性Lv1' },
+            { atk: 3, def: 2, defLv: 1, desc: '火属性 vs 地属性Lv1' },
+            { atk: 1, def: 3, defLv: 1, desc: '水属性 vs 火属性Lv1' },
+            { atk: 6, def: 9, defLv: 1, desc: '圣属性 vs 不死Lv1' }
+        ]
+        tests.forEach(t => {
+            const mod = getElementalModifier(t.atk, t.def, t.defLv)
+            log(`  ${t.desc}: ${mod}%`, mod > 100 ? 'success' : (mod < 100 ? 'warning' : 'info'))
+        })
+
+        // 显示玩家当前属性
+        log(`[玩家状态]`, 'dim')
+        log(`  攻击属性: ${ElementNames[player.attackElement || 0]}`, 'info')
+
+        log(`======================================`, 'system')
     }
 })

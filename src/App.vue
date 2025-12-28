@@ -10,6 +10,7 @@
   import { setMonstersDB, getMonster, getMonsterByName } from './game/monsters.js'
   import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
   import { moveTo } from './game/combat.js'
+  import { parseElementCode, ElementNames } from './game/elementalTable.js'
   import LoginScreen from './components/LoginScreen.vue'
 
   // --- 核心状态 ---
@@ -377,10 +378,17 @@
       const id = instance.templateId
       if (!monsterCounts[id]) {
         const template = getMonster(id)
+        // 解析属性
+        let elementName = '无'
+        if (template?.element) {
+          const parsed = parseElementCode(template.element)
+          elementName = ElementNames[parsed.element] || '无'
+        }
         monsterCounts[id] = {
           id,
           name: template?.name || `Monster ${id}`,
           lv: template?.lv || '?',
+          element: elementName,
           count: 0
         }
       }
@@ -652,7 +660,7 @@
               <div class="space-y-0.5">
                 <div v-if="mapMonsters.length === 0" class="text-gray-500">无数据</div>
                 <div v-for="mob in mapMonsters" :key="mob.id" class="text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700 rounded px-1 transition-colors" @click="handleEntityClick(mob.name)">
-                  <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }}
+                  <span class="text-yellow-500">[Lv.{{ mob.lv }}]</span> {{ mob.name }} <span class="text-cyan-600 text-[10px]">({{ mob.element }})</span>
                 </div>
               </div>
             </div>

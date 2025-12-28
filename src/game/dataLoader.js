@@ -38,6 +38,7 @@ export async function loadMobDB(maxLevel = 99) {
           maxHp: mob.hp,
           exp: mob.exp,
           jobExp: mob.jobExp,
+          element: mob.element || 0, // 属性代码
           atkMin: mob.battleStats.atkMin,
           atkMax: mob.battleStats.atkMax,
           def: mob.battleStats.def,

@@ -3,6 +3,7 @@ import { EquipType, WeaponType, WeaponRangeTable } from '../equipment.js'
 import * as Formulas from '../formulas.js'
 import { JobConfig } from '../jobs.js'
 import { getJobFactors, getJobBaseStats, getJobBonuses, getJobBaseAspd } from '../DataManager.js'
+import { parseElementCode } from '../elementalTable.js'
 
 /**
  * Stat Manager Module
@@ -240,4 +241,15 @@ export function recalculatePlayerStats(player) {
     }
 
     player.attackRange = rangeInCells * CELL_SIZE
+
+    // Attack Element (从武器获取)
+    player.attackElement = 0 // 默认无属性
+    if (player.equipment && player.equipment.Weapon) {
+        const weaponInfo = getItemInfo(player.equipment.Weapon.id)
+        if (weaponInfo && weaponInfo.element) {
+            // 武器属性代码 (如果存在)
+            const parsed = parseElementCode(weaponInfo.element)
+            player.attackElement = parsed.element
+        }
+    }
 }

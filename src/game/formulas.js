@@ -1,6 +1,7 @@
 // src/game/formulas.js
 import { WeaponType } from './equipment'
 import { aspdCalculator } from './modules/aspd'
+import { getElementalModifier } from './elementalTable.js'
 
 // --- 素质点消耗 ---
 export function getStatPointCost(currentVal) {
@@ -174,9 +175,26 @@ export function calcLevelDiffRate(playerLv, monsterLv) {
 
 // --- 核心战斗逻辑 (Behavioral Correctness Template) ---
 
+/**
+ * 计算伤害流程
+ * @param {Object} params - 伤害计算参数
+ * @param {number} params.attackerAtk - 攻击者 ATK
+ * @param {number} params.attackerHit - 攻击者 HIT
+ * @param {number} params.attackerCrit - 攻击者暴击率
+ * @param {number} params.attackerElement - 攻击者属性 (0-9, 默认0=无属性)
+ * @param {number} params.defenderDef - 防御者 DEF
+ * @param {number} params.defenderFlee - 防御者 FLEE
+ * @param {number} params.defenderLuk - 防御者 LUK
+ * @param {number} params.defenderElement - 防御者属性 (0-9)
+ * @param {number} params.defenderElementLevel - 防御者属性等级 (1-4)
+ * @param {boolean} params.isPlayerAttacking - 是否玩家攻击
+ * @returns {{ damage: number, type: string, hitRate: number, elementalModifier?: number }}
+ */
 export function calculateDamageFlow({
     attackerAtk, attackerHit, attackerCrit,
+    attackerElement = 0,
     defenderDef, defenderFlee, defenderLuk = 1,
+    defenderElement = 0, defenderElementLevel = 1,
     isPlayerAttacking = true
 }) {
     // 1. 命中判定 (RO 经典公式: 80 + AttackerHit - DefenderFlee)
@@ -203,13 +221,28 @@ export function calculateDamageFlow({
         baseDmg = Math.floor(baseDmg * 1.4)
     }
 
-    // 4. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
+    // 4. 属性克制修正 (Elemental Modifier)
+    let elementalModifier = 100 // 默认无修正
+    if (typeof defenderElement === 'number' && typeof defenderElementLevel === 'number') {
+        try {
+            elementalModifier = getElementalModifier(attackerElement, defenderElement, defenderElementLevel)
+        } catch (e) {
+            console.warn('[Damage] Elemental modifier calculation failed:', e)
+            elementalModifier = 100
+        }
+    }
+
+    // 应用属性修正
+    baseDmg = Math.floor(baseDmg * (elementalModifier / 100))
+
+    // 5. 防御减免 (Renewal 公式: Damage * (600 / (600 + DEF)))
     const defReduction = 600 / (600 + defenderDef)
     const finalDamage = Math.max(1, Math.floor(baseDmg * defReduction))
 
     return {
         damage: finalDamage,
         type: isCrit ? 'crit' : 'hit',
-        hitRate: hitRate
+        hitRate: hitRate,
+        elementalModifier: elementalModifier !== 100 ? elementalModifier : undefined
     }
 }

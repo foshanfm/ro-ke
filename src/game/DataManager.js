@@ -8,7 +8,7 @@ import { analyzeConnectivity } from './utils/mapGraph.js';
 import { buildNavigationGraph } from './navigation.js';
 
 // 数据版本号 - 当数据文件更新时,增加此版本号以触发重新解析
-const DATA_VERSION = 11;
+const DATA_VERSION = 13; // v13: Fixed element field in dataLoader
 
 // 内存缓存
 let itemsCache = null;

@@ -298,6 +298,7 @@ function parseMobDB() {
             hp: parseInt(parts[5]),
             exp: parseInt(parts[7]),
             jobExp: parseInt(parts[8]),
+            element: parseInt(parts[24]) || 0, // 属性代码 (XY格式: X=属性, Y=等级)
             battleStats: {
                 atkMin: (parseInt(parts[10]) || 0) - (parseInt(parts[11]) || 0),
                 atkMax: (parseInt(parts[10]) || 0) + (parseInt(parts[11]) || 0),
