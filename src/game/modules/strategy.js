@@ -10,7 +10,7 @@ import { getItemInfo, ItemType } from '../items.js'
  */
 export function checkNeedsRestock(player) {
     const config = player.config.strategies.supply
-    if (!config) return { needsRestock: false }
+    if (!config || !config.enabled) return { needsRestock: false }
 
     const inventory = player.inventory
 
@@ -57,6 +57,8 @@ export function checkNeedsRestock(player) {
  * @returns {boolean} 是否应该卖出
  */
 export function shouldSellItem(itemSlot, lootConfig) {
+    if (!lootConfig || !lootConfig.enabled) return false
+
     const info = getItemInfo(itemSlot.id)
     if (!info) return false
 

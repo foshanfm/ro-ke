@@ -193,12 +193,24 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **UI Display**: Map monsters show full metadata (e.g., "波利 (水/中/植物)").
 - [x] **Ammo Property**: Arrow element propagates to Player attack element for bows.
 
+### Phase 31: Advanced Configuration UI & Shopping Experience [Completed]
+- [x] **Strategy Modal**: Dedicated GUI for configuring bot behaviors (Supply/Loot).
+- [x] **Visual Configuration**: Input validation, granular toggles, and inventory-based whitelist/blacklist management.
+- [x] **Interactive Shop Modal**: 
+    - **Visual Shopping**: Grid view of items sold by nearby merchants.
+    - **Sell Logic**: Tabbed interface for selling items ("Sell Queue") with inventory hiding.
+    - **Starter Pack**: Quick-buy button for novice essentials.
+- [x] **UI Optimization**: 
+    - **Portal Decluttering**: Smart filtering of "Known Exits" list in high-density maps (e.g. Prontera).
+    - **Modal Architecture**: Standardized overlay system for Shops, Strategy, Inventory, and Stats.
+
 ## 4. Current State
-*   **Version:** 3.1.0 (Phase 30 - Advanced Combat Modifiers)
-*   **Stability:** High. Fully data-driven combat calculations.
+*   **Version:** 3.2.0 (Phase 31 - Advanced Config UI)
+*   **Stability:** High.
 *   **Performance:** Elite.
 *   **New Features:**
     - **Advanced Multipliers**: Race, Element, and Size bonuses from cards/equip are now functional.
     - **Elemental Arrows**: Player attack property automatically inherits from equipped arrows.
+    - **Visual Strategy & Shop**: Complete GUI overhaul for bot configuration and merchant interaction.
     - **Full Metadata UI**: Real-time display of monster Element, Size, and Race in navigation.
 *   **Next Objective:** Skill Mechanics Upgrade (SP costs, Cast Time, Cool Down).

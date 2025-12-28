@@ -1,40 +1,44 @@
 <script setup>
-  import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue' 
-  import { player, saveGame, getStatPointCost, equipItem, unequipItem, useItem, insertCard, addItem } from './game/player.js'
-  import { setLogCallback, startRecovery, gameState } from './game/combat.js'
-  import { JobConfig } from './game/jobs.js'
-  import { Maps } from './game/maps.js'
-  import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggestions } from './game/commands.js'
-  import { initializeGameData } from './game/DataManager.js'
-  import { setItemsDB, getItemInfo, getItemByName, ItemType, getEquippableName } from './game/items.js'
-  import { setMonstersDB, getMonster, getMonsterByName } from './game/monsters.js'
-  import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
-  import { moveTo } from './game/combat.js'
-  import { parseElementCode, ElementNames } from './game/elementalTable.js'
-  import { SizeNames } from './game/sizeTable.js'
-  import { RaceNames } from './game/raceTable.js'
-  import LoginScreen from './components/LoginScreen.vue'
+import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue'
+import { player, saveGame, getStatPointCost, equipItem, unequipItem, useItem, insertCard, addItem, buyItem, getShopList } from './game/player.js'
+import { setLogCallback, startRecovery, gameState } from './game/combat.js'
+import { JobConfig } from './game/jobs.js'
+import { Maps } from './game/maps.js'
+import { executeGameCommand, getCommandNames, registerCommand, getCommandSuggestions } from './game/commands.js'
+import { initializeGameData } from './game/DataManager.js'
+import { setItemsDB, getItemInfo, getItemByName, ItemType, getEquippableName } from './game/items.js'
+import { setMonstersDB, getMonster, getMonsterByName } from './game/monsters.js'
+import { setSpawnData, setWarpData, mapState, initMap } from './game/mapManager.js'
+import { moveTo } from './game/combat.js'
+import { parseElementCode, ElementNames } from './game/elementalTable.js'
+import { SizeNames } from './game/sizeTable.js'
+import { RaceNames } from './game/raceTable.js'
+import LoginScreen from './components/LoginScreen.vue'
+import StrategyModal from './components/StrategyModal.vue'
+import ShopModal from './components/ShopModal.vue'
 
-  // --- 核心状态 ---
+// --- 核心状态 ---
   const logs = ref([]) 
   const logContainer = ref(null) 
   const cmdInput = ref(null)
   const userCommand = ref('')
-  const isDataLoaded = ref(false) // 数据加载状态
-  const isLoggedIn = ref(false) // 登录状态
-  const isInitializing = ref(false) // 初始化状态
+  const isDataLoaded = ref(false) 
+  const isLoggedIn = ref(false) 
+  const isInitializing = ref(false) 
   
   // --- 智能提示状态 ---
   const showSuggestions = ref(false)
   const suggestionIndex = ref(0)
   
   // --- 交互详情状态 ---
-  const selectedDetail = ref(null) // { type: 'item'|'monster', data: ... }
+  const selectedDetail = ref(null) 
   const showStatsModal = ref(false)
   const showInventoryModal = ref(false)
+  const showStrategyModal = ref(false)
+  const showShopModal = ref(false)
   const inventoryTab = ref('All')
-  const cardInsertingMode = ref(false) // Whether we are selecting an item to insert a card into
-  const activeCardId = ref(null) // The card we are currently trying to insert
+  const cardInsertingMode = ref(false) 
+  const activeCardId = ref(null) 
   
   // --- 素质点加点 ---
   import { increaseStat } from './game/player.js'
@@ -72,7 +76,7 @@
       return getCommandSuggestions(userCommand.value)
   })
 
-  // 监听输入，重置选择索引
+  // 监听输入
   watch(userCommand, () => {
       suggestionIndex.value = 0
       showSuggestions.value = true
@@ -107,46 +111,23 @@
       } 
   }
 
-
-  
   // --- 日志系统 ---
-  // --- 日志系统 ---
-  // 解析日志中的 [Name] 模式，使其可点击
-  // 格式: [Type:ID:Name] 
-  // 例如: [Item:501:Red Potion], [Monster:1001:Poring]
-  // 简化版我们可以在逻辑层生成日志时就把 ID 埋进去，或者简单点正则匹配名称
-  // 为了健壮性，我们修改 combat.js 发送日志的格式，或者在这里做文本匹配
-  // 现阶段这里做简单文本匹配: 如果日志包含 "Loot: [RARE] Name"
-  
   const addLog = (msg, type = 'info') => {
     const time = new Date().toLocaleTimeString('zh-CN', { hour12: false })
     if (logs.value.length > 200) logs.value.shift()
     
     // 解析交互实体
-    // 简单正则: 匹配 [Name]
-    // 更好的方式是让 msg 本身是一个对象结构，但为了兼容旧代码，我们先做简单处理
-    // 在这里我们不改变 msg 存储结构，而是在 template里用 v-html 或组件渲染
-    // 但 Vue 推荐数据驱动。
-    
-    // 方案: 存储 parsedMsg 数组
     const parsedSegments = []
     const regex = /\[(.*?)\]/g
     let lastIndex = 0
     let match
     
     while ((match = regex.exec(msg)) !== null) {
-        // Text before match
         if (match.index > lastIndex) {
             parsedSegments.push({ text: msg.substring(lastIndex, match.index), type: 'text' })
         }
         
-        const content = match[1] // e.g., "RARE", "Poring", "Red Potion"
-        // 尝试判断类型 (这很脆弱，但在有限的日志格式下可行)
-        // 比如: [RARE] 是修饰符， [Name] 是实体
-        // 我们可以约定，游戏逻辑发出的日志，实体用特殊标记，比如 {Item:501}
-        // 但为了不重构 combat.js 所有日志，我们先只针对 UI 
-        
-        // 临时方案: 只是把 [] 里的内容高亮，点击尝试搜索名字
+        const content = match[1] 
         parsedSegments.push({ 
             text: `[${content}]`, 
             type: 'interactive', 
@@ -178,7 +159,6 @@
           name = nameOrInstance
       }
 
-      // 去除修饰符如 RARE 和 [] 以及空格
       const cleanName = name.replace('RARE', '').replace('[', '').replace(']', '').trim()
       if (!cleanName) return
 
@@ -301,12 +281,10 @@
       setSpawnData(spawnData)
       setWarpData(warpDB)
       
-      // 确保当前地图 ID 是小写的
       if (player.currentMap) player.currentMap = player.currentMap.toLowerCase()
       
       isDataLoaded.value = true
       
-      // 数据加载后，显式初始化当前地图
       if (player.currentMap) {
           initMap(player.currentMap)
       }
@@ -326,19 +304,14 @@
     setLogCallback(addLog)
     startRecovery()
 
-    // 启动自动保存 (异步)
     autoSaveTimer = setInterval(async () => {
         await saveGame()
-        // addLog('Auto saved.', 'dim') // 可选提示
     }, 30000)
   })
 
-  // 监听地图变更，自动更新地图数据
   watch(() => player.currentMap, (newMapId, oldMapId) => {
     if (isDataLoaded.value && newMapId && newMapId !== oldMapId) {
         initMap(newMapId.toLowerCase())
-        // 可选：添加一条系统日志
-        // addLog(`进入地图: ${Maps[newMapId.toLowerCase()]?.name || newMapId}`, 'system')
     }
 })
 
@@ -369,28 +342,21 @@
 
   const jobName = computed(() => JobConfig[player.job] ? JobConfig[player.job].name : player.job)
 
-
-  // 地图怪物列表 - 显示当前地图上的实时怪物实例
   const mapMonsters = computed(() => {
     if (!mapState.monsters || mapState.monsters.length === 0) return []
     
-    // 统计每种怪物的数量
     const monsterCounts = {}
     mapState.monsters.forEach(instance => {
       const id = instance.templateId
       if (!monsterCounts[id]) {
         const template = getMonster(id)
-        // 解析属性
         let elementName = '无'
         if (template?.element) {
           const parsed = parseElementCode(template.element)
           elementName = ElementNames[parsed.element] || '无'
         }
         
-        // 解析体型
         const sizeName = SizeNames[template?.scale] || '中'
-        
-        // 解析种族
         const raceName = RaceNames[template?.race] || '无型'
 
         monsterCounts[id] = {
@@ -409,17 +375,28 @@
     return Object.values(monsterCounts)
   })
 
-
-  // 地图传送点列表
+  // OPTIMIZED PRONTERAD PORTALS
   const mapPortals = computed(() => {
     if (!mapState.activeWarps) return []
-    return mapState.activeWarps.map(w => ({
+    
+    let rawPortals = mapState.activeWarps.map(w => ({
       x: w.x,
       y: w.y,
       targetMap: w.targetMap,
       targetName: Maps[w.targetMap.toLowerCase()]?.name || w.targetMap,
       name: w.name
     }))
+
+    if (player.currentMap === 'prontera' && rawPortals.length > 6) {
+        const sorted = rawPortals.sort((a, b) => {
+             const distA = Math.pow(a.x - player.x, 2) + Math.pow(a.y - player.y, 2)
+             const distB = Math.pow(b.x - player.x, 2) + Math.pow(b.y - player.y, 2)
+             return distA - distB
+        })
+        return sorted.slice(0, 6)
+    }
+
+    return rawPortals
   })
 
   // --- Inventory & Equipment Actions ---
@@ -491,7 +468,6 @@
       return names[slot] || slot
   }
 
-  // Ordered list for display
   const EQUIPMENT_SLOTS = [
       'HeadTop', 'HeadMid', 'HeadLow',
       'Weapon', 'Shield', 'Armor',
@@ -506,8 +482,8 @@
       const subType = info.subType
       return [
         'TWO_HAND_SWORD', 'TWO_HAND_AXE', 'TWO_HAND_SPEAR',
-        'TWO_HAND_STAFF', 'BOW', 'KATAR', 'INSTRUMENT', 'WHIP', 'BOOK' // Book usually 1h but keeping safe, Instrument/Whip strict 2h? Check RO. Actually Book is Shield-compatible? For now, simplify.
-      ].includes(subType) || info.range > 3 // Simple heuristic if subtype fails
+        'TWO_HAND_STAFF', 'BOW', 'KATAR', 'INSTRUMENT', 'WHIP', 'BOOK'
+      ].includes(subType) || info.range > 3 
   }
 
   const isOccupiedByTwoHanded = (slot) => {
@@ -517,13 +493,12 @@
       return isTwoHandedWeapon(weapon.id)
   }
 
-  // Bonus Translator
   const translateBonus = (key, val) => {
       const map = {
           str: 'Str', agi: 'Agi', vit: 'Vit', int: 'Int', dex: 'Dex', luk: 'Luk',
           atk: 'Atk', matk: 'Matk', def: 'Def', mdef: 'Mdef',
           maxhp: 'MaxHP', maxsp: 'MaxSP',
-          hp: 'MaxHP', sp: 'MaxSP', // Alias
+          hp: 'MaxHP', sp: 'MaxSP', 
           crit: 'Crit', hit: 'Hit', flee: 'Flee',
           aspdrate: 'Aspd %',
           speedrate: 'Move Speed %'
@@ -541,11 +516,10 @@
   const navigateToPortal = (x, y) => {
     moveTo(x, y)
   }
+</script>
 
-  </script>
-  
-  <template>
-    <!-- 登录界面 -->
+<template>
+<!-- 登录界面 -->
     <LoginScreen v-if="!isLoggedIn" @login="handleLogin" />
 
     <!-- 加载中界面 -->
@@ -630,6 +604,15 @@
           <button @click="showInventoryModal = true" class="w-full mt-1 bg-gray-700 hover:bg-gray-600 text-xs py-1 rounded text-yellow-500">
               背包 & 装备
           </button>
+          
+          <div class="flex gap-1 mt-1">
+            <button @click="showShopModal = true" class="flex-1 bg-gray-700 hover:bg-gray-600 text-xs py-1 rounded text-green-400">
+                商店交易
+            </button>
+            <button @click="showStrategyModal = true" class="flex-1 bg-gray-700 hover:bg-gray-600 text-xs py-1 rounded text-purple-400">
+                挂机策略
+            </button>
+          </div>
 
           <!-- Assets -->
           <div class="pt-2 border-t border-gray-700">
@@ -939,6 +922,10 @@
         </div>
     </div>
 
+    <!-- New Modals -->
+    <StrategyModal v-if="showStrategyModal" @close="showStrategyModal = false" />
+    <ShopModal v-if="showShopModal" :mapId="player.currentMap" :playerX="player.x" :playerY="player.y" @close="showShopModal = false" />
+
         <!-- 智能提示浮窗 -->
         <div v-if="suggestions.length > 0 && userCommand" class="bg-gray-800 border-t border-gray-600 text-gray-300 px-2 py-1 absolute bottom-8 left-0 w-full opacity-90">
            <div v-for="(sug, idx) in suggestions" :key="idx" 
@@ -966,27 +953,13 @@
       </div>
   
     </div>
-  </template>
-  
-  <style>
-  .scrollbar-hide::-webkit-scrollbar {
-      display: none;
-  }
-  .scrollbar-hide {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-  }
-  .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-      background: #000;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #333;
-      border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #555;
-  }
-  </style>
+</template>
+
+<style>
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #000; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+</style>

@@ -26,6 +26,9 @@ All math logic resides in `src/game/formulas.js`.
 
 *   **`player.js`**: State Owner. Handles Inventory, Stats, Config. Delegates persistence to `db/index.js` and stat calculation to `statManager.js`.
 *   **`modules/logger.js`**: Global Event Bus. Provides a reactive log stream for UI rendering and decoupled module communication.
+*   **UI Components**:
+    - **`StrategyModal.vue`**: Configuration Interface. Direct two-way binding to `player.config.strategies`.
+    - **`ShopModal.vue`**: Marketplace Interface. Manages Cart/Queue state locally and executes atomic `buyItem`/`sellItem` actions via `player.js`.
 *   **`modules/statManager.js`**: Calculation Engine. Extracts formula-heavy logic from `player.js` to compute HP, SP, ATK, DEF, and ASPD.
 *   **`combat.js`**: AI Orchestrator. Manages the high-level `aiTick` loop, delegating specific behaviors to Handlers.
     - **MovementHandler**: Moving, Returning, and Warp collision.

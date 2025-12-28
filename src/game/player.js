@@ -36,6 +36,7 @@ const defaultStats = {
         attackRange: 10,
         strategies: {
             supply: {
+                enabled: true,
                 restock_hp_item: '红色药水',
                 restock_hp_amount: 100,
                 restock_hp_trigger: 20,
@@ -45,6 +46,7 @@ const defaultStats = {
                 use_butterfly_wing: true
             },
             loot: {
+                enabled: true,
                 sell_all_etc: true,
                 keep_cards: true,
                 keep_rares: true,
@@ -838,8 +840,8 @@ export function sellItem(itemNameOrId, count = 1, mapId, playerX, playerY) {
     const slot = player.inventory[slotIndex]
     const info = getItemInfo(slot.id)
 
-    if (info.type !== ItemType.ETC && info.type !== ItemType.EQUIP) {
-        return { success: false, msg: '该物品暂时无法贩卖 (仅限杂物和装备)。' }
+    if (info.type !== ItemType.ETC && info.type !== ItemType.EQUIP && info.type !== ItemType.USABLE && info.type !== ItemType.AMMO) {
+        return { success: false, msg: '该物品暂时无法贩卖 (不可出售类型)。' }
     }
 
     const amountToSell = Math.min(slot.count, count)
