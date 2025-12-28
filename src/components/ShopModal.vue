@@ -218,7 +218,7 @@ const getIconClass = (type) => {
 
 <template>
     <div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[75]" @click.self="$emit('close')">
-        <div class="bg-[#1e1e1e] border border-gray-700 w-[800px] h-[600px] flex flex-col shadow-2xl rounded-lg overflow-hidden">
+        <div class="bg-[#1e1e1e] border border-gray-700 w-[800px] h-[600px] flex flex-col shadow-2xl rounded-lg overflow-hidden" @click.stop>
             <!-- Header -->
             <div class="bg-gray-900 border-b border-gray-700 p-3 flex justify-between items-center">
                 <div class="flex items-center gap-4">

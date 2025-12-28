@@ -203,6 +203,8 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **UI Optimization**: 
     - **Portal Decluttering**: Smart filtering of "Known Exits" list in high-density maps (e.g. Prontera).
     - **Modal Architecture**: Standardized overlay system for Shops, Strategy, Inventory, and Stats.
+    - **Focus Protection**: Refactored `App.vue` to move modals to root level and implemented `@click.stop` to prevent console input stealing focus.
+    - **Interaction Polish**: Removed `pointer-events-none` from disabled strategy sections to allow configuration before activation.
 
 ## 4. Current State
 *   **Version:** 3.2.0 (Phase 31 - Advanced Config UI)

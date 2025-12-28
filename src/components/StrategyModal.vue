@@ -85,7 +85,7 @@ const supplyConfig = computed(() => {
 
 <template>
     <div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[70]" @click.self="$emit('close')">
-        <div v-if="player.config.strategies" class="bg-[#1e1e1e] border border-gray-700 w-[900px] h-[600px] flex flex-col shadow-2xl rounded-lg overflow-hidden">
+        <div v-if="player.config.strategies" class="bg-[#1e1e1e] border border-gray-700 w-[900px] h-[600px] flex flex-col shadow-2xl rounded-lg overflow-hidden" @click.stop>
             <!-- Header -->
             <div class="bg-gray-900 border-b border-gray-700 p-3 flex justify-between items-center">
                 <div class="flex items-center gap-2">
@@ -124,7 +124,7 @@ const supplyConfig = computed(() => {
                     <div class="flex-1 overflow-y-auto p-4 custom-scrollbar text-gray-300 text-sm bg-[#1e1e1e]">
                         
                         <!-- Supply Tab -->
-                        <div v-if="activeTab === 'Supply'" class="space-y-4" :class="{'opacity-50 pointer-events-none': !player.config.strategies.supply.enabled}">
+                        <div v-if="activeTab === 'Supply'" class="space-y-4" :class="{'opacity-50': !player.config.strategies.supply.enabled}">
                             <div class="bg-gray-800 p-3 rounded border border-gray-700 shadow-sm">
                                 <h4 class="text-green-400 font-bold mb-3 flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -159,7 +159,7 @@ const supplyConfig = computed(() => {
                                     </label>
                                 </div>
                                
-                                <div class="grid grid-cols-2 gap-4" :class="{'opacity-50 pointer-events-none': !supplyConfig.ammo_enabled}">
+                                <div class="grid grid-cols-2 gap-4" :class="{'opacity-50': !supplyConfig.ammo_enabled}">
                                     <div class="col-span-2">
                                         <label class="block text-gray-500 text-xs mb-1">备用箭矢名称 (Item Name)</label>
                                         <input v-model="player.config.strategies.supply.restock_arrow_item" class="w-full bg-black text-white px-3 py-2 rounded border border-gray-600 focus:border-yellow-500 outline-none transition-colors" placeholder="例如: 箭矢" />
@@ -185,7 +185,7 @@ const supplyConfig = computed(() => {
                         </div>
 
                         <!-- Loot Tab (Same as before but direct access) -->
-                        <div v-if="activeTab === 'Loot'" class="space-y-4" :class="{'opacity-50 pointer-events-none': !player.config.strategies.loot.enabled}">
+                        <div v-if="activeTab === 'Loot'" class="space-y-4" :class="{'opacity-50': !player.config.strategies.loot.enabled}">
                             <div class="bg-gray-800 p-3 rounded border border-gray-700 space-y-2 shadow-sm">
                                 <h4 class="text-cyan-400 font-bold mb-2">通用规则</h4>
                                 <div class="space-y-1">

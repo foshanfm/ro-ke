@@ -702,87 +702,116 @@ import ShopModal from './components/ShopModal.vue'
           </div>
         </div>
 
-        <!-- Details Panel (Overlay on right side) -->
-        <div v-if="selectedDetail" class="fixed right-4 top-20 w-72 bg-[#1e1e1e] border border-gray-600 h-[500px] flex flex-col shadow-2xl z-[90] rounded">
-            <div class="flex justify-between items-center p-2 border-b border-gray-700">
-                <div class="flex flex-col">
-                    <span class="text-yellow-500 font-bold">{{ selectedDetail.type === 'Item' ? getEquippableName(selectedDetail.instance || { id: selectedDetail.data.id }) : selectedDetail.data.name }}</span>
-                    <span class="text-[9px] text-gray-600">ID: {{ selectedDetail.data.id }}</span>
-                </div>
-                <button @click="selectedDetail = null" class="text-gray-500 hover:text-white font-bold">×</button>
-            </div>
-            <div class="p-3 text-xs space-y-3 overflow-y-auto custom-scrollbar flex-1">
-                
-                <!-- Basic Info for Equip -->
-                <div v-if="selectedDetail.data.type === 'Equip'" class="grid grid-cols-2 gap-2 bg-gray-800 p-2 rounded">
-                    <div class="text-gray-400">Atk: <span class="text-gray-100">{{ selectedDetail.data.atk || 0 }}</span></div>
-                    <div class="text-gray-400">Matk: <span class="text-gray-100">{{ selectedDetail.data.matk || 0 }}</span></div>
-                    <div class="text-gray-400">Def: <span class="text-gray-100">{{ selectedDetail.data.def || 0 }}</span></div>
-                    <div class="text-gray-400">Weight: <span class="text-gray-100">{{ selectedDetail.data.weight }}</span></div>
-                    <div class="text-gray-400 col-span-2">Type: <span class="text-cyan-400">{{ selectedDetail.data.subType }}</span></div>
-                    <div v-if="selectedDetail.data.reqLv" class="text-gray-400 col-span-2">Req Lv: <span class="text-gray-100">{{ selectedDetail.data.reqLv }}</span></div>
-                </div>
-
-                <!-- Inserted Cards (Equip Instance Only) -->
-                <div v-if="selectedDetail.instance && selectedDetail.instance.cards && selectedDetail.instance.cards.some(c => c)" class="bg-orange-900 bg-opacity-20 border border-orange-800 p-2 rounded">
-                    <div class="text-orange-500 font-bold text-[10px] mb-1 uppercase tracking-wider">已插卡片 (Inserted Cards)</div>
-                    <div class="space-y-1">
-                        <div v-for="(cid, idx) in selectedDetail.instance.cards" :key="idx" 
-                             class="flex items-center gap-2 p-1 rounded hover:bg-orange-950 transition-colors cursor-pointer group/slot"
-                             @click="cid && handleEntityClick(cid, true)">
-                            <div class="w-2 h-2 rounded-full" :class="cid ? 'bg-orange-500' : 'bg-gray-700'"></div>
-                            <span v-if="cid" class="text-xs text-gray-200 group-hover/slot:text-white">{{ getItemInfo(cid).name }}</span>
-                            <span v-else class="text-xs text-gray-600 italic">空插槽</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card Info -->
-                <div v-if="selectedDetail.data.type === 'Card'" class="bg-indigo-900 bg-opacity-30 border border-indigo-700 p-2 rounded">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-indigo-300 font-bold uppercase text-[10px]">卡片类物品</span>
-                        <span class="text-indigo-400 text-[10px]">Compound on</span>
-                    </div>
-                    <div class="text-lg text-indigo-100 font-bold">{{ selectedDetail.data.compoundOn || 'Common' }}</div>
-                </div>
-
-                <!-- Price (for non-equipped items/monsters) -->
-                <div v-if="selectedDetail.data.price && !selectedDetail.instance" class="flex justify-between text-gray-400 bg-gray-800 p-2 rounded">
-                    <span>Price:</span>
-                    <span class="text-yellow-500">{{ selectedDetail.data.price.buy }} z</span>
-                </div>
-
-                <!-- Parsed Bonuses (Script Translation) -->
-                <div v-if="getItemBonuses(selectedDetail.data).length > 0" class="bg-gray-800 p-2 rounded border border-gray-700 shadow-inner">
-                    <div class="text-green-500 font-bold mb-1 border-b border-gray-600 pb-1 flex justify-between">
-                        <span>属性加成效果</span>
-                        <span class="text-[9px] text-gray-500 uppercase">Effective</span>
-                    </div>
-                    <div v-for="(bonus, idx) in getItemBonuses(selectedDetail.data)" :key="idx" class="text-green-400 font-mono">
-                        ● {{ bonus }}
-                    </div>
-                </div>
-
-                <!-- Lore Description -->
-                <div v-if="selectedDetail.data.description" class="bg-[#121212] p-3 rounded text-gray-500 whitespace-pre-wrap leading-relaxed border border-gray-800 text-[10px]">
-                    <div class="text-gray-600 font-bold mb-1 uppercase tracking-tighter opacity-50">Item Background</div>
-                    {{ selectedDetail.data.description }}
-                </div>
-
-                <!-- Drops (Monster Only) -->
-                <template v-if="selectedDetail.type === 'Monster'">
-                     <div class="mt-2 text-cyan-400 font-bold border-b border-gray-700 pb-1">掉落物品</div>
-                     <div v-for="drop in selectedDetail.data.drops" :key="drop.id" class="flex justify-between py-0.5">
-                        <span class="text-gray-300">{{ getItemInfo(drop.id).name }}</span>
-                        <span class="text-yellow-600">{{ (drop.rate * 100).toFixed(2) }}%</span>
-                     </div>
-                </template>
-            </div>
+        <!-- 智能提示浮窗 -->
+        <div v-if="suggestions.length > 0 && userCommand" class="bg-gray-800 border-t border-gray-600 text-gray-300 px-2 py-1 absolute bottom-8 left-0 w-full opacity-90">
+           <div v-for="(sug, idx) in suggestions" :key="idx" 
+                class="flex gap-2 cursor-pointer" 
+                :class="{'bg-gray-700 text-white': idx === suggestionIndex}"
+                @click="applySuggestion(sug)"
+           >
+               <span class="font-bold">{{ sug.text }}</span>
+               <span v-if="sug.hint" class="text-gray-500 text-xs">({{ sug.hint }})</span>
+           </div>
         </div>
+    
+        <div class="bg-black px-1 pb-1 shrink-0">
+          <input 
+            ref="cmdInput"
+            v-model="userCommand"
+            @keyup.enter="executeCommand"
+            @keydown="handleKeyDown"
+            type="text" 
+            class="bg-black text-gray-200 w-full outline-none border-none caret-white"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+  
+    </div>
+
+    <!-- All Overlays & Modals (Moved to root to prevent focus stealing) -->
+    <!-- Details Panel (Overlay on right side) -->
+    <div v-if="selectedDetail" class="fixed right-4 top-20 w-72 bg-[#1e1e1e] border border-gray-600 h-[500px] flex flex-col shadow-2xl z-[90] rounded" @click.stop>
+        <div class="flex justify-between items-center p-2 border-b border-gray-700">
+            <div class="flex flex-col">
+                <span class="text-yellow-500 font-bold">{{ selectedDetail.type === 'Item' ? getEquippableName(selectedDetail.instance || { id: selectedDetail.data.id }) : selectedDetail.data.name }}</span>
+                <span class="text-[9px] text-gray-600">ID: {{ selectedDetail.data.id }}</span>
+            </div>
+            <button @click="selectedDetail = null" class="text-gray-500 hover:text-white font-bold">×</button>
+        </div>
+        <div class="p-3 text-xs space-y-3 overflow-y-auto custom-scrollbar flex-1">
+            
+            <!-- Basic Info for Equip -->
+            <div v-if="selectedDetail.data.type === 'Equip'" class="grid grid-cols-2 gap-2 bg-gray-800 p-2 rounded">
+                <div class="text-gray-400">Atk: <span class="text-gray-100">{{ selectedDetail.data.atk || 0 }}</span></div>
+                <div class="text-gray-400">Matk: <span class="text-gray-100">{{ selectedDetail.data.matk || 0 }}</span></div>
+                <div class="text-gray-400">Def: <span class="text-gray-100">{{ selectedDetail.data.def || 0 }}</span></div>
+                <div class="text-gray-400">Weight: <span class="text-gray-100">{{ selectedDetail.data.weight }}</span></div>
+                <div class="text-gray-400 col-span-2">Type: <span class="text-cyan-400">{{ selectedDetail.data.subType }}</span></div>
+                <div v-if="selectedDetail.data.reqLv" class="text-gray-400 col-span-2">Req Lv: <span class="text-gray-100">{{ selectedDetail.data.reqLv }}</span></div>
+            </div>
+
+            <!-- Inserted Cards (Equip Instance Only) -->
+            <div v-if="selectedDetail.instance && selectedDetail.instance.cards && selectedDetail.instance.cards.some(c => c)" class="bg-orange-900 bg-opacity-20 border border-orange-800 p-2 rounded">
+                <div class="text-orange-500 font-bold text-[10px] mb-1 uppercase tracking-wider">已插卡片 (Inserted Cards)</div>
+                <div class="space-y-1">
+                    <div v-for="(cid, idx) in selectedDetail.instance.cards" :key="idx" 
+                         class="flex items-center gap-2 p-1 rounded hover:bg-orange-950 transition-colors cursor-pointer group/slot"
+                         @click="cid && handleEntityClick(cid, true)">
+                        <div class="w-2 h-2 rounded-full" :class="cid ? 'bg-orange-500' : 'bg-gray-700'"></div>
+                        <span v-if="cid" class="text-xs text-gray-200 group-hover/slot:text-white">{{ getItemInfo(cid).name }}</span>
+                        <span v-else class="text-xs text-gray-600 italic">空插槽</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Info -->
+            <div v-if="selectedDetail.data.type === 'Card'" class="bg-indigo-900 bg-opacity-30 border border-indigo-700 p-2 rounded">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-indigo-300 font-bold uppercase text-[10px]">卡片类物品</span>
+                    <span class="text-indigo-400 text-[10px]">Compound on</span>
+                </div>
+                <div class="text-lg text-indigo-100 font-bold">{{ selectedDetail.data.compoundOn || 'Common' }}</div>
+            </div>
+
+            <!-- Price (for non-equipped items/monsters) -->
+            <div v-if="selectedDetail.data.price && !selectedDetail.instance" class="flex justify-between text-gray-400 bg-gray-800 p-2 rounded">
+                <span>Price:</span>
+                <span class="text-yellow-500">{{ selectedDetail.data.price.buy }} z</span>
+            </div>
+
+            <!-- Parsed Bonuses (Script Translation) -->
+            <div v-if="getItemBonuses(selectedDetail.data).length > 0" class="bg-gray-800 p-2 rounded border border-gray-700 shadow-inner">
+                <div class="text-green-500 font-bold mb-1 border-b border-gray-600 pb-1 flex justify-between">
+                    <span>属性加成效果</span>
+                    <span class="text-[9px] text-gray-500 uppercase">Effective</span>
+                </div>
+                <div v-for="(bonus, idx) in getItemBonuses(selectedDetail.data)" :key="idx" class="text-green-400 font-mono">
+                    ● {{ bonus }}
+                </div>
+            </div>
+
+            <!-- Lore Description -->
+            <div v-if="selectedDetail.data.description" class="bg-[#121212] p-3 rounded text-gray-500 whitespace-pre-wrap leading-relaxed border border-gray-800 text-[10px]">
+                <div class="text-gray-600 font-bold mb-1 uppercase tracking-tighter opacity-50">Item Background</div>
+                {{ selectedDetail.data.description }}
+            </div>
+
+            <!-- Drops (Monster Only) -->
+            <template v-if="selectedDetail.type === 'Monster'">
+                 <div class="mt-2 text-cyan-400 font-bold border-b border-gray-700 pb-1">掉落物品</div>
+                 <div v-for="drop in selectedDetail.data.drops" :key="drop.id" class="flex justify-between py-0.5">
+                    <span class="text-gray-300">{{ getItemInfo(drop.id).name }}</span>
+                    <span class="text-yellow-600">{{ (drop.rate * 100).toFixed(2) }}%</span>
+                 </div>
+            </template>
+        </div>
+    </div>
 
     <!-- Stats Modal -->
     <div v-if="showStatsModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[80]" @click.self="showStatsModal = false">
-        <div class="bg-gray-800 border border-gray-600 p-4 rounded w-96 shadow-xl">
+        <div class="bg-gray-800 border border-gray-600 p-4 rounded w-96 shadow-xl" @click.stop>
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-white">素质点分配</h3>
                  <span class="text-yellow-500">剩余点数: {{ player.statPoints }}</span>
@@ -809,7 +838,7 @@ import ShopModal from './components/ShopModal.vue'
 
     <!-- Inventory Modal -->
     <div v-if="showInventoryModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]" @click.self="showInventoryModal = false">
-        <div class="bg-[#1e1e1e] border border-gray-700 w-[800px] h-[600px] flex flex-col shadow-2xl rounded-lg overflow-hidden">
+        <div class="bg-[#1e1e1e] border border-gray-700 w-[900px] h-[600px] flex flex-col shadow-2xl rounded-lg overflow-hidden" @click.stop>
             <!-- Header & Tabs -->
             <div class="bg-gray-900 border-b border-gray-700 p-2 flex justify-between items-center">
                 <div class="flex gap-2">
@@ -922,37 +951,8 @@ import ShopModal from './components/ShopModal.vue'
         </div>
     </div>
 
-    <!-- New Modals -->
     <StrategyModal v-if="showStrategyModal" @close="showStrategyModal = false" />
     <ShopModal v-if="showShopModal" :mapId="player.currentMap" :playerX="player.x" :playerY="player.y" @close="showShopModal = false" />
-
-        <!-- 智能提示浮窗 -->
-        <div v-if="suggestions.length > 0 && userCommand" class="bg-gray-800 border-t border-gray-600 text-gray-300 px-2 py-1 absolute bottom-8 left-0 w-full opacity-90">
-           <div v-for="(sug, idx) in suggestions" :key="idx" 
-                class="flex gap-2 cursor-pointer" 
-                :class="{'bg-gray-700 text-white': idx === suggestionIndex}"
-                @click="applySuggestion(sug)"
-           >
-               <span class="font-bold">{{ sug.text }}</span>
-               <span v-if="sug.hint" class="text-gray-500 text-xs">({{ sug.hint }})</span>
-           </div>
-        </div>
-    
-        <div class="bg-black px-1 pb-1 shrink-0">
-          <input 
-            ref="cmdInput"
-            v-model="userCommand"
-            @keyup.enter="executeCommand"
-            @keydown="handleKeyDown"
-            type="text" 
-            class="bg-black text-gray-200 w-full outline-none border-none caret-white"
-            spellcheck="false"
-            autocomplete="off"
-          />
-        </div>
-      </div>
-  
-    </div>
 </template>
 
 <style>

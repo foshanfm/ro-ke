@@ -29,6 +29,7 @@ All math logic resides in `src/game/formulas.js`.
 *   **UI Components**:
     - **`StrategyModal.vue`**: Configuration Interface. Direct two-way binding to `player.config.strategies`.
     - **`ShopModal.vue`**: Marketplace Interface. Manages Cart/Queue state locally and executes atomic `buyItem`/`sellItem` actions via `player.js`.
+    - **Modal Rendering**: All modals and overlays are rendered at the root of the `App.vue` template to bypass the console's focus-stealing click listener.
 *   **`modules/statManager.js`**: Calculation Engine. Extracts formula-heavy logic from `player.js` to compute HP, SP, ATK, DEF, and ASPD.
 *   **`combat.js`**: AI Orchestrator. Manages the high-level `aiTick` loop, delegating specific behaviors to Handlers.
     - **MovementHandler**: Moving, Returning, and Warp collision.
