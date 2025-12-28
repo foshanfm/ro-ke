@@ -119,7 +119,8 @@ export function executeAttack(target, getMobTemplate, log) {
 
     // Debug: Log elemental info
     if (defenderElement !== 0 || player.attackElement !== 0) {
-        console.log(`[Elemental] Attacker: ${player.attackElement}, Defender: ${defenderElement} Lv${defenderElementLevel}, Modifier: ${res.elementalModifier}%`)
+        const displayMod = res.elementalModifier !== undefined ? res.elementalModifier : 100
+        console.log(`[Elemental] Attacker: ${player.attackElement}, Defender: ${defenderElement} Lv${defenderElementLevel}, Modifier: ${displayMod}%`)
     }
 
     passiveRes.logs.forEach(l => log(l.msg, l.type))

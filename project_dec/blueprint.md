@@ -227,14 +227,21 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Batch Selling**: Implemented "Add All" and "Queue All Junk" functions in the Shop UI.
 - [x] **Test Support**: Created 10 level-distributed test maps (Lv 1-100) with chained warps.
 - [x] **UI Polish**: Optimized monster list with level-sorting and display limits.
+### Phase 34: Navigation Stability & UI Polish [Completed]
+- [x] **Warp Loop Fix**: Implemented 3-second warp immunity and increased landing offsets (±20-40px) to prevent infinite portal loops.
+- [x] **Auto-Bot Strategy Refinement**: Added explicit `auto_hp_enabled` switch to the strategy configuration.
+- [x] **Premium UI Overhaul**:
+    - [x] **Strategy Modal**: Modern card-based layout with iOS-style toggles and micro-animations.
+    - [x] **Character Sidebar**: Enhanced HP/SP/Exp bars with gradients, glowing effects, and glassmorphism.
+- [x] **Data Integrity**: Added NaN protection for coordinate validation after map transitions.
+- [x] **Bug Fixes**: Resolved `undefined%` modifier logs in combat results.
 
 ## 4. Current State
-*   **Version:** 3.5.0 (Phase 33 - AI Stability)
-*   **Stability:** High (Fixed AI loop death on warp).
+*   **Version:** 3.6.0 (Phase 34 - UI & Navigation Polish)
+*   **Stability:** High (Resolved warp loops and coordinate stalls).
 *   **Performance:** Elite.
 *   **New Features:**
-    - **Session Breakthrough**: `auto` command now acts as a reset if the bot hangs.
-    - **Test Ecosystem**: 10 standard-monster-only test maps (Lv 1-100) with chained navigation.
-    - **Batch Merchant Tools**: Batch selling of ETC junk and "Sell All" queue for inventory management.
-    - **Navigation Navigation**: NPC coordinates and facility dropdown for cleaner UI.
+    - **Warp Immunity**: 3s grace period after map change to prevent accidental re-entry.
+    - **Strategy Toggles**: Granular control over HP recovery and Ammo supply.
+    - **Visual Excellence**: Completely redesigned strategy dashboard and status sidebar.
 *   **Next Objective:** Phase 20: SP Mechanics & Skills (SP costs, Cast Time, Cool Down).

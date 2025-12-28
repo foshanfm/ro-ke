@@ -148,7 +148,7 @@ function recoveryLoop() {
 }
 
 function checkAutoPotion() {
-    if (!player.config || player.config.auto_hp_percent <= 0) return
+    if (!player.config || !player.config.auto_hp_enabled || player.config.auto_hp_percent <= 0) return
     const threshold = player.maxHp * (player.config.auto_hp_percent / 100)
     if (player.hp < threshold) {
         const itemToUse = player.config.auto_hp_item || '红色药水'
@@ -176,6 +176,9 @@ async function aiTick(sessionId) {
         // 1. 获取基本状态
         const curMapId = (player.currentMap || '').toLowerCase()
         const goalMapId = (gameState.goalMap || '').toLowerCase()
+
+        // Debug heartbeat
+        // console.log(`[AI] Tick - Status: ${gameState.status}, Map: ${curMapId}`)
 
         // 0. Check for restock need
         const restockCheck = checkNeedsRestock(player)

@@ -92,6 +92,10 @@ We prioritize "Feel" over "Academic Accuracy", but use **Authentic Data Sources*
 *   **Warp Avoidance (Combat Safety)**:
     - AI strictly avoids targeting monsters within **5 cells (50px)** of a warp to prevent unintended map transitions.
     - `randomWalk` includes safety retries to ensure patrol targets are at least **80px** away from known warps.
+    - **Warp Immunity**: Implemented 3-second cooldown (`lastWarpTime`) and landing offsets to prevent infinite portal loops.
+*   **UI & Configuration**:
+    - **Strategy UI**: `StrategyModal.vue` uses a card-based layout with two-way binding to `player.config.auto_hp_enabled`.
+    - **Responsive Sidebar**: Premium CSS gradients and shadows for real-time status tracking.
 *   **Autonomous Restocking (FSM)**:
     - **Detection**: `strategy.js` triggers a restock state when supplies (Potions/Arrows) fall below user-defined thresholds.
     - **Workflow**: `RestockHandler.js` manages a 4-stage machine: `START` (Recall via Wing) -> `FIND_NPC` (Navigate to City Merchant) -> `TRADING` (Filtered Sell & Restock Buy) -> `DONE` (Return to Combat Loop).

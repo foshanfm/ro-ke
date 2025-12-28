@@ -29,6 +29,7 @@ const defaultStats = {
         [EquipType.AMMO]: null
     },
     config: {
+        auto_hp_enabled: true,
         auto_hp_percent: 0,
         auto_hp_item: '红色药水',
         auto_buy_potion: 0, // 废弃，由 strategies 替代
@@ -739,6 +740,7 @@ export function warp(mapId) {
     }
 
     player.currentMap = id
+    player.lastWarpTime = Date.now()
     saveGame()
     return { success: true, msg: `Warped to ${map.name}` }
 }

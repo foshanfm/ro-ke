@@ -29,19 +29,30 @@ export function handleManualMovement(target, log) {
 
     movePlayerToward(x, y, player.moveSpeed)
 
-    // Check warp collision
-    const warpInfo = checkWarpCollision(player.x, player.y)
-    if (warpInfo) {
-        log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
-        const res = warp(warpInfo.targetMap)
-        if (res.success) {
-            const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-            const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-            player.x = warpInfo.targetX + offsetX
-            player.y = warpInfo.targetY + offsetY
-            log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+    // Check warp collision (with 3s immunity)
+    if (!player.lastWarpTime || Date.now() - player.lastWarpTime > 3000) {
+        const warpInfo = checkWarpCollision(player.x, player.y)
+        if (warpInfo) {
+            log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
+            const res = warp(warpInfo.targetMap)
+            if (res.success) {
+                // Safe Landing Offset: ±20-40px
+                const offsetX = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 20)
+                const offsetY = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 20)
+
+                const tx = (warpInfo.targetX || 0) + offsetX
+                const ty = (warpInfo.targetY || 0) + offsetY
+
+                if (isNaN(tx) || isNaN(ty)) {
+                    log(`传送错误: 目标坐标无效 [${tx}, ${ty}]`, 'error')
+                } else {
+                    player.x = tx
+                    player.y = ty
+                }
+                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+            }
+            return { shouldContinue: false, delay: 500, warped: true }
         }
-        return { shouldContinue: false, delay: 500, warped: true }
     }
 
     return { shouldContinue: true, delay: 100 }
@@ -80,15 +91,31 @@ export function handleReturnToGoalMap(currentMap, goalMap, findPath, log, lastAc
     // Move toward warp
     movePlayerToward(warpToNext.x, warpToNext.y, player.moveSpeed)
 
-    // Check warp collision
-    const warpInfo = checkWarpCollision(player.x, player.y)
-    if (warpInfo) {
-        log(`进入传送点 [${warpInfo.name}]...`, 'warning')
-        const res = warp(warpInfo.targetMap)
-        if (res.success) {
-            // Map changed, will re-evaluate on next tick
+    // Check warp collision (with 3s immunity)
+    if (!player.lastWarpTime || Date.now() - player.lastWarpTime > 3000) {
+        const warpInfo = checkWarpCollision(player.x, player.y)
+        if (warpInfo) {
+            log(`进入传送点 [${warpInfo.name}]...`, 'warning')
+            const res = warp(warpInfo.targetMap)
+            if (res.success) {
+                // Fixed: Update position on return logic too
+                // Safe Landing Offset: ±20-40px
+                const offsetX = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 20)
+                const offsetY = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 20)
+
+                const tx = (warpInfo.targetX || 0) + offsetX
+                const ty = (warpInfo.targetY || 0) + offsetY
+
+                if (isNaN(tx) || isNaN(ty)) {
+                    log(`传送错误: 目标坐标无效 [${tx}, ${ty}]`, 'error')
+                } else {
+                    player.x = tx
+                    player.y = ty
+                }
+                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+            }
+            return { shouldContinue: false, delay: 100 }
         }
-        return { shouldContinue: false, delay: 100 }
     }
 
     return { shouldContinue: true, delay: 100 }
@@ -112,19 +139,30 @@ export function handleChaseTarget(target, log, lastActionLog, getMobTemplate) {
 
     movePlayerToward(target.x, target.y, player.moveSpeed)
 
-    // Check warp collision
-    const warpInfo = checkWarpCollision(player.x, player.y)
-    if (warpInfo) {
-        log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
-        const res = warp(warpInfo.targetMap)
-        if (res.success) {
-            const offsetX = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-            const offsetY = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2)
-            player.x = warpInfo.targetX + offsetX
-            player.y = warpInfo.targetY + offsetY
-            log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+    // Check warp collision (with 3s immunity)
+    if (!player.lastWarpTime || Date.now() - player.lastWarpTime > 3000) {
+        const warpInfo = checkWarpCollision(player.x, player.y)
+        if (warpInfo) {
+            log(`进入传送点 [${warpInfo.name}]，传送至 ${warpInfo.targetMap}...`, 'warning')
+            const res = warp(warpInfo.targetMap)
+            if (res.success) {
+                // Safe Landing Offset: ±20-40px
+                const offsetX = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 20)
+                const offsetY = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 20)
+
+                const tx = (warpInfo.targetX || 0) + offsetX
+                const ty = (warpInfo.targetY || 0) + offsetY
+
+                if (isNaN(tx) || isNaN(ty)) {
+                    log(`传送错误: 目标坐标无效 [${tx}, ${ty}]`, 'error')
+                } else {
+                    player.x = tx
+                    player.y = ty
+                }
+                log(`已到达 ${warpInfo.targetMap} ${formatPos(player.x, player.y)}`, 'success')
+            }
+            return { shouldContinue: false, delay: 500, warped: true }
         }
-        return { shouldContinue: false, delay: 500, warped: true }
     }
 
     return { shouldContinue: true, delay: 100 }

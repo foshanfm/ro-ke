@@ -675,45 +675,53 @@ import ShopModal from './components/ShopModal.vue'
           </div>
 
           <!-- HP / SP Bars -->
-          <div class="space-y-3">
+          <div class="space-y-4">
               <!-- HP -->
-              <div>
-                  <div class="flex justify-between text-xs mb-1">
-                      <span class="text-green-400">HP</span>
-                      <span>{{ Math.floor(player.hp) }} / {{ player.maxHp }}</span>
+              <div class="group">
+                  <div class="flex justify-between text-[11px] mb-1.5 px-1">
+                      <span class="text-green-400 font-bold tracking-tight">HP</span>
+                      <span class="text-gray-100 font-mono">{{ Math.floor(player.hp) }} <span class="text-gray-600">/</span> {{ player.maxHp }}</span>
                   </div>
-                  <div class="h-3 w-full bg-gray-800 rounded overflow-hidden border border-gray-700">
-                      <div class="h-full bg-green-600 transition-all duration-300" :style="{ width: hpPercent + '%' }"></div>
+                  <div class="h-4 w-full bg-black/40 rounded-full overflow-hidden border border-gray-800 shadow-inner relative ring-1 ring-white/5">
+                      <div class="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.3)] relative" :style="{ width: hpPercent + '%' }">
+                          <div class="absolute inset-x-0 top-0 h-[30%] bg-white/20"></div>
+                      </div>
                   </div>
               </div>
               <!-- SP -->
-              <div>
-                  <div class="flex justify-between text-xs mb-1">
-                      <span class="text-blue-400">SP</span>
-                      <span>{{ Math.floor(player.sp) }} / {{ player.maxSp }}</span>
+              <div class="group">
+                  <div class="flex justify-between text-[11px] mb-1.5 px-1">
+                      <span class="text-blue-400 font-bold tracking-tight">SP</span>
+                      <span class="text-gray-100 font-mono">{{ Math.floor(player.sp) }} <span class="text-gray-600">/</span> {{ player.maxSp }}</span>
                   </div>
-                  <div class="h-3 w-full bg-gray-800 rounded overflow-hidden border border-gray-700">
-                      <div class="h-full bg-blue-600 transition-all duration-300" :style="{ width: spPercent + '%' }"></div>
+                  <div class="h-4 w-full bg-black/40 rounded-full overflow-hidden border border-gray-800 shadow-inner relative ring-1 ring-white/5">
+                      <div class="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.3)] relative" :style="{ width: spPercent + '%' }">
+                          <div class="absolute inset-x-0 top-0 h-[30%] bg-white/20"></div>
+                      </div>
                   </div>
               </div>
           </div>
 
           <!-- Exp Bars -->
-          <div class="space-y-2 pt-2 border-t border-gray-700">
-               <div class="text-xs flex justify-between">
-                   <span>Base Lv.{{ player.lv }}</span>
-                   <span class="text-gray-500">{{ baseExpPercent.toFixed(1) }}%</span>
-               </div>
-               <div class="h-1.5 w-full bg-gray-800 rounded overflow-hidden">
-                    <div class="h-full bg-yellow-600 transition-all duration-500" :style="{ width: baseExpPercent + '%' }"></div>
+          <div class="space-y-3 pt-4 border-t border-gray-800/60">
+               <div>
+                   <div class="text-[10px] flex justify-between mb-1 text-gray-400 uppercase tracking-widest font-bold">
+                       <span>Base Lv.{{ player.lv }}</span>
+                       <span class="text-yellow-500/80">{{ baseExpPercent.toFixed(1) }}%</span>
+                   </div>
+                   <div class="h-1 w-full bg-black/60 rounded-full overflow-hidden">
+                        <div class="h-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)] transition-all duration-1000" :style="{ width: baseExpPercent + '%' }"></div>
+                   </div>
                </div>
                
-               <div class="text-xs flex justify-between mt-1">
-                   <span>Job Lv.{{ player.jobLv }}</span>
-                   <span class="text-gray-500">{{ jobExpPercent.toFixed(1) }}%</span>
-               </div>
-               <div class="h-1.5 w-full bg-gray-800 rounded overflow-hidden">
-                    <div class="h-full bg-purple-600 transition-all duration-500" :style="{ width: jobExpPercent + '%' }"></div>
+               <div>
+                   <div class="text-[10px] flex justify-between mb-1 text-gray-400 uppercase tracking-widest font-bold">
+                       <span>Job Lv.{{ player.jobLv }}</span>
+                       <span class="text-purple-400">{{ jobExpPercent.toFixed(1) }}%</span>
+                   </div>
+                   <div class="h-1 w-full bg-black/60 rounded-full overflow-hidden">
+                        <div class="h-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)] transition-all duration-1000" :style="{ width: jobExpPercent + '%' }"></div>
+                   </div>
                </div>
           </div>
 
