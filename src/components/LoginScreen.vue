@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { listSaves, createNewCharacter, loadGame, saveGame, deleteCharacter } from '../game/player.js'
+import { listSaves, createNewCharacter, saveGame, deleteCharacter } from '../game/player.js'
 
 const emit = defineEmits(['login'])
 
@@ -22,18 +22,8 @@ onMounted(async () => {
 })
 
 // 选择存档
-const selectSave = async (save) => {
-  try {
-    const success = await loadGame(save.id)
-    if (success) {
-      emit('login', save.id)
-    } else {
-      alert('加载存档失败')
-    }
-  } catch (error) {
-    console.error('[LoginScreen] 加载存档失败:', error)
-    alert('加载存档失败')
-  }
+const selectSave = (save) => {
+  emit('login', save.id)
 }
 
 // 删除存档

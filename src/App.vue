@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue'
-import { player, saveGame, getStatPointCost, equipItem, unequipItem, useItem, insertCard, addItem, buyItem, getShopList, recalculateMaxStats } from './game/player.js'
+import { player, saveGame, getStatPointCost, equipItem, unequipItem, useItem, insertCard, addItem, buyItem, getShopList, recalculateMaxStats, loadGame } from './game/player.js'
 import { setLogCallback, startRecovery, gameState } from './game/combat.js'
 import { JobConfig } from './game/jobs.js'
 import { Maps } from './game/maps.js'
@@ -264,18 +264,35 @@ import ShopModal from './components/ShopModal.vue'
     isInitializing.value = true
     loadingLogs.value = []
 
-    // 1. 异步加载所有基础数据并注册
-    // 本次改动：移除了 initializeGameDataAsync 中的 sleep，确保按真实速度加载
+    // 1. 异步加载所有基础数据并注册 (Step 1)
     await initializeGameDataAsync()
 
-    // 2. 关键同步点：等待 Vue 响应式系统同步数据库状态到 UI 或其他模块
+    // 2. 加载玩家存档 (Step 2)
+    addLoadingLog('Loading Save Game...')
+    const loadSuccess = await loadGame(saveId)
+    if (!loadSuccess) {
+        addLoadingLog('FATAL: Save load failed.')
+        setTimeout(() => {
+            isLoggedIn.value = false // Return to login
+            isInitializing.value = false
+        }, 2000)
+        return
+    }
+
+    // 3. 关键同步点：等待 Vue 响应式系统同步数据库状态到 UI 或其他模块
     await nextTick()
 
-    // 3. 核心计算：所有 DB 已在内存中，执行首次完整属性计算
+    // 4. 核心计算：所有 DB 已在内存中，执行首次完整属性计算 (Step 3)
     recalculateMaxStats()
     addLoadingLog('Character Stats Synchronized.')
     
-    // 4. 验证数据正确性 (可选)
+    // 强制初始化当前地图 (防止 watcher 因 mapId 未变而不触发)
+    if (player.currentMap) {
+        initMap(player.currentMap)
+        addLoadingLog(`Initializing Map: ${player.currentMap}`)
+    }
+    
+    // 5. 验证数据正确性 (可选)
     if (player.maxHp <= 0) {
         addLoadingLog('WARN: Stat sync incomplete, retrying...')
         recalculateMaxStats()
@@ -289,10 +306,18 @@ import ShopModal from './components/ShopModal.vue'
     addLog(`当前位置: ${mapName}`, 'system')
     addLog(`系统就绪。输入 'auto' 开始挂机,输入 'help' 查看帮助。`, 'system')
     
-    // 5. 最终确认并关闭引导界面 (留 500ms 让人看一眼 "OK")
+    // 6. 最终确认并关闭引导界面 (Step 4)
     setTimeout(async () => {
         addLoadingLog('Launching Shell...')
         isInitializing.value = false
+        
+        // --- 强制在 UI 显示后再次重算，确保响应式同步 ---
+        await nextTick()
+        addLoadingLog('Syncing UI State...')
+        recalculateMaxStats()
+        
+        console.log(`[App] 初始属性加载完成: ATK=${player.atk}, HP=${player.hp}/${player.maxHp}`)
+        
         await nextTick()
         focusInput()
     }, 500)
@@ -307,6 +332,8 @@ import ShopModal from './components/ShopModal.vue'
     
     try {
       // DataManager.initializeGameData 内部执行主要的加载逻辑
+      // 传递 99 作为默认 maxLv，这通常不影响启动，具体 maxLv 可能在 loadGame 后才知道
+      // 但这里我们只加载静态数据，不依赖玩家等级
       const data = await initializeGameData(99)
       
       // 按序注册组件
@@ -320,17 +347,12 @@ import ShopModal from './components/ShopModal.vue'
       addLoadingLog('Loading Warp Database...')
       setWarpData(data.warpDB)
       
-      if (player.currentMap) player.currentMap = player.currentMap.toLowerCase()
-      
       isDataLoaded.value = true
       
-      if (player.currentMap) {
-          initMap(player.currentMap)
-          addLoadingLog(`Initializing Map: ${player.currentMap}`)
-      }
-
       if (data.jobStats) {
         addLoadingLog('Registering Job Stat Formulas...')
+      } else {
+        throw new Error('Critical job data (JobStats) failed to load.')
       }
 
       addLoadingLog('System Core: OK')
@@ -338,7 +360,7 @@ import ShopModal from './components/ShopModal.vue'
     } catch (error) {
       addLoadingLog('FATAL: Initialization failed.')
       console.error(error)
-      isDataLoaded.value = true
+      isDataLoaded.value = true // Force true to avoid infinite blocks, though game is broken
     }
   }
 
@@ -922,9 +944,9 @@ import ShopModal from './components/ShopModal.vue'
                     <span class="w-8 font-bold text-gray-400">{{ stat }}</span>
                     <div class="flex items-baseline gap-1">
                         <span class="text-white font-mono text-lg">{{ player[stat.toLowerCase()] }}</span>
-                        <!-- Bonus Display: Sum of Equip Bonus + Job Bonus -->
-                        <span class="text-green-400 text-xs font-bold" v-if="(player.equipmentBonuses?.[stat.toLowerCase()] || 0) + (player.equipmentBonuses?.[`job${stat}`] || 0) > 0">
-                            +{{ (player.equipmentBonuses?.[stat.toLowerCase()] || 0) + (player.equipmentBonuses?.[`job${stat}`] || 0) }}
+                        <!-- Bonus Display: equipmentBonuses already contains total bonus (Job + Equip + Buffs) -->
+                        <span class="text-green-400 text-xs font-bold" v-if="(player.equipmentBonuses?.[stat.toLowerCase()] || 0) > 0">
+                            +{{ player.equipmentBonuses?.[stat.toLowerCase()] || 0 }}
                         </span>
                     </div>
                     <div class="flex items-center gap-2">

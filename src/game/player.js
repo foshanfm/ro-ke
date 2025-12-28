@@ -65,7 +65,12 @@ const defaultStats = {
         x: 156 * 10,
         y: 178 * 10
     },
-    inventory: []
+    inventory: [],
+    equipmentBonuses: {
+        str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0,
+        jobStr: 0, jobAgi: 0, jobVit: 0, jobInt: 0, jobDex: 0, jobLuk: 0,
+        hp: 0, sp: 0, atk: 0, matk: 0, def: 0, mdef: 0, hit: 0, flee: 0, crit: 0
+    }
 }
 
 export const player = reactive({ ...defaultStats })

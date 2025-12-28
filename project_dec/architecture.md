@@ -45,7 +45,9 @@ All math logic resides in `src/game/formulas.js`.
     - **Template** (from `monsters.js`): Static data like `name`, `hp`, `atk`, `attackDelay`.
     - **Instance** (in `mapState.monsters`): Runtime data like `guid`, `templateId`, `x`, `y`, current `hp`.
     - **Portal Categorization**: Provides logic to distinguish between "World Exits" (monsters/path nodes) and "Local Facilities" (indoors/NPCs) for UI prioritization.
-*   **Boot Sequence Lifecycle**: Implemented in `App.vue` to bridge data loading and UI readiness. It enforces a strict `Data Loaded -> UI NextTick -> Recalculate Stats -> Launch` flow to prevent race conditions with "naked" character stats.
+*   **Boot Sequence Lifecycle**: Implemented in `App.vue` to bridge data loading and UI readiness. It enforces a strict `Static DB -> Player Hydration -> Stat Recalc -> Map Init -> Launch` flow.
+    - **Zero-Tolerance Policy**: Legacy fallback formulas for HP/SP have been removed. If the Static DB fails to load or provide job data, the system terminates the loading sequence with a fatal error to ensure 100% attribute mathematical accuracy.
+    - **Stat Synchronization**: Calculated bonuses (Job/Equip) are stored in `player.equipmentBonuses` to ensure UI transparency for hidden multipliers.
 
 ## 3. Core Algorithms (Standard)
 

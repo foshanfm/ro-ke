@@ -109,6 +109,7 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Combat Realism**:
   - [x] **Monster Persistence**: Monsters continue attacking if player stops bot but remains in range.
   - [x] **Safety Checks**: Prevented cross-map zombie loops.
+  - [x] **Loading Logic Refactor**: Fixed race-condition where `loadGame` occurred before Static DB init. Enforced strict 4-step sequence + UI-side stat refresh to guarantee correct attribute display upon login.
 
 ### Phase 19: Economy & Data Stability [Completed]
 - [x] **Dynamic Pricing**: Hybrid price system merging compiled DB with hardcoded objects.
@@ -212,6 +213,10 @@ A web-based idle game recreating the experience of using automated botting softw
 - [x] **Smart Navigation UI**:
     - [x] Categorization of portals into "World Exits" (high priority) and "Local Facilities" (distance-filtered).
     - [x] Prevents major gates (e.g., Prontera East/West) from being hidden by indoor facilities.
+- [x] **Phase 32: Stat Stability & Precision [Completed]**
+    - [x] **Zero-Tolerance Loading**: Removed legacy "survival" HP/SP formulas. If DB fails, game errors out rather than showing inaccurate data.
+    - [x] **Attribute Bonus Sync**: Fixed data binding so that Job and Equipment bonuses (e.g., Novice Job 10's +1) are visible in the Stats Modal.
+    - [x] **Loading Pipeline Integrity**: Enforced strict validation of `JobStats` before game entry.
 
 ## 4. Current State
 *   **Version:** 3.4.0 (Phase 31+ - Retro Stability)

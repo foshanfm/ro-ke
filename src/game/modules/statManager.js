@@ -154,6 +154,8 @@ export function parseBonuses(equipment) {
  * @param {Object} player - Player reactive object
  */
 export function recalculatePlayerStats(player) {
+    if (!player) return
+    console.log(`[StatManager] 开始为角色 ${player.name} 计算属性...`)
     const jobCfg = JobConfig[player.job] || JobConfig.NOVICE
 
     const str = player.str || 1
@@ -169,13 +171,16 @@ export function recalculatePlayerStats(player) {
     const baseStatsData = getJobBaseStats(jobId)
     const jobFactors = getJobFactors(jobId)
 
-    // Calculate base HP/SP (using RO database if available, else legacy)
-    if (baseStatsData && baseStatsData.hp) {
-        player.maxHp = Formulas.calcMaxHp(baseLv, vit, baseStatsData.hp, jobFactors?.hpMulti || 500)
+    // Calculate base HP/SP (Must use RO database)
+    if (baseStatsData && baseStatsData.hp && jobFactors) {
+        player.maxHp = Formulas.calcMaxHp(baseLv, vit, baseStatsData.hp, jobFactors.hpMulti || 500)
         player.maxSp = Formulas.calcMaxSp(baseLv, int, baseStatsData.sp)
     } else {
-        player.maxHp = Formulas.calcMaxHp(baseLv, vit, jobCfg.hpMod)
-        player.maxSp = Formulas.calcMaxSp(baseLv, int, jobCfg.spMod)
+        // FATAL: If we reach here, either DB is not loaded or this Job ID is missing.
+        // As requested by user: No fallback, just signal the error.
+        console.error(`[StatManager] FATAL ERROR: 无法获取职业(ID:${jobId})的基础属性。数据库可能未加载。`)
+        player.maxHp = 1 // Prevent total UI breakage but signal something is wrong
+        player.maxSp = 1
     }
 
     // Safety checks
@@ -300,4 +305,10 @@ export function recalculatePlayerStats(player) {
             player.attackElement = weaponInfo.element
         }
     }
+
+    // --- Final Step: Sync bonuses back to reactive player object for UI display ---
+    if (!player.equipmentBonuses) {
+        player.equipmentBonuses = {}
+    }
+    Object.assign(player.equipmentBonuses, bonus)
 }

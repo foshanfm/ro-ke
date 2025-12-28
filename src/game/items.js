@@ -127,7 +127,7 @@ export function setItemsDB(newItemsDB) {
   // 克隆一份数据，避免修改缓存中的原始数据
   itemsDB = JSON.parse(JSON.stringify(newItemsDB))
   injectRuntimeEffects(itemsDB)
-  console.log('[Items] 物品数据库已更新并注入运行时效果')
+  console.log(`[Items] 物品数据库已更新, 加载了 ${Object.keys(itemsDB).length} 个项目`)
 }
 
 /**
