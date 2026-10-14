@@ -1,7 +1,7 @@
 name: WeCom event notifications
 on:
   workflow_run:
-    workflows: [WeCom PR event capture]
+    workflows: ["WeCom PR event capture"]
     types: [completed]
   release:
     types: [published, released]
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   notify:
-    if: github.repository_owner == 'foshanfm' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    if: github.repository_owner == 'foshanfm' && (github.event_name != 'workflow_run' || (github.event.workflow_run.name != 'WeCom event notifications' && (github.event.workflow_run.name != 'WeCom PR event capture' || github.event.workflow_run.conclusion == 'success')))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -24,6 +24,7 @@ jobs:
         env:
           GH_REPO_TOKEN: ${{ github.token }}
           WECOM_WEBHOOK: ${{ secrets.LIMEN_GITHUB_NOTIFY_WEBHOOK }}
+          PERSONAL_EVENTS_STARTED_AT: "2026-10-14T10:39:11.024534+00:00"
         run: |
           python3 - <<'PY'
           """Trusted event consumer. The deployed workflow embeds this source without checkout."""
@@ -308,6 +309,23 @@ jobs:
 
 
           def deliver(client, sender, repository, event_name, event, receipt_store=None, record_loader=artifact_record):
+              if (event_name == 'workflow_run'
+                      and event.get('workflow_run', {}).get('name', CAPTURE_NAME) != CAPTURE_NAME):
+                  # Releases created by another workflow's GITHUB_TOKEN do not generate
+                  # another release workflow. Reconcile on CI completion instead of polling.
+                  if repository.split('/')[0].lower() != OWNER:
+                      raise MonitorError('此事件工作流只允许个人仓库。')
+                  cutoff = parse(os.environ['PERSONAL_EVENTS_STARTED_AT'])
+                  delivered = False
+                  for page in client.pages(f'/repos/{repository}/releases'):
+                      for release in page:
+                          if (release.get('draft') or release.get('prerelease')
+                                  or not release.get('published_at') or parse(release['published_at']) < cutoff):
+                              continue
+                          delivered = deliver(client, sender, repository, 'release',
+                                              {'action': 'published', 'release': {'id': release['id']}},
+                                              receipt_store, record_loader) or delivered
+                  return delivered
               result = notification(client, repository, event_name, event, record_loader)
               if result is None:
                   print('事件配置检查完成；未发送消息。' if event_name == 'workflow_dispatch' else '非正式发布，保持安静。')
